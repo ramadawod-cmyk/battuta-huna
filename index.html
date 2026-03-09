@@ -1322,7 +1322,7 @@ async function fetchWikiImage(poi) {
     return;
   }
   try {
-    const url = `/api/wiki-image?title=${encodeURIComponent(poi.wiki)}`;
+    const url = `/.netlify/functions/wiki-image?title=${encodeURIComponent(poi.wiki)}`;
     const res = await fetch(url);
     const data = await res.json();
     console.log(`[wiki] ${poi.id}:`, data.url || 'NO IMAGE');
