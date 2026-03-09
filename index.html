@@ -1422,7 +1422,7 @@ function switchCity(city) {
   if (searchInput) searchInput.value = '';
   // Pre-fetch images for new city
   prefetchAllImages();
-  showToast('📍 Switched to ' + cityName);
+  showInfoToast('📍 Switched to ' + cityName);
 }
 
 function renderTestButtons() {
@@ -1432,14 +1432,6 @@ function renderTestButtons() {
   container.innerHTML = locs.map(loc =>
     `<button class="test-loc-btn" onclick="simulateLocation(${loc.lat}, ${loc.lng}, '${loc.label}')">${loc.label}</button>`
   ).join('');
-}
-
-function showToast(msg) {
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.innerHTML = `<div class="toast-header">◈ BATTUTA HUNA</div><div class="toast-name">${msg}</div>`;
-  document.getElementById('toast-container').appendChild(t);
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 2500);
 }
 const wikiImageCache = {};
 
@@ -1743,12 +1735,21 @@ function showToast(poi, dist) {
   toast.className = 'toast';
   toast.innerHTML = `
     <div class="toast-header">◈ NEARBY DISCOVERY</div>
-    <div class="toast-name">${poi.emoji} ${poi.name}</div>
+    <div class="toast-name">${poi.name}</div>
     <div class="toast-dist">${formatDist(dist)} · ${poi.category}</div>
   `;
   toast.onclick = () => { openDetail(poi.id); removeToast(toast); };
   container.appendChild(toast);
   setTimeout(() => removeToast(toast), 6000);
+}
+
+function showInfoToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = '<div class="toast-header">◈ BATTUTA HUNA</div><div class="toast-name">' + msg + '</div>';
+  container.appendChild(toast);
+  setTimeout(() => { toast.classList.add('out'); setTimeout(() => toast.remove(), 300); }, 2500);
 }
 
 function showToastMsg(msg) {
