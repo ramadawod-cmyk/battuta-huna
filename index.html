@@ -1323,12 +1323,12 @@ async function fetchWikiImage(poi) {
     return;
   }
   try {
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${poi.wiki}?redirect=true`;
+    const url = `/.netlify/functions/wiki-image?title=${encodeURIComponent(poi.wiki)}`;
     const res = await fetch(url);
     const data = await res.json();
-    console.log(`[wiki] ${poi.id}:`, data.thumbnail ? data.thumbnail.source : 'NO THUMBNAIL');
-    if (data.thumbnail && data.thumbnail.source) {
-      const src = data.thumbnail.source.replace(/\/\d+px-/, '/640px-');
+    console.log(`[wiki] ${poi.id}:`, data.url || 'NO IMAGE');
+    if (data.url) {
+      const src = data.url;
       wikiImageCache[poi.id] = src;
       poi.image = src;
       document.querySelectorAll(`[data-poi-id="${poi.id}"] .poi-card-img`).forEach(img => {
