@@ -15,15 +15,12 @@ function httpsGet(url) {
 
 exports.handler = async function(event) {
   const title = event.queryStringParameters && event.queryStringParameters.title;
-
   if (!title) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing title' }) };
   }
-
   try {
     const wikiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title);
     const data = await httpsGet(wikiUrl);
-
     if (data.thumbnail && data.thumbnail.source) {
       const src = data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
       return {
@@ -42,10 +39,3 @@ exports.handler = async function(event) {
     return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
 };
-```
-
-**4. Scroll down and click "Commit changes"**
-
-**5. Wait ~30 seconds for Netlify to redeploy, then open this in your browser:**
-```
-https://battutahuna.com/.netlify/functions/wiki-image?title=Colosseum
