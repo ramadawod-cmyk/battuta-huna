@@ -868,7 +868,7 @@
 
     <!-- ALL SITES VIEW -->
     <div id="all-sites" style="display:none">
-      <div class="section-label">All Sites · Rome</div>
+      <div class="section-label" id="allSitesLabel">All Sites · Rome</div>
       <div class="search-bar">
         <span class="search-icon"><svg width="14" height="14" fill="none" stroke="#6f7f96" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg></span>
         <input type="text" id="searchInput" placeholder="Search sites, categories…" oninput="filterSites()" />
@@ -911,6 +911,15 @@
       </div>
 
       <div class="settings-section">
+        <div class="settings-title">City</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="test-loc-btn active-loc" id="cityBtn-rome" onclick="switchCity('rome')">🏛️ Rome</button>
+          <button class="test-loc-btn" id="cityBtn-amman" onclick="switchCity('amman')">🕌 Amman</button>
+          <button class="test-loc-btn" id="cityBtn-malaga" onclick="switchCity('malaga')">🌊 Málaga</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
         <div class="settings-title">Your Journey</div>
         <div class="stats-grid">
           <div class="stat-box">
@@ -919,21 +928,16 @@
           </div>
           <div class="stat-box">
             <div class="stat-num" id="statTotal">0</div>
-            <div class="stat-label">Sites in Rome</div>
+            <div class="stat-label" id="statCityLabel">Sites in Rome</div>
           </div>
         </div>
       </div>
 
       <div class="settings-section">
         <div class="settings-title">Test Locations</div>
-        <p style="font-size:13px;color:var(--stone);font-style:italic;margin-bottom:12px;line-height:1.6;">Simulate being in Rome without leaving your desk.</p>
+        <p style="font-size:13px;color:var(--stone);font-style:italic;margin-bottom:12px;line-height:1.6;">Simulate being in the city without leaving your desk.</p>
         <div style="display:flex;flex-direction:column;gap:8px;" id="testLocationBtns">
-          <button class="test-loc-btn" onclick="simulateLocation(41.8986, 12.4769, 'Pantheon')">🏛️ Pantheon area</button>
-          <button class="test-loc-btn" onclick="simulateLocation(41.8902, 12.4922, 'Colosseum')">🏟️ Colosseum area</button>
-          <button class="test-loc-btn" onclick="simulateLocation(41.9022, 12.4539, 'Vatican')">⛪ Vatican area</button>
-          <button class="test-loc-btn" onclick="simulateLocation(41.8992, 12.4731, 'Piazza Navona')">🗺️ Piazza Navona area</button>
-          <button class="test-loc-btn" onclick="simulateLocation(41.8898, 12.4697, 'Trastevere')">✨ Trastevere area</button>
-          <button class="test-loc-btn" onclick="simulateLocation(41.9060, 12.4824, 'Spanish Steps')">🪜 Spanish Steps area</button>
+          <!-- populated by renderTestButtons() -->
         </div>
       </div>
 
@@ -1311,8 +1315,132 @@ const ROME_POIS = [
 ];
 
 // ══════════════════════════════════════════════
-//  WIKIPEDIA IMAGE FETCHER
+//  AMMAN POI DATABASE
 // ══════════════════════════════════════════════
+const AMMAN_POIS = [
+  { id: "citadel", image: "", wiki: "Amman_Citadel", name: "Amman Citadel", category: "Ancient Ruins", emoji: "castle", lat: 31.9552, lng: 35.9337, description: "Jabal al-Qala'a has been inhabited for nearly 7,000 years. Greeks, Romans, Byzantines and Umayyads all left their mark here — the Temple of Hercules, the Umayyad Palace and a Byzantine church coexist on this single hilltop.", mapUrl: "https://maps.google.com/?q=Amman+Citadel" },
+  { id: "roman-theatre", image: "", wiki: "Roman_theatre_(Amman)", name: "Roman Theatre", category: "Ancient Monument", emoji: "amphitheatre", lat: 31.9520, lng: 35.9366, description: "Carved into the hillside in the 2nd century AD under Emperor Marcus Aurelius, this 6,000-seat theatre still hosts performances. Its south-facing stage catches full sunlight while the audience seating remains in merciful shade.", mapUrl: "https://maps.google.com/?q=Roman+Theatre+Amman" },
+  { id: "jordan-museum", image: "", wiki: "Jordan_Museum", name: "The Jordan Museum", category: "Museum", emoji: "tablet", lat: 31.9497, lng: 35.9305, description: "Jordan's flagship national museum holds the Ain Ghazal statues — among the oldest human figures ever found, dating to 7250 BC — alongside the Copper Scroll, one of the Dead Sea Scrolls discovered at Qumran.", mapUrl: "https://maps.google.com/?q=Jordan+Museum+Amman" },
+  { id: "king-abdullah-mosque", image: "", wiki: "King_Abdullah_I_Mosque", name: "King Abdullah I Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9637, lng: 35.9196, description: "The blue-domed landmark built in the 1980s as a tribute to Jordan's founder can hold 7,000 worshippers. Unusually for the region, it welcomes non-Muslim visitors during set hours — robes are provided at the entrance.", mapUrl: "https://maps.google.com/?q=King+Abdullah+Mosque+Amman" },
+  { id: "rainbow-street", image: "", wiki: "Rainbow_Street,_Amman", name: "Rainbow Street", category: "Cultural District", emoji: "road", lat: 31.9545, lng: 35.9178, description: "The beating heart of West Amman's café culture, strung with rainbow lights and lined with bookshops, galleries and rooftop bars. On Friday mornings, Souk Jara transforms it into an open-air market of crafts and antiques.", mapUrl: "https://maps.google.com/?q=Rainbow+Street+Amman" },
+  { id: "downtown-amman", image: "", wiki: "Downtown_Amman", name: "Downtown Amman (Al-Balad)", category: "Historic District", emoji: "map", lat: 31.9522, lng: 35.9350, description: "The chaotic, fragrant soul of the city — a warren of spice souks, falafel counters, old coffee houses and call-to-prayer echoes. The Nymphaeum ruins and the Odeon theatre are hidden among the market stalls.", mapUrl: "https://maps.google.com/?q=Downtown+Amman" },
+  { id: "dukes-diwan", image: "", wiki: "Duke%27s_Diwan", name: "Duke's Diwan", category: "Heritage Museum", emoji: "tablet", lat: 31.9524, lng: 35.9353, description: "One of Amman's oldest surviving buildings, this Ottoman-era structure has served as a hotel, post office, and now a cultural museum. Its walls are hung with old portraits and photographs; the flaking ceiling is part of the charm.", mapUrl: "https://maps.google.com/?q=Dukes+Diwan+Amman" },
+  { id: "odeon-amman", image: "", wiki: "Odeon_(Amman)", name: "The Odeon", category: "Ancient Theatre", emoji: "amphitheatre", lat: 31.9519, lng: 35.9358, description: "A small 500-seat Roman theatre tucked beside the main Roman Theatre. More intimate than its larger neighbour, it was used for musical performances and poetry recitals in the 2nd century AD.", mapUrl: "https://maps.google.com/?q=Odeon+Amman" },
+  { id: "nymphaeum", image: "", wiki: "Nymphaeum_(Amman)", name: "Nymphaeum of Amman", category: "Ancient Ruins", emoji: "fountain", lat: 31.9521, lng: 35.9344, description: "A grand Roman fountain complex dedicated to the water nymphs, built in 191 AD. Once fed by an aqueduct, its marble-clad pools and columned façade stood at the heart of ancient Philadelphia.", mapUrl: "https://maps.google.com/?q=Nymphaeum+Amman" },
+  { id: "jordan-archaeological-museum", image: "", wiki: "Jordan_Archaeological_Museum", name: "Archaeological Museum", category: "Museum", emoji: "search", lat: 31.9553, lng: 35.9335, description: "Sitting at the heart of the Citadel since 1951, this compact museum displays artefacts arranged chronologically from the Neolithic through to the Islamic period — including some of the Ain Ghazal figurines and Dead Sea Scroll fragments.", mapUrl: "https://maps.google.com/?q=Jordan+Archaeological+Museum+Amman" },
+  { id: "abu-darwish-mosque", image: "", wiki: "Abu_Darwish_Mosque", name: "Abu Darwish Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9434, lng: 35.9380, description: "Amman's most visually striking mosque, built in 1961 with alternating layers of black and white stone. Perched on the summit of Jabal al-Ashrafiyeh, it commands panoramic views over the whole city.", mapUrl: "https://maps.google.com/?q=Abu+Darwish+Mosque+Amman" },
+  { id: "darat-al-funun", image: "", wiki: "Darat_al_Funun", name: "Darat al Funun", category: "Arts Centre", emoji: "palette", lat: 31.9586, lng: 35.9202, description: "A rare haven in a city short on contemporary art spaces. Three Ottoman-era stone villas set in terraced gardens house rotating exhibitions of Arab artists, a Byzantine church ruin, and a research library.", mapUrl: "https://maps.google.com/?q=Darat+al+Funun+Amman" },
+  { id: "fuheis", image: "", wiki: "Fuheis", name: "Fuheis Village", category: "Heritage Village", emoji: "sunrise", lat: 31.9730, lng: 35.8320, description: "A hilltop Christian village west of Amman, its stone lanes lined with Ottoman and early Mandate-era houses. The weekly Friday market, village squares and absence of traffic make it feel like another century entirely.", mapUrl: "https://maps.google.com/?q=Fuheis+Jordan" },
+  { id: "wadi-seer", image: "", wiki: "Wadi_al-Seer", name: "Wadi al-Seer", category: "Natural Valley", emoji: "mountain", lat: 31.9467, lng: 35.8447, description: "A green valley cutting through western Amman, dotted with ancient cave dwellings and olive terraces. At its heart lies Iraq al-Amir, a Tobiad palace from the 2nd century BC — one of the oldest monuments in Jordan.", mapUrl: "https://maps.google.com/?q=Wadi+al-Seer+Amman" },
+  { id: "hussein-mosque", image: "", wiki: "Al-Husseini_Mosque", name: "Al-Husseini Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9527, lng: 35.9348, description: "Built in 1924 by King Abdullah I on the site of a much older mosque, this red-and-white striped building anchors the old city. It remains a working mosque in the middle of the busy downtown souk.", mapUrl: "https://maps.google.com/?q=Al-Husseini+Mosque+Amman" },
+  { id: "royal-automobile-museum", image: "", wiki: "Royal_Automobile_Museum", name: "Royal Automobile Museum", category: "Museum", emoji: "road", lat: 31.9797, lng: 35.9012, description: "King Hussein's personal collection of 70 vehicles — from a 1916 Cadillac to the royal family's everyday cars — displayed in a dramatic hilltop building in King Hussein Park. Each car tells a chapter of Jordan's modern history.", mapUrl: "https://maps.google.com/?q=Royal+Automobile+Museum+Amman" },
+  { id: "children-museum", image: "", wiki: "Children%27s_Museum_Jordan", name: "Children's Museum Jordan", category: "Museum", emoji: "star", lat: 31.9793, lng: 35.9018, description: "An interactive science and culture museum in King Hussein Park, designed to make learning tangible for young visitors. Its outdoor exhibits and hands-on galleries make it one of Amman's most visited family destinations.", mapUrl: "https://maps.google.com/?q=Children+Museum+Jordan+Amman" },
+  { id: "photo-museum", image: "", wiki: "Arab_photography", name: "Arab Photography Archive", category: "Cultural Archive", emoji: "palette", lat: 31.9555, lng: 35.9190, description: "A small but significant institution preserving photographic records of everyday Arab life from the 19th century onwards. The rotating exhibitions draw from a vast archive of images rarely seen outside the region.", mapUrl: "https://maps.google.com/?q=Amman+photography+museum" },
+  { id: "jabal-lweibdeh", image: "", wiki: "Jabal_Luweibdeh", name: "Jabal Luweibdeh", category: "Cultural Neighbourhood", emoji: "palette", lat: 31.9590, lng: 35.9170, description: "Amman's bohemian hilltop neighbourhood — the city's arts and café quarter. Its stone streets hold independent galleries, the French Cultural Centre, vintage shops and the kind of unhurried rooftop conversations the city does best.", mapUrl: "https://maps.google.com/?q=Jabal+Luweibdeh+Amman" },
+  { id: "iraq-al-amir", image: "", wiki: "Iraq_al-Amir", name: "Iraq al-Amir Palace", category: "Ancient Palace", emoji: "castle", lat: 31.9008, lng: 35.7733, description: "A Tobiad palace 30km west of Amman, built in the 2nd century BC and carved with enormous eagles and lions. One of the oldest and most complete ancient buildings in Jordan, set in a quiet agricultural valley.", mapUrl: "https://maps.google.com/?q=Iraq+al+Amir" }
+];
+
+// ══════════════════════════════════════════════
+//  MÁLAGA POI DATABASE
+// ══════════════════════════════════════════════
+const MALAGA_POIS = [
+  { id: "alcazaba", image: "", wiki: "Alcazaba_of_M%C3%A1laga", name: "Alcazaba of Málaga", category: "Moorish Fortress", emoji: "castle", lat: 36.7211, lng: -4.4178, description: "An 11th-century Hammudid palace-fortress built over Roman foundations. Over 100 towers, three concentric defence walls, and gardens fragrant with jasmine make this one of the best-preserved Alcazabas in Andalusia.", mapUrl: "https://maps.google.com/?q=Alcazaba+Malaga" },
+  { id: "gibralfaro", image: "", wiki: "Castillo_de_Gibralfaro", name: "Castillo de Gibralfaro", category: "Medieval Castle", emoji: "castle", lat: 36.7228, lng: -4.4118, description: "The Phoenicians built a lighthouse here; the Moors built this castle in the 10th century to protect the Alcazaba below. Its ramparts offer the most commanding view in Málaga — city, port, bullring and Mediterranean in one sweep.", mapUrl: "https://maps.google.com/?q=Castillo+de+Gibralfaro+Malaga" },
+  { id: "malaga-cathedral", image: "", wiki: "M%C3%A1laga_Cathedral", name: "Málaga Cathedral", category: "Renaissance Cathedral", emoji: "church", lat: 36.7200, lng: -4.4196, description: "Known as La Manquita — 'the one-armed lady' — because its south tower was never finished, its funds diverted to American independence. Built over two centuries from 1528, its interior holds an extraordinary carved wooden choir.", mapUrl: "https://maps.google.com/?q=Malaga+Cathedral" },
+  { id: "roman-theatre-malaga", image: "", wiki: "Roman_theatre_of_Malaga", name: "Roman Theatre of Málaga", category: "Ancient Monument", emoji: "amphitheatre", lat: 36.7209, lng: -4.4172, description: "Built in the 1st century BC during Augustus's reign, this theatre lay buried and forgotten for centuries until 1951, when workers discovered it while demolishing a cultural centre. Now fully excavated and open to visitors.", mapUrl: "https://maps.google.com/?q=Roman+Theatre+Malaga" },
+  { id: "picasso-museum", image: "", wiki: "Picasso_Museum_M%C3%A1laga", name: "Museo Picasso Málaga", category: "Art Museum", emoji: "palette", lat: 36.7219, lng: -4.4172, description: "Housed in the 16th-century Buenavista Palace, this museum holds over 200 works by Málaga's most famous son. Christine Ruiz-Picasso donated the collection to the city where Pablo spent his early childhood.", mapUrl: "https://maps.google.com/?q=Museo+Picasso+Malaga" },
+  { id: "casa-natal-picasso", image: "", wiki: "Birthplace_of_Pablo_Picasso", name: "Picasso Birthplace", category: "Historic House", emoji: "palette", lat: 36.7232, lng: -4.4199, description: "The apartment at Plaza de la Merced 15 where Pablo Ruiz Picasso was born on 25 October 1881. Now a museum with rotating exhibitions, period furniture and Picasso family memorabilia.", mapUrl: "https://maps.google.com/?q=Casa+Natal+Picasso+Malaga" },
+  { id: "plaza-merced", image: "", wiki: "Plaza_de_la_Merced,_M%C3%A1laga", name: "Plaza de la Merced", category: "Historic Square", emoji: "map", lat: 36.7232, lng: -4.4200, description: "A wide 19th-century square at the heart of the old city, centred on an obelisk to the liberal hero General Torrijos. A bronze Picasso sits on a bench here, gazing at his birthplace across the square.", mapUrl: "https://maps.google.com/?q=Plaza+de+la+Merced+Malaga" },
+  { id: "centre-pompidou", image: "", wiki: "Centre_Pompidou_M%C3%A1laga", name: "Centre Pompidou Málaga", category: "Contemporary Art", emoji: "palette", lat: 36.7162, lng: -4.4236, description: "The only Centre Pompidou outside France, housed in a glass cube of coloured panels at the port. Its permanent collection spans Frida Kahlo, Francis Bacon and Miró, with blockbuster temporary exhibitions.", mapUrl: "https://maps.google.com/?q=Centre+Pompidou+Malaga" },
+  { id: "carmen-thyssen", image: "", wiki: "Carmen_Thyssen_Museum,_M%C3%A1laga", name: "Carmen Thyssen Museum", category: "Art Museum", emoji: "palette", lat: 36.7205, lng: -4.4215, description: "A jewel of 19th-century Spanish painting — Murillo, Zurbarán and a peerless collection of Andalusian scenes — displayed in a beautifully restored 16th-century palace. Carmen Thyssen-Bornemisza personally curated the collection.", mapUrl: "https://maps.google.com/?q=Carmen+Thyssen+Museum+Malaga" },
+  { id: "atarazanas-market", image: "", wiki: "Atarazanas_Market", name: "Mercado de Atarazanas", category: "Historic Market", emoji: "map", lat: 36.7195, lng: -4.4245, description: "A 14th-century Nasrid shipyard converted into Málaga's main food market. Its original Moorish horseshoe arch remains intact at the entrance. Inside, under a spectacular stained-glass window, stalls overflow with local produce.", mapUrl: "https://maps.google.com/?q=Mercado+Atarazanas+Malaga" },
+  { id: "malagueta-beach", image: "", wiki: "La_Malagueta", name: "La Malagueta Beach", category: "Urban Beach", emoji: "sunrise", lat: 36.7170, lng: -4.4050, description: "The city's iconic urban beach, a ten-minute walk from the cathedral. The espigón breakwater gives it calm waters; the chiringuitos along the sand serve espetos — sardines grilled on cane skewers over driftwood fires.", mapUrl: "https://maps.google.com/?q=La+Malagueta+Beach+Malaga" },
+  { id: "muelle-uno", image: "", wiki: "Port_of_M%C3%A1laga", name: "Muelle Uno", category: "Port Promenade", emoji: "sunrise", lat: 36.7165, lng: -4.4193, description: "The regenerated port promenade, lined with restaurants, boutiques and the glass cube of the Pompidou. On evenings the whole city seems to stroll here, with the floodlit Alcazaba framing the scene from above.", mapUrl: "https://maps.google.com/?q=Muelle+Uno+Malaga" },
+  { id: "soho-malaga", image: "", wiki: "Soho,_M%C3%A1laga", name: "Soho Arts District", category: "Arts District", emoji: "palette", lat: 36.7180, lng: -4.4280, description: "Málaga's street-art neighbourhood, where entire building façades have been transformed by international muralists. The Centre for Contemporary Art anchors this post-industrial district that has become Spain's most talked-about arts quarter.", mapUrl: "https://maps.google.com/?q=Soho+Malaga" },
+  { id: "malaga-museum", image: "", wiki: "Malaga_Museum", name: "Málaga Museum", category: "Museum", emoji: "tablet", lat: 36.7215, lng: -4.4155, description: "Housed in the elegant 18th-century Palacio de la Aduana, this double museum covers both archaeology — Roman mosaics, Moorish treasures, Paleolithic finds — and fine arts, including a gallery of Málaga-born painters.", mapUrl: "https://maps.google.com/?q=Malaga+Museum" },
+  { id: "constitution-square", image: "", wiki: "Plaza_de_la_Constituci%C3%B3n,_M%C3%A1laga", name: "Plaza de la Constitución", category: "Historic Square", emoji: "map", lat: 36.7209, lng: -4.4218, description: "The historic heart of the city, where merchants once traded under the arcades. Today it opens into Calle Larios — Spain's fifth most expensive shopping street — and fills nightly with people watching, café culture and Christmas lights.", mapUrl: "https://maps.google.com/?q=Plaza+de+la+Constitucion+Malaga" },
+  { id: "hammam-al-andalus", image: "", wiki: "Hammam_Al_%C3%81ndalus", name: "Hammam Al Ándalus", category: "Historic Bathhouse", emoji: "fountain", lat: 36.7225, lng: -4.4198, description: "A working Arab bathhouse in a restored 12th-century building — horseshoe arches, star-shaped skylights, warm marble pools. One of the few places in Spain where the ancient Moorish bathing ritual still lives on.", mapUrl: "https://maps.google.com/?q=Hammam+Al+Andalus+Malaga" },
+  { id: "concepcion-garden", image: "", wiki: "La_Concepci%C3%B3n_Historical-Botanical_Garden", name: "La Concepción Gardens", category: "Historic Garden", emoji: "tree", lat: 36.7423, lng: -4.4241, description: "A 19th-century English landscape garden with over 150 years of history, filled with tropical and subtropical species from around the world. Its waterfalls, Roman ruins and labyrinthine paths feel like a secret world.", mapUrl: "https://maps.google.com/?q=La+Concepcion+Garden+Malaga" },
+  { id: "larios-street", image: "", wiki: "Calle_Marqu%C3%A9s_de_Larios", name: "Calle Marqués de Larios", category: "Historic Street", emoji: "road", lat: 36.7208, lng: -4.4228, description: "A grand 19th-century pedestrian boulevard — Málaga's answer to Barcelona's Las Ramblas. Lined with orange trees and marble paving, it becomes the most spectacular street in Spain each Christmas, draped in lights.", mapUrl: "https://maps.google.com/?q=Calle+Larios+Malaga" },
+  { id: "english-cemetery", image: "", wiki: "English_Cemetery,_M%C3%A1laga", name: "English Cemetery", category: "Historic Cemetery", emoji: "tree", lat: 36.7154, lng: -4.4072, description: "The first Protestant cemetery in Spain, opened in 1831 by the British consul. Conceived as a botanical garden on terraces overlooking the sea, its exotic plantings and 19th-century tombs make it one of Europe's most atmospheric burial grounds.", mapUrl: "https://maps.google.com/?q=English+Cemetery+Malaga" },
+  { id: "malagueta-bullring", image: "", wiki: "La_Malagueta", name: "La Malagueta Bullring", category: "Historic Arena", emoji: "amphitheatre", lat: 36.7182, lng: -4.4057, description: "A neo-Mudéjar bullring from 1876, its distinctive red-brick towers a Málaga landmark. Whether or not bullfighting is your interest, the architecture and the museum inside tell the story of Andalusian popular culture.", mapUrl: "https://maps.google.com/?q=Plaza+de+Toros+La+Malagueta" }
+];
+
+// ══════════════════════════════════════════════
+//  CITY MANAGEMENT
+// ══════════════════════════════════════════════
+const CITY_DATA = {
+  rome:   { pois: null, name: 'Rome',   flag: '🏛️', testLocs: [
+    { lat: 41.8986, lng: 12.4769, label: '🏛️ Pantheon area' },
+    { lat: 41.8902, lng: 12.4922, label: '🏟️ Colosseum area' },
+    { lat: 41.9022, lng: 12.4539, label: '⛪ Vatican area' },
+    { lat: 41.8992, lng: 12.4731, label: '🗺️ Piazza Navona area' },
+    { lat: 41.8898, lng: 12.4697, label: '✨ Trastevere area' },
+  ]},
+  amman:  { pois: null, name: 'Amman',  flag: '🕌', testLocs: [
+    { lat: 31.9552, lng: 35.9337, label: '🏰 Citadel area' },
+    { lat: 31.9520, lng: 35.9366, label: '🎭 Roman Theatre area' },
+    { lat: 31.9590, lng: 35.9170, label: '🎨 Luweibdeh / Rainbow St' },
+    { lat: 31.9637, lng: 35.9196, label: '🕌 King Abdullah Mosque' },
+    { lat: 31.9434, lng: 35.9380, label: '🕌 Abu Darwish Mosque' },
+  ]},
+  malaga: { pois: null, name: 'Málaga', flag: '🌊', testLocs: [
+    { lat: 36.7211, lng: -4.4178, label: '🏰 Alcazaba area' },
+    { lat: 36.7200, lng: -4.4196, label: '⛪ Cathedral area' },
+    { lat: 36.7232, lng: -4.4200, label: '🎨 Plaza de la Merced' },
+    { lat: 36.7162, lng: -4.4236, label: '🎭 Port / Pompidou' },
+    { lat: 36.7170, lng: -4.4050, label: '🏖️ La Malagueta beach' },
+  ]}
+};
+CITY_DATA.rome.pois   = ROME_POIS;
+CITY_DATA.amman.pois  = AMMAN_POIS;
+CITY_DATA.malaga.pois = MALAGA_POIS;
+
+let currentCity = localStorage.getItem('bh_city') || 'rome';
+function getActivePois() { return CITY_DATA[currentCity].pois; }
+
+function switchCity(city) {
+  currentCity = city;
+  localStorage.setItem('bh_city', city);
+  // Update city buttons
+  document.querySelectorAll('[id^="cityBtn-"]').forEach(b => b.classList.remove('active-loc'));
+  const btn = document.getElementById('cityBtn-' + city);
+  if (btn) btn.classList.add('active-loc');
+  // Update labels
+  const cityName = CITY_DATA[city].name;
+  const label = document.getElementById('allSitesLabel');
+  if (label) label.textContent = 'All Sites · ' + cityName;
+  const statLabel = document.getElementById('statCityLabel');
+  if (statLabel) statLabel.textContent = 'Sites in ' + cityName;
+  // Reset exploration state for new city
+  notifiedToday.clear();
+  currentPos = null;
+  renderTestButtons();
+  updateStats();
+  renderAllSites('');
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) searchInput.value = '';
+  // Pre-fetch images for new city
+  prefetchAllImages();
+  showToast('📍 Switched to ' + cityName);
+}
+
+function renderTestButtons() {
+  const container = document.getElementById('testLocationBtns');
+  if (!container) return;
+  const locs = CITY_DATA[currentCity].testLocs;
+  container.innerHTML = locs.map(loc =>
+    `<button class="test-loc-btn" onclick="simulateLocation(${loc.lat}, ${loc.lng}, '${loc.label}')">${loc.label}</button>`
+  ).join('');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<div class="toast-header">◈ BATTUTA HUNA</div><div class="toast-name">${msg}</div>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 2500);
+}
 const wikiImageCache = {};
 
 async function fetchWikiImage(poi) {
@@ -1345,7 +1473,7 @@ async function fetchWikiImage(poi) {
 
 // Prefetch all images in the background
 function prefetchAllImages() {
-  ROME_POIS.forEach((poi, i) => {
+  getActivePois().forEach((poi, i) => {
     setTimeout(() => fetchWikiImage(poi), i * 150);
   });
 }
@@ -1457,7 +1585,7 @@ function checkNearby() {
   const nearby = [];
   const newlyInRange = []; // sites just entered range, not yet notified
 
-  for (const poi of ROME_POIS) {
+  for (const poi of getActivePois()) {
     const dist = haversine(currentPos.lat, currentPos.lng, poi.lat, poi.lng);
     if (dist <= radius) {
       nearby.push({ ...poi, dist });
@@ -1675,7 +1803,7 @@ function showView(view) {
 // ══════════════════════════════════════════════
 function renderAllSites(query) {
   const q = query.toLowerCase();
-  const filtered = ROME_POIS.filter(p =>
+  const filtered = getActivePois().filter(p =>
     p.name.toLowerCase().includes(q) ||
     p.category.toLowerCase().includes(q) ||
     p.description.toLowerCase().includes(q)
@@ -1729,7 +1857,7 @@ function filterSites() {
 let currentDetailId = null;
 
 function openDetail(id) {
-  const poi = ROME_POIS.find(p => p.id === id);
+  const poi = getActivePois().find(p => p.id === id);
   if (!poi) return;
 
   currentDetailId = id;
@@ -1827,7 +1955,7 @@ function resetHistory() {
 
 function updateStats() {
   document.getElementById('statDiscovered').textContent = visitedSites.size;
-  document.getElementById('statTotal').textContent = ROME_POIS.length;
+  document.getElementById('statTotal').textContent = getActivePois().length;
 }
 
 // ══════════════════════════════════════════════
@@ -1845,7 +1973,7 @@ function toggleVisited(id) {
   // Re-render whichever views are active
   if (currentPos) {
     const radius = settings.radius;
-    const nearby = ROME_POIS.map(poi => ({
+    const nearby = getActivePois().map(poi => ({
       ...poi,
       dist: haversine(currentPos.lat, currentPos.lng, poi.lat, poi.lng)
     })).filter(p => p.dist <= radius).sort((a,b) => a.dist - b.dist);
@@ -1904,11 +2032,17 @@ function init() {
   document.getElementById('radiusSelect').value = settings.radius;
   document.getElementById('notifToggle').classList.toggle('on', settings.notif);
   document.getElementById('toastToggle').classList.toggle('on', settings.toast);
+
+  // Restore city
+  const cityBtn = document.getElementById('cityBtn-' + currentCity);
+  if (cityBtn) cityBtn.classList.add('active-loc');
+  const cityName = CITY_DATA[currentCity].name;
+  const label = document.getElementById('allSitesLabel');
+  if (label) label.textContent = 'All Sites · ' + cityName;
+  const statLabel = document.getElementById('statCityLabel');
+  if (statLabel) statLabel.textContent = 'Sites in ' + cityName;
+  renderTestButtons();
   updateStats();
-
-  // All views start hidden via HTML, no JS needed
-
-  // All-sites list renders on demand when tab is opened
 
   // Prefetch Wikipedia images in background
   prefetchAllImages();
