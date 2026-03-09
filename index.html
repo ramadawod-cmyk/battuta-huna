@@ -1120,7 +1120,7 @@ const ROME_POIS = [
   {
     id: "vatican",
     image: "",
-    wiki: "St._Peter's_Basilica",
+    wiki: "St._Peter%27s_Basilica",
     name: "St. Peter's Basilica",
     category: "Sacred Architecture",
     emoji: "church",
@@ -1144,7 +1144,7 @@ const ROME_POIS = [
   {
     id: "castel-angelo",
     image: "",
-    wiki: "Castel_Sant'Angelo",
+    wiki: "Castel_Sant%27Angelo",
     name: "Castel Sant'Angelo",
     category: "Fortress",
     emoji: "castle",
@@ -1240,7 +1240,7 @@ const ROME_POIS = [
   {
     id: "bioparco",
     image: "",
-    wiki: "Explora_(museum)",
+    wiki: "Explora_Museum,_Rome",
     name: "Explora — Children's Museum",
     category: "Museum",
     emoji: "search",
@@ -1276,7 +1276,7 @@ const ROME_POIS = [
   {
     id: "aventine-keyhole",
     image: "",
-    wiki: "Aventine_Keyhole",
+    wiki: "Aventine_Hill",
     name: "Knights of Malta Keyhole",
     category: "Hidden Gem",
     emoji: "key",
@@ -1323,30 +1323,25 @@ async function fetchWikiImage(poi) {
     return;
   }
   try {
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${poi.wiki}`;
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${poi.wiki}?redirect=true`;
     const res = await fetch(url);
     const data = await res.json();
+    console.log(`[wiki] ${poi.id}:`, data.thumbnail ? data.thumbnail.source : 'NO THUMBNAIL');
     if (data.thumbnail && data.thumbnail.source) {
-      // Upgrade to larger image
       const src = data.thumbnail.source.replace(/\/\d+px-/, '/640px-');
       wikiImageCache[poi.id] = src;
       poi.image = src;
-      // Re-render any visible card for this POI
       document.querySelectorAll(`[data-poi-id="${poi.id}"] .poi-card-img`).forEach(img => {
         img.src = src;
         img.style.display = 'block';
       });
-      // Also update detail sheet if open
-      const detailImg = document.querySelector(`#detailSheet .poi-card-img`);
-      if (detailImg && document.getElementById('detailSheet').style.display !== 'none') {
-        const detailId = document.getElementById('detailSheet').dataset.poiId;
-        if (detailId === poi.id) {
-          detailImg.src = src;
-          detailImg.style.display = 'block';
-        }
+      const detailSheet = document.getElementById('detailSheet');
+      if (detailSheet && detailSheet.dataset.poiId === poi.id) {
+        const detailImg = document.getElementById('detailImg');
+        if (detailImg) { detailImg.src = src; detailImg.style.display = 'block'; }
       }
     }
-  } catch(e) {}
+  } catch(e) { console.warn(`[wiki] ${poi.id} error:`, e); }
 }
 
 // Prefetch all images in the background
