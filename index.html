@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/ramad/Downloads/index_7.html -->
+<!-- saved from url=(0045)file:///C:/Users/ramad/Downloads/index_8.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="Battuta Huna">
   <link rel="preconnect" href="https://fonts.googleapis.com/">
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
-  <link href="./Battuta Huna — Discover Rome_files/css2" rel="stylesheet">
+  <link href="./index_files/css2" rel="stylesheet">
 
   <style>
     :root {
@@ -780,6 +780,20 @@
     }
   </style>
 
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(reg) {
+            window._swReg = reg;
+            console.log('SW registered:', reg.scope);
+          })
+          .catch(function(err) {
+            console.log('SW registration failed:', err);
+          });
+      });
+    }
+  </script>
 </head>
 <body>
 <div id="app">
@@ -972,13 +986,13 @@
 <div id="detail-overlay" onclick="closeDetail(event)">
   <div class="detail-sheet" id="detailSheet">
     <div class="detail-handle"></div>
-    <img id="detailImg" class="detail-img" src="file:///C:/Users/ramad/Downloads/index_7.html" alt="" style="display:none;">
+    <img id="detailImg" class="detail-img" src="file:///C:/Users/ramad/Downloads/index_8.html" alt="" style="display:none;">
     <div id="detailCategory" class="detail-category"></div>
     <div id="detailName" class="detail-name"></div>
     <div class="detail-divider"></div>
     <div id="detailDesc" class="detail-desc"></div>
     <div class="detail-actions">
-      <a id="detailMapBtn" href="file:///C:/Users/ramad/Downloads/index_7.html#" target="_blank" class="detail-map-btn">
+      <a id="detailMapBtn" href="file:///C:/Users/ramad/Downloads/index_8.html#" target="_blank" class="detail-map-btn">
         <svg width="14" height="14" fill="none" stroke="#e3b96c" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
         OPEN IN MAPS
       </a>
@@ -1309,8 +1323,19 @@ function formatDist(m) {
 // ══════════════════════════════════════════════
 async function startExploration() {
   // Request notification permission
-  if ('Notification' in window && Notification.permission === 'default') {
-    await Notification.requestPermission();
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      const perm = await Notification.requestPermission();
+      if (perm === 'denied') {
+        settings.notif = false;
+        localStorage.setItem('bh_settings', JSON.stringify(settings));
+        showToastMsg('Notifications blocked. Enable them in browser settings to get alerts near sites.');
+      }
+    }
+    if (Notification.permission === 'denied') {
+      settings.notif = false;
+      localStorage.setItem('bh_settings', JSON.stringify(settings));
+    }
   }
 
   isExploring = true;
@@ -1445,12 +1470,25 @@ function renderNearby(nearby) {
 function triggerAlert(poi, dist) {
   if (settings.toast) showToast(poi, dist);
   if (settings.notif && 'Notification' in window && Notification.permission === 'granted') {
-    new Notification(`📍 ${poi.name}`, {
-      body: `${formatDist(dist)} · ${poi.description.substring(0, 80)}…`,
-      icon: 'icon-192.png',
+    const payload = {
+      title: poi.name,
+      body: formatDist(dist) + ' away · ' + poi.category,
       tag: poi.id,
-      badge: 'icon-72.png'
-    });
+      data: { poiId: poi.id }
+    };
+    // Use service worker for reliable background delivery
+    if (window._swReg && window._swReg.active) {
+      window._swReg.active.postMessage({ type: 'NOTIFY', payload: payload });
+    } else {
+      // Fallback: direct notification
+      new Notification(poi.name, {
+        body: payload.body,
+        tag: payload.tag,
+        icon: '/icon-192.png',
+        badge: '/icon-72.png',
+        data: { poiId: poi.id }
+      });
+    }
   }
 }
 
@@ -1466,6 +1504,15 @@ function showToast(poi, dist) {
   toast.onclick = () => { openDetail(poi.id); removeToast(toast); };
   container.appendChild(toast);
   setTimeout(() => removeToast(toast), 6000);
+}
+
+function showToastMsg(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = '<div class="toast-header">◈ NOTICE</div><div class="toast-dist" style="margin-top:4px;">' + msg + '</div>';
+  container.appendChild(toast);
+  setTimeout(() => removeToast(toast), 5000);
 }
 
 function removeToast(toast) {
@@ -1693,7 +1740,7 @@ function toggleVisited(id) {
 //  DEMO / TEST MODE
 // ══════════════════════════════════════════════
 async function simulateLocation(lat, lng, label) {
-  // Start exploration if not already active, without triggering showView
+  // Start exploration if not already active
   if (!isExploring) {
     if ('Notification' in window && Notification.permission === 'default') {
       await Notification.requestPermission();
@@ -1708,19 +1755,23 @@ async function simulateLocation(lat, lng, label) {
   notifiedToday.clear();
   localStorage.removeItem('bh_notified');
 
+  // Set simulated position
   currentPos = { lat, lng };
-  document.getElementById('locationDisplay').textContent =
-    `${lat.toFixed(5)}, ${lng.toFixed(5)} (Demo: ${label})`;
+
+  // Update location display
+  const locDisplay = document.getElementById('locationDisplay');
+  if (locDisplay) locDisplay.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5) + ' (Demo: ' + label + ')';
 
   // Highlight active button
-  document.querySelectorAll('.test-loc-btn').forEach(b => b.classList.remove('active-loc'));
-  event.target.classList.add('active-loc');
+  document.querySelectorAll('.test-loc-btn').forEach(function(b) { b.classList.remove('active-loc'); });
+  if (event && event.target) event.target.classList.add('active-loc');
 
+  // Switch to explore view FIRST so the cards render visibly
+  showView('explorer');
+
+  // Then check nearby and render cards
   checkNearby();
   updateStats();
-
-  // Switch to explore view to see results
-  showView('explorer');
 }
 
 // ══════════════════════════════════════════════
