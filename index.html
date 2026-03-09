@@ -1334,8 +1334,17 @@ async function fetchWikiImage(poi) {
       // Re-render any visible card for this POI
       document.querySelectorAll(`[data-poi-id="${poi.id}"] .poi-card-img`).forEach(img => {
         img.src = src;
-        img.style.display = '';
+        img.style.display = 'block';
       });
+      // Also update detail sheet if open
+      const detailImg = document.querySelector(`#detailSheet .poi-card-img`);
+      if (detailImg && document.getElementById('detailSheet').style.display !== 'none') {
+        const detailId = document.getElementById('detailSheet').dataset.poiId;
+        if (detailId === poi.id) {
+          detailImg.src = src;
+          detailImg.style.display = 'block';
+        }
+      }
     }
   } catch(e) {}
 }
@@ -1534,10 +1543,10 @@ function poiImg(url, poi) {
   var icon = poi ? getIcon(poi.emoji, 40) : '';
   var placeholder = '<div class="poi-card-placeholder" style="background:linear-gradient(135deg,'
     + color + '22,' + color + '44);"><div style="opacity:0.6;">' + icon + '</div></div>';
-  if (!url) return placeholder;
+  var imgStyle = url ? '' : ' style="display:none"';
   return '<div class="poi-card-img-wrap">'
     + placeholder
-    + '<img class="poi-card-img" src="' + url + '" loading="lazy" onerror="this.style.display=\'none\'">'
+    + '<img class="poi-card-img" src="' + (url||'') + '" loading="lazy"' + imgStyle + ' onerror="this.style.display=\'none\'">'
     + '</div>';
 }
 
@@ -1735,6 +1744,9 @@ function openDetail(id) {
   document.getElementById('detailDesc').textContent = poi.description;
   document.getElementById('detailMapBtn').href = poi.mapUrl;
 
+  const detailSheet = document.getElementById('detailSheet');
+  detailSheet.dataset.poiId = id;
+
   const detailImg = document.getElementById('detailImg');
   if (poi.image) {
     detailImg.src = poi.image;
@@ -1742,6 +1754,8 @@ function openDetail(id) {
     detailImg.style.display = 'block';
   } else {
     detailImg.style.display = 'none';
+    // Fetch now and update when ready
+    fetchWikiImage(poi);
   }
 
   // Update visit button state
