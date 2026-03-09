@@ -1,38 +1,36 @@
-exports.handler = async function(event) {
-  const title = event.queryStringParameters && event.queryStringParameters.title;
+export default async function(req, context) {
+  const url = new URL(req.url);
+  const title = url.searchParams.get('title');
+
   if (!title) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing title' }) };
+    return new Response(JSON.stringify({ error: 'Missing title' }), { status: 400 });
   }
 
   try {
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-    const response = await fetch(url, {
+    const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+    const response = await fetch(wikiUrl, {
       headers: { 'User-Agent': 'BattutaHuna/1.0 (https://battutahuna.com)' }
     });
     const data = await response.json();
 
     if (data.thumbnail && data.thumbnail.source) {
-      // Upgrade to larger size
       const src = data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
-      return {
-        statusCode: 200,
+      return new Response(JSON.stringify({ url: src, title: data.title }), {
+        status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=86400', // cache 24h
+          'Cache-Control': 'public, max-age=86400',
           'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({ url: src, title: data.title })
-      };
+        }
+      });
     } else {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'No thumbnail found', title: data.title })
-      };
+      return new Response(JSON.stringify({ error: 'No thumbnail found' }), { status: 404 });
     }
   } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: e.message })
-    };
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
+}
+
+export const config = {
+  path: "/api/wiki-image"
 };
