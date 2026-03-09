@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Battuta Huna — Discover Rome</title>
+  <title>Battuta Huna — Cultural Discovery</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#3d2e26" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -800,7 +800,7 @@
   <header>
     <div class="logo">
       <span class="logo-name">Battuta Huna</span>
-      <span class="logo-sub">Cultural Discovery · Rome</span>
+      <span class="logo-sub" id="logoSubCity">Cultural Discovery · Rome</span>
     </div>
     <div class="status-pill" id="statusPill" onclick="toggleExploration()">
       <div class="status-dot"></div>
@@ -838,7 +838,7 @@
         <cite>— Ibn Battuta</cite>
       </blockquote>
       <button class="start-btn" onclick="startExploration()">BEGIN EXPLORING</button>
-      <p class="permission-note">Requires location & notification access.<br/>Best experienced while walking Rome's streets.</p>
+      <p class="permission-note">Requires location & notification access.<br/>Best experienced while walking <span id="splashCityName">Rome</span>'s streets.</p>
     </div>
 
     <!-- EXPLORER VIEW -->
@@ -1412,6 +1412,12 @@ function switchCity(city) {
   if (label) label.textContent = 'All Sites · ' + cityName;
   const statLabel = document.getElementById('statCityLabel');
   if (statLabel) statLabel.textContent = 'Sites in ' + cityName;
+  const logoSub = document.getElementById('logoSubCity');
+  if (logoSub) logoSub.textContent = 'Cultural Discovery · ' + cityName;
+  const splashCity = document.getElementById('splashCityName');
+  if (splashCity) splashCity.textContent = cityName;
+  const emptyText = document.getElementById('emptyNearbyText');
+  if (emptyText) emptyText.innerHTML = `No sites within ${settings.radius >= 1000 ? (settings.radius/1000)+'km' : settings.radius+'m'}.<br/>Keep walking — ${cityName} reveals itself slowly.`;
   // Reset exploration state for new city
   notifiedToday.clear();
   currentPos = null;
@@ -1672,7 +1678,7 @@ function renderNearby(nearby) {
               <circle cx="22" cy="22" r="18" stroke="#e3b96c" stroke-width="2.5" stroke-dasharray="28 85" stroke-linecap="round"/>
               <circle cx="22" cy="22" r="11" stroke="#c97b5c" stroke-width="2.5" stroke-dasharray="18 52" stroke-linecap="round"/>
             </svg></div>
-      <p class="empty-text">No sites within ${settings.radius >= 1000 ? (settings.radius/1000)+'km' : settings.radius+'m'}.<br/>Keep walking — Rome reveals itself slowly.</p>
+      <p class="empty-text" id="emptyNearbyText">No sites within ${settings.radius >= 1000 ? (settings.radius/1000)+'km' : settings.radius+'m'}.<br/>Keep walking — Rome reveals itself slowly.</p>
     </div>`;
     return;
   }
@@ -2042,6 +2048,10 @@ function init() {
   if (label) label.textContent = 'All Sites · ' + cityName;
   const statLabel = document.getElementById('statCityLabel');
   if (statLabel) statLabel.textContent = 'Sites in ' + cityName;
+  const logoSub = document.getElementById('logoSubCity');
+  if (logoSub) logoSub.textContent = 'Cultural Discovery · ' + cityName;
+  const splashCity = document.getElementById('splashCityName');
+  if (splashCity) splashCity.textContent = cityName;
   renderTestButtons();
   updateStats();
 
