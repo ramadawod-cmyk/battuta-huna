@@ -2,27 +2,38 @@ const https = require('https');
 
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'BattutaHuna/1.0 (https://battutahuna.com)' } }, (res) => {
+    const req = https.get(url, {
+      headers: { 'User-Agent': 'BattutaHuna/1.0 (https://battutahuna.com)' },
+      timeout: 8000
+    }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return httpsGet(res.headers.location).then(resolve).catch(reject);
       }
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
+        if (!data) return reject(new Error('Empty response'));
+        const first = data.trimStart()[0];
+        if (first !== '{' && first !== '[') {
+          return reject(new Error('Non-JSON response: ' + data.slice(0, 80)));
+        }
         try { resolve(JSON.parse(data)); }
-        catch (e) { reject(new Error('JSON parse error')); }
+        catch (e) { reject(new Error('JSON parse error: ' + data.slice(0, 80))); }
       });
-    }).on('error', reject);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
   });
 }
 
 function httpsGetBinary(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, {
+    const req = https.get(url, {
       headers: {
         'User-Agent': 'BattutaHuna/1.0 (https://battutahuna.com)',
         'Referer': 'https://en.wikipedia.org/'
-      }
+      },
+      timeout: 8000
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return httpsGetBinary(res.headers.location).then(resolve).catch(reject);
@@ -33,14 +44,16 @@ function httpsGetBinary(url) {
         buffer: Buffer.concat(chunks),
         contentType: res.headers['content-type'] || 'image/jpeg'
       }));
-    }).on('error', reject);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
   });
 }
 
 exports.handler = async function(event) {
   const params = event.queryStringParameters || {};
 
-  // Mode 2: proxy image bytes (bypasses Wikimedia hotlink protection)
+  // Mode 2: proxy image bytes
   if (params.img) {
     try {
       const decoded = decodeURIComponent(params.img);
@@ -56,21 +69,27 @@ exports.handler = async function(event) {
         isBase64Encoded: true
       };
     } catch (e) {
-      return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: e.message })
+      };
     }
   }
 
-  // Mode 1: get Wikipedia thumbnail URL for a page title
+  // Mode 1: resolve wiki title → thumbnail URL
   if (!params.title) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing title' }) };
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Missing title' })
+    };
   }
 
   try {
-    // Title arrives already URL-decoded by Netlify, or percent-encoded once
-    // Normalize: decode if encoded, then re-encode cleanly for Wikipedia API
-    let title = params.title;
-    try { title = decodeURIComponent(title); } catch(e) { /* use as-is */ }
-
+    // Netlify decodes query params once already, so title arrives decoded
+    // Just encode it cleanly for the Wikipedia API
+    const title = params.title;
     const wikiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' +
       encodeURIComponent(title);
 
@@ -88,10 +107,19 @@ exports.handler = async function(event) {
         },
         body: JSON.stringify({ url: proxied, title: data.title })
       };
-    } else {
-      return { statusCode: 404, body: JSON.stringify({ error: 'No thumbnail', page: data.title }) };
     }
+
+    return {
+      statusCode: 404,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'No thumbnail', page: data.title || title })
+    };
+
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: e.message })
+    };
   }
 };
