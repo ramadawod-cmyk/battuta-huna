@@ -444,6 +444,48 @@
     .search-bar input::placeholder { color: var(--stone); }
     .search-bar input:focus { border-color: var(--terracotta); }
 
+    .tag-filter-bar {
+      display: flex; gap: 8px;
+      padding: 0 16px 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tag-filter-bar::-webkit-scrollbar { display: none; }
+
+    .tag-filter-btn {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(201,123,92,0.3);
+      background: #ffffff;
+      color: var(--stone);
+      font-family: 'Raleway', sans-serif;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tag-filter-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+    .tag-filter-btn.active-tag {
+      background: var(--terracotta);
+      border-color: var(--terracotta);
+      color: #ffffff;
+    }
+
+    .poi-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(201,123,92,0.25);
+      background: var(--surface);
+      color: var(--stone);
+      font-family: 'Raleway', sans-serif;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.04em;
+      margin-right: 4px;
+    }
+
     .search-icon {
       position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
       color: var(--stone); font-size: 14px;
@@ -653,13 +695,13 @@
 
     /* ── CITY HERO ── */
     .city-hero {
-      width: 100%;
+      width: calc(100% - 32px);
+      margin: 0 16px 20px;
       height: 200px;
       position: relative;
       overflow: hidden;
-      margin-bottom: 20px;
       background: var(--surface-deep);
-      border-radius: 0 0 20px 20px;
+      border-radius: 20px;
     }
     .city-hero-img {
       width: 100%; height: 100%;
@@ -879,6 +921,17 @@
             <option value="20000">20 km</option>
           </select>
         </div>
+        <div class="tag-filter-bar" id="tagFilterBarExplore">
+          <button class="tag-filter-btn active-tag" onclick="toggleTagExplore(null, this)">All</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('Sightseeing', this)">Sightseeing</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('History', this)">History</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('Art & Culture', this)">Art & Culture</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('Spiritual', this)">Spiritual</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('Food & Market', this)">Food & Market</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('Nature', this)">Nature</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('Neighbourhood', this)">Neighbourhood</button>
+          <button class="tag-filter-btn" onclick="toggleTagExplore('Architecture', this)">Architecture</button>
+        </div>
         <div id="nearbyList">
           <div class="empty-state">
             <div class="empty-icon"><svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" class="battuta-spin">
@@ -905,6 +958,17 @@
       <div class="search-bar">
         <span class="search-icon"><svg width="14" height="14" fill="none" stroke="#6f7f96" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg></span>
         <input type="text" id="searchInput" placeholder="Search sites, categories…" oninput="filterSites()" />
+      </div>
+      <div class="tag-filter-bar" id="tagFilterBarSites">
+        <button class="tag-filter-btn active-tag" onclick="toggleTagSites(null, this)">All</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('Sightseeing', this)">Sightseeing</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('History', this)">History</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('Art & Culture', this)">Art & Culture</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('Spiritual', this)">Spiritual</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('Food & Market', this)">Food & Market</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('Nature', this)">Nature</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('Neighbourhood', this)">Neighbourhood</button>
+        <button class="tag-filter-btn" onclick="toggleTagSites('Architecture', this)">Architecture</button>
       </div>
       <div id="allSitesList"></div>
     </div>
@@ -1109,6 +1173,7 @@ function getIcon(key, size, overrideColor) {
 const ROME_POIS = [
   {
     id: "colosseum",
+    tags: ["Sightseeing", "History"],
     image: "",
     wiki: "Colosseum",
     name: "The Colosseum",
@@ -1121,6 +1186,7 @@ const ROME_POIS = [
   },
   {
     id: "pantheon",
+    tags: ["Sightseeing", "Architecture"],
     image: "",
     wiki: "Pantheon,_Rome",
     name: "The Pantheon",
@@ -1133,6 +1199,7 @@ const ROME_POIS = [
   },
   {
     id: "trevi",
+    tags: ["Sightseeing"],
     image: "",
     wiki: "Trevi_Fountain",
     name: "Trevi Fountain",
@@ -1145,6 +1212,7 @@ const ROME_POIS = [
   },
   {
     id: "spanish-steps",
+    tags: ["Sightseeing", "Neighbourhood"],
     image: "",
     wiki: "Spanish_Steps",
     name: "Spanish Steps",
@@ -1157,6 +1225,7 @@ const ROME_POIS = [
   },
   {
     id: "vatican",
+    tags: ["Sightseeing", "Spiritual"],
     image: "",
     wiki: "St._Peter%27s_Basilica",
     name: "St. Peter's Basilica",
@@ -1169,6 +1238,7 @@ const ROME_POIS = [
   },
   {
     id: "forum",
+    tags: ["History", "Sightseeing"],
     image: "",
     wiki: "Roman_Forum",
     name: "Roman Forum",
@@ -1181,6 +1251,7 @@ const ROME_POIS = [
   },
   {
     id: "castel-angelo",
+    tags: ["Sightseeing", "History"],
     image: "",
     wiki: "Castel_Sant%27Angelo",
     name: "Castel Sant'Angelo",
@@ -1193,6 +1264,7 @@ const ROME_POIS = [
   },
   {
     id: "piazza-navona",
+    tags: ["Sightseeing", "Neighbourhood"],
     image: "",
     wiki: "Piazza_Navona",
     name: "Piazza Navona",
@@ -1205,6 +1277,7 @@ const ROME_POIS = [
   },
   {
     id: "borghese",
+    tags: ["Nature", "Art & Culture"],
     image: "",
     wiki: "Villa_Borghese_gardens",
     name: "Villa Borghese Gardens",
@@ -1217,6 +1290,7 @@ const ROME_POIS = [
   },
   {
     id: "campo-fiori",
+    tags: ["Food & Market", "Neighbourhood"],
     image: "",
     wiki: "Campo_de%27_Fiori",
     name: "Campo de' Fiori",
@@ -1229,6 +1303,7 @@ const ROME_POIS = [
   },
   {
     id: "trastevere",
+    tags: ["Spiritual", "Neighbourhood"],
     image: "",
     wiki: "Santa_Maria_in_Trastevere",
     name: "Santa Maria in Trastevere",
@@ -1241,6 +1316,7 @@ const ROME_POIS = [
   },
   {
     id: "palatine-hill",
+    tags: ["History", "Sightseeing"],
     image: "",
     wiki: "Palatine_Hill",
     name: "Palatine Hill",
@@ -1253,6 +1329,7 @@ const ROME_POIS = [
   },
   {
     id: "maxxi",
+    tags: ["Art & Culture", "Architecture"],
     image: "",
     wiki: "MAXXI",
     name: "MAXXI — Museum of 21st Century Arts",
@@ -1265,6 +1342,7 @@ const ROME_POIS = [
   },
   {
     id: "ara-pacis",
+    tags: ["History", "Sightseeing"],
     image: "",
     wiki: "Ara_Pacis",
     name: "Ara Pacis Augustae",
@@ -1277,6 +1355,7 @@ const ROME_POIS = [
   },
   {
     id: "bioparco",
+    tags: ["Nature"],
     image: "",
     wiki: "Explora_Museum,_Rome",
     name: "Explora — Children's Museum",
@@ -1289,6 +1368,7 @@ const ROME_POIS = [
   },
   {
     id: "janiculum",
+    tags: ["Sightseeing", "Nature"],
     image: "",
     wiki: "Janiculum",
     name: "Gianicolo Terrace",
@@ -1301,6 +1381,7 @@ const ROME_POIS = [
   },
   {
     id: "appian-way",
+    tags: ["History", "Nature"],
     image: "",
     wiki: "Appian_Way",
     name: "Via Appia Antica",
@@ -1313,6 +1394,7 @@ const ROME_POIS = [
   },
   {
     id: "aventine-keyhole",
+    tags: ["Sightseeing"],
     image: "",
     wiki: "Aventine_Hill",
     name: "Knights of Malta Keyhole",
@@ -1325,6 +1407,7 @@ const ROME_POIS = [
   },
   {
     id: "mouth-of-truth",
+    tags: ["Sightseeing", "History"],
     image: "",
     wiki: "Mouth_of_Truth",
     name: "Bocca della Verità",
@@ -1337,6 +1420,7 @@ const ROME_POIS = [
   },
   {
     id: "piazza-venezia",
+    tags: ["Sightseeing", "Architecture"],
     image: "",
     wiki: "Altare_della_Patria",
     name: "Vittoriano Monument",
@@ -1353,130 +1437,130 @@ const ROME_POIS = [
 //  AMMAN POI DATABASE
 // ══════════════════════════════════════════════
 const AMMAN_POIS = [
-  { id: "citadel", image: "", wiki: "Amman_Citadel", name: "Amman Citadel", category: "Ancient Ruins", emoji: "castle", lat: 31.9552, lng: 35.9337, description: "Jabal al-Qala'a has been inhabited for nearly 7,000 years. Greeks, Romans, Byzantines and Umayyads all left their mark here. The Temple of Hercules, the Umayyad Palace and a Byzantine church coexist on this single hilltop.", mapUrl: "https://maps.google.com/?q=Amman+Citadel" },
-  { id: "roman-theatre", image: "", wiki: "Roman_Theatre_(Amman)", name: "Roman Theatre", category: "Ancient Monument", emoji: "amphitheatre", lat: 31.9520, lng: 35.9366, description: "Carved into the hillside in the 2nd century AD under Emperor Marcus Aurelius, this 6,000-seat theatre still hosts performances. Its south-facing stage catches full sunlight while the audience seating remains in merciful shade.", mapUrl: "https://maps.google.com/?q=Roman+Theatre+Amman" },
-  { id: "jordan-museum", image: "", wiki: "Jordan_Museum", name: "The Jordan Museum", category: "Museum", emoji: "tablet", lat: 31.9497, lng: 35.9305, description: "Jordan's flagship national museum holds the Ain Ghazal statues, among the oldest human figures ever found, dating to 7250 BC, alongside the Copper Scroll, one of the Dead Sea Scrolls discovered at Qumran.", mapUrl: "https://maps.google.com/?q=Jordan+Museum+Amman" },
-  { id: "king-abdullah-mosque", image: "", wiki: "King_Abdullah_I_Mosque", name: "King Abdullah I Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9637, lng: 35.9196, description: "The blue-domed landmark built in the 1980s as a tribute to Jordan's founder can hold 7,000 worshippers. Unusually for the region, it welcomes non-Muslim visitors during set hours. Robes are provided at the entrance.", mapUrl: "https://maps.google.com/?q=King+Abdullah+Mosque+Amman" },
-  { id: "rainbow-street", image: "", wiki: "Jabal_Amman", name: "Rainbow Street", category: "Cultural District", emoji: "road", lat: 31.9545, lng: 35.9178, description: "The beating heart of West Amman's café culture, strung with rainbow lights and lined with bookshops, galleries and rooftop bars. On Friday mornings, Souk Jara transforms it into an open-air market of crafts and antiques.", mapUrl: "https://maps.google.com/?q=Rainbow+Street+Amman" },
-  { id: "downtown-amman", image: "", wiki: "Downtown_Amman", name: "Downtown Amman (Al-Balad)", category: "Historic District", emoji: "map", lat: 31.9522, lng: 35.9350, description: "The chaotic, fragrant soul of the city: a warren of spice souks, falafel counters, old coffee houses and call-to-prayer echoes. The Nymphaeum ruins and the Odeon theatre are hidden among the market stalls.", mapUrl: "https://maps.google.com/?q=Downtown+Amman" },
-  { id: "dukes-diwan", image: "", wiki: "Culture_of_Jordan", name: "Duke's Diwan", category: "Heritage Museum", emoji: "tablet", lat: 31.9524, lng: 35.9353, description: "One of Amman's oldest surviving buildings, this Ottoman-era structure has served as a hotel, post office, and now a cultural museum. Its walls are hung with old portraits and photographs; the flaking ceiling is part of the charm.", mapUrl: "https://maps.google.com/?q=Dukes+Diwan+Amman" },
-  { id: "odeon-amman", image: "", wiki: "Philadelphia_(Roman_city)", name: "The Odeon", category: "Ancient Theatre", emoji: "amphitheatre", lat: 31.9519, lng: 35.9358, description: "A small 500-seat Roman theatre tucked beside the main Roman Theatre. More intimate than its larger neighbour, it was used for musical performances and poetry recitals in the 2nd century AD.", mapUrl: "https://maps.google.com/?q=Odeon+Amman" },
-  { id: "nymphaeum", image: "", wiki: "Umayyad_Palace,_Amman", name: "Nymphaeum of Amman", category: "Ancient Ruins", emoji: "fountain", lat: 31.9521, lng: 35.9344, description: "A grand Roman fountain complex dedicated to the water nymphs, built in 191 AD. Once fed by an aqueduct, its marble-clad pools and columned façade stood at the heart of ancient Philadelphia.", mapUrl: "https://maps.google.com/?q=Nymphaeum+Amman" },
-  { id: "jordan-archaeological-museum", image: "", wiki: "Jordan_Archaeological_Museum", name: "Archaeological Museum", category: "Museum", emoji: "search", lat: 31.9553, lng: 35.9335, description: "Sitting at the heart of the Citadel since 1951, this compact museum displays artefacts arranged chronologically from the Neolithic through to the Islamic period, including some of the Ain Ghazal figurines and Dead Sea Scroll fragments.", mapUrl: "https://maps.google.com/?q=Jordan+Archaeological+Museum+Amman" },
-  { id: "abu-darwish-mosque", image: "", wiki: "Abu_Darwish_Mosque", name: "Abu Darwish Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9434, lng: 35.9380, description: "Amman's most visually striking mosque, built in 1961 with alternating layers of black and white stone. Perched on the summit of Jabal al-Ashrafiyeh, it commands panoramic views over the whole city.", mapUrl: "https://maps.google.com/?q=Abu+Darwish+Mosque+Amman" },
-  { id: "darat-al-funun", image: "", wiki: "Darat_al_Funun", name: "Darat al Funun", category: "Arts Centre", emoji: "palette", lat: 31.9586, lng: 35.9202, description: "A rare haven in a city short on contemporary art spaces. Three Ottoman-era stone villas set in terraced gardens house rotating exhibitions of Arab artists, a Byzantine church ruin, and a research library.", mapUrl: "https://maps.google.com/?q=Darat+al+Funun+Amman" },
-  { id: "fuheis", image: "", wiki: "Christianity_in_Jordan", name: "Fuheis Village", category: "Heritage Village", emoji: "sunrise", lat: 31.9730, lng: 35.8320, description: "A hilltop Christian village west of Amman, its stone lanes lined with Ottoman and early Mandate-era houses. The weekly Friday market, village squares and absence of traffic make it feel like another century entirely.", mapUrl: "https://maps.google.com/?q=Fuheis+Jordan" },
-  { id: "wadi-seer", image: "", wiki: "Iraq_al-Amir", name: "Wadi al-Seer", category: "Natural Valley", emoji: "mountain", lat: 31.9467, lng: 35.8447, description: "A green valley cutting through western Amman, dotted with ancient cave dwellings and olive terraces. At its heart lies Iraq al-Amir, a Tobiad palace from the 2nd century BC, one of the oldest monuments in Jordan.", mapUrl: "https://maps.google.com/?q=Wadi+al-Seer+Amman" },
-  { id: "hussein-mosque", image: "", wiki: "Al-Husseini_Mosque", name: "Al-Husseini Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9527, lng: 35.9348, description: "Built in 1924 by King Abdullah I on the site of a much older mosque, this red-and-white striped building anchors the old city. It remains a working mosque in the middle of the busy downtown souk.", mapUrl: "https://maps.google.com/?q=Al-Husseini+Mosque+Amman" },
-  { id: "royal-automobile-museum", image: "", wiki: "Royal_Automobile_Museum", name: "Royal Automobile Museum", category: "Museum", emoji: "road", lat: 31.9797, lng: 35.9012, description: "King Hussein's personal collection of 70 vehicles, from a 1916 Cadillac to the royal family's everyday cars, displayed in a dramatic hilltop building in King Hussein Park. Each car tells a chapter of Jordan's modern history.", mapUrl: "https://maps.google.com/?q=Royal+Automobile+Museum+Amman" },
-  { id: "children-museum", image: "", wiki: "King_Hussein_Park", name: "Children's Museum Jordan", category: "Museum", emoji: "star", lat: 31.9793, lng: 35.9018, description: "An interactive science and culture museum in King Hussein Park, designed to make learning tangible for young visitors. Its outdoor exhibits and hands-on galleries make it one of Amman's most visited family destinations.", mapUrl: "https://maps.google.com/?q=Children+Museum+Jordan+Amman" },
-  { id: "photo-museum", image: "", wiki: "Jordan", name: "Arab Photography Archive", category: "Cultural Archive", emoji: "palette", lat: 31.9555, lng: 35.9190, description: "A small but significant institution preserving photographic records of everyday Arab life from the 19th century onwards. The rotating exhibitions draw from a vast archive of images rarely seen outside the region.", mapUrl: "https://maps.google.com/?q=Amman+photography+museum" },
-  { id: "jabal-lweibdeh", image: "", wiki: "Amman", name: "Jabal Luweibdeh", category: "Cultural Neighbourhood", emoji: "palette", lat: 31.9590, lng: 35.9170, description: "Amman's bohemian hilltop neighbourhood and the city's arts and café quarter. Its stone streets hold independent galleries, the French Cultural Centre, vintage shops and the kind of unhurried rooftop conversations the city does best.", mapUrl: "https://maps.google.com/?q=Jabal+Luweibdeh+Amman" },
-  { id: "iraq-al-amir", image: "", wiki: "Iraq_al-Amir", name: "Iraq al-Amir Palace", category: "Ancient Palace", emoji: "castle", lat: 31.9008, lng: 35.7733, description: "A Tobiad palace 30km west of Amman, built in the 2nd century BC and carved with enormous eagles and lions. One of the oldest and most complete ancient buildings in Jordan, set in a quiet agricultural valley.", mapUrl: "https://maps.google.com/?q=Iraq+al+Amir" }
+  { id: "citadel", image: "", tags: ["History", "Sightseeing"], wiki: "Amman_Citadel", name: "Amman Citadel", category: "Ancient Ruins", emoji: "castle", lat: 31.9552, lng: 35.9337, description: "Jabal al-Qala'a has been inhabited for nearly 7,000 years. Greeks, Romans, Byzantines and Umayyads all left their mark here. The Temple of Hercules, the Umayyad Palace and a Byzantine church coexist on this single hilltop.", mapUrl: "https://maps.google.com/?q=Amman+Citadel" },
+  { id: "roman-theatre", image: "", tags: ["History", "Sightseeing"], wiki: "Roman_Theatre_(Amman)", name: "Roman Theatre", category: "Ancient Monument", emoji: "amphitheatre", lat: 31.9520, lng: 35.9366, description: "Carved into the hillside in the 2nd century AD under Emperor Marcus Aurelius, this 6,000-seat theatre still hosts performances. Its south-facing stage catches full sunlight while the audience seating remains in merciful shade.", mapUrl: "https://maps.google.com/?q=Roman+Theatre+Amman" },
+  { id: "jordan-museum", image: "", tags: ["History", "Art & Culture"], wiki: "Jordan_Museum", name: "The Jordan Museum", category: "Museum", emoji: "tablet", lat: 31.9497, lng: 35.9305, description: "Jordan's flagship national museum holds the Ain Ghazal statues, among the oldest human figures ever found, dating to 7250 BC, alongside the Copper Scroll, one of the Dead Sea Scrolls discovered at Qumran.", mapUrl: "https://maps.google.com/?q=Jordan+Museum+Amman" },
+  { id: "king-abdullah-mosque", image: "", tags: ["Spiritual", "Architecture"], wiki: "King_Abdullah_I_Mosque", name: "King Abdullah I Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9637, lng: 35.9196, description: "The blue-domed landmark built in the 1980s as a tribute to Jordan's founder can hold 7,000 worshippers. Unusually for the region, it welcomes non-Muslim visitors during set hours. Robes are provided at the entrance.", mapUrl: "https://maps.google.com/?q=King+Abdullah+Mosque+Amman" },
+  { id: "rainbow-street", image: "", tags: ["Neighbourhood", "Food & Market"], wiki: "Jabal_Amman", name: "Rainbow Street", category: "Cultural District", emoji: "road", lat: 31.9545, lng: 35.9178, description: "The beating heart of West Amman's café culture, strung with rainbow lights and lined with bookshops, galleries and rooftop bars. On Friday mornings, Souk Jara transforms it into an open-air market of crafts and antiques.", mapUrl: "https://maps.google.com/?q=Rainbow+Street+Amman" },
+  { id: "downtown-amman", image: "", tags: ["Neighbourhood", "Food & Market"], wiki: "Downtown_Amman", name: "Downtown Amman (Al-Balad)", category: "Historic District", emoji: "map", lat: 31.9522, lng: 35.9350, description: "The chaotic, fragrant soul of the city: a warren of spice souks, falafel counters, old coffee houses and call-to-prayer echoes. The Nymphaeum ruins and the Odeon theatre are hidden among the market stalls.", mapUrl: "https://maps.google.com/?q=Downtown+Amman" },
+  { id: "dukes-diwan", image: "", tags: ["History", "Art & Culture"], wiki: "Culture_of_Jordan", name: "Duke's Diwan", category: "Heritage Museum", emoji: "tablet", lat: 31.9524, lng: 35.9353, description: "One of Amman's oldest surviving buildings, this Ottoman-era structure has served as a hotel, post office, and now a cultural museum. Its walls are hung with old portraits and photographs; the flaking ceiling is part of the charm.", mapUrl: "https://maps.google.com/?q=Dukes+Diwan+Amman" },
+  { id: "odeon-amman", image: "", tags: ["History", "Sightseeing"], wiki: "Philadelphia_(Roman_city)", name: "The Odeon", category: "Ancient Theatre", emoji: "amphitheatre", lat: 31.9519, lng: 35.9358, description: "A small 500-seat Roman theatre tucked beside the main Roman Theatre. More intimate than its larger neighbour, it was used for musical performances and poetry recitals in the 2nd century AD.", mapUrl: "https://maps.google.com/?q=Odeon+Amman" },
+  { id: "nymphaeum", image: "", tags: ["History", "Sightseeing"], wiki: "Umayyad_Palace,_Amman", name: "Nymphaeum of Amman", category: "Ancient Ruins", emoji: "fountain", lat: 31.9521, lng: 35.9344, description: "A grand Roman fountain complex dedicated to the water nymphs, built in 191 AD. Once fed by an aqueduct, its marble-clad pools and columned façade stood at the heart of ancient Philadelphia.", mapUrl: "https://maps.google.com/?q=Nymphaeum+Amman" },
+  { id: "jordan-archaeological-museum", image: "", tags: ["History", "Art & Culture"], wiki: "Jordan_Archaeological_Museum", name: "Archaeological Museum", category: "Museum", emoji: "search", lat: 31.9553, lng: 35.9335, description: "Sitting at the heart of the Citadel since 1951, this compact museum displays artefacts arranged chronologically from the Neolithic through to the Islamic period, including some of the Ain Ghazal figurines and Dead Sea Scroll fragments.", mapUrl: "https://maps.google.com/?q=Jordan+Archaeological+Museum+Amman" },
+  { id: "abu-darwish-mosque", image: "", tags: ["Spiritual", "Sightseeing"], wiki: "Abu_Darwish_Mosque", name: "Abu Darwish Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9434, lng: 35.9380, description: "Amman's most visually striking mosque, built in 1961 with alternating layers of black and white stone. Perched on the summit of Jabal al-Ashrafiyeh, it commands panoramic views over the whole city.", mapUrl: "https://maps.google.com/?q=Abu+Darwish+Mosque+Amman" },
+  { id: "darat-al-funun", image: "", tags: ["Art & Culture"], wiki: "Darat_al_Funun", name: "Darat al Funun", category: "Arts Centre", emoji: "palette", lat: 31.9586, lng: 35.9202, description: "A rare haven in a city short on contemporary art spaces. Three Ottoman-era stone villas set in terraced gardens house rotating exhibitions of Arab artists, a Byzantine church ruin, and a research library.", mapUrl: "https://maps.google.com/?q=Darat+al+Funun+Amman" },
+  { id: "fuheis", image: "", tags: ["Neighbourhood", "History"], wiki: "Christianity_in_Jordan", name: "Fuheis Village", category: "Heritage Village", emoji: "sunrise", lat: 31.9730, lng: 35.8320, description: "A hilltop Christian village west of Amman, its stone lanes lined with Ottoman and early Mandate-era houses. The weekly Friday market, village squares and absence of traffic make it feel like another century entirely.", mapUrl: "https://maps.google.com/?q=Fuheis+Jordan" },
+  { id: "wadi-seer", image: "", tags: ["Nature", "History"], wiki: "Iraq_al-Amir", name: "Wadi al-Seer", category: "Natural Valley", emoji: "mountain", lat: 31.9467, lng: 35.8447, description: "A green valley cutting through western Amman, dotted with ancient cave dwellings and olive terraces. At its heart lies Iraq al-Amir, a Tobiad palace from the 2nd century BC, one of the oldest monuments in Jordan.", mapUrl: "https://maps.google.com/?q=Wadi+al-Seer+Amman" },
+  { id: "hussein-mosque", image: "", tags: ["Spiritual", "History"], wiki: "Al-Husseini_Mosque", name: "Al-Husseini Mosque", category: "Sacred Architecture", emoji: "star", lat: 31.9527, lng: 35.9348, description: "Built in 1924 by King Abdullah I on the site of a much older mosque, this red-and-white striped building anchors the old city. It remains a working mosque in the middle of the busy downtown souk.", mapUrl: "https://maps.google.com/?q=Al-Husseini+Mosque+Amman" },
+  { id: "royal-automobile-museum", image: "", tags: ["History", "Art & Culture"], wiki: "Royal_Automobile_Museum", name: "Royal Automobile Museum", category: "Museum", emoji: "road", lat: 31.9797, lng: 35.9012, description: "King Hussein's personal collection of 70 vehicles, from a 1916 Cadillac to the royal family's everyday cars, displayed in a dramatic hilltop building in King Hussein Park. Each car tells a chapter of Jordan's modern history.", mapUrl: "https://maps.google.com/?q=Royal+Automobile+Museum+Amman" },
+  { id: "children-museum", image: "", tags: ["Art & Culture"], wiki: "King_Hussein_Park", name: "Children's Museum Jordan", category: "Museum", emoji: "star", lat: 31.9793, lng: 35.9018, description: "An interactive science and culture museum in King Hussein Park, designed to make learning tangible for young visitors. Its outdoor exhibits and hands-on galleries make it one of Amman's most visited family destinations.", mapUrl: "https://maps.google.com/?q=Children+Museum+Jordan+Amman" },
+  { id: "photo-museum", image: "", tags: ["Art & Culture"], wiki: "Jordan", name: "Arab Photography Archive", category: "Cultural Archive", emoji: "palette", lat: 31.9555, lng: 35.9190, description: "A small but significant institution preserving photographic records of everyday Arab life from the 19th century onwards. The rotating exhibitions draw from a vast archive of images rarely seen outside the region.", mapUrl: "https://maps.google.com/?q=Amman+photography+museum" },
+  { id: "jabal-lweibdeh", image: "", tags: ["Neighbourhood", "Art & Culture"], wiki: "Amman", name: "Jabal Luweibdeh", category: "Cultural Neighbourhood", emoji: "palette", lat: 31.9590, lng: 35.9170, description: "Amman's bohemian hilltop neighbourhood and the city's arts and café quarter. Its stone streets hold independent galleries, the French Cultural Centre, vintage shops and the kind of unhurried rooftop conversations the city does best.", mapUrl: "https://maps.google.com/?q=Jabal+Luweibdeh+Amman" },
+  { id: "iraq-al-amir", image: "", tags: ["History", "Sightseeing"], wiki: "Iraq_al-Amir", name: "Iraq al-Amir Palace", category: "Ancient Palace", emoji: "castle", lat: 31.9008, lng: 35.7733, description: "A Tobiad palace 30km west of Amman, built in the 2nd century BC and carved with enormous eagles and lions. One of the oldest and most complete ancient buildings in Jordan, set in a quiet agricultural valley.", mapUrl: "https://maps.google.com/?q=Iraq+al+Amir" }
 ];
 
 // ══════════════════════════════════════════════
 //  MÁLAGA POI DATABASE
 // ══════════════════════════════════════════════
 const MALAGA_POIS = [
-  { id: "alcazaba", image: "", wiki: "Alcazaba_of_Málaga", name: "Alcazaba of Málaga", category: "Moorish Fortress", emoji: "castle", lat: 36.7211, lng: -4.4178, description: "An 11th-century Hammudid palace-fortress built over Roman foundations. Over 100 towers, three concentric defence walls, and gardens fragrant with jasmine make this one of the best-preserved Alcazabas in Andalusia.", mapUrl: "https://maps.google.com/?q=Alcazaba+Malaga" },
-  { id: "gibralfaro", image: "", wiki: "Gibralfaro", name: "Castillo de Gibralfaro", category: "Medieval Castle", emoji: "castle", lat: 36.7228, lng: -4.4118, description: "The Phoenicians built a lighthouse here; the Moors built this castle in the 10th century to protect the Alcazaba below. Its ramparts offer the most commanding view in Málaga: city, port, bullring and Mediterranean in one sweep.", mapUrl: "https://maps.google.com/?q=Castillo+de+Gibralfaro+Malaga" },
-  { id: "malaga-cathedral", image: "", wiki: "Málaga_Cathedral", name: "Málaga Cathedral", category: "Renaissance Cathedral", emoji: "church", lat: 36.7200, lng: -4.4196, description: "Known as La Manquita, the one-armed lady, because its south tower was never finished, its funds diverted to American independence. Built over two centuries from 1528, its interior holds an extraordinary carved wooden choir.", mapUrl: "https://maps.google.com/?q=Malaga+Cathedral" },
-  { id: "roman-theatre-malaga", image: "", wiki: "Roman_theatre_of_Málaga", name: "Roman Theatre of Málaga", category: "Ancient Monument", emoji: "amphitheatre", lat: 36.7209, lng: -4.4172, description: "Built in the 1st century BC during Augustus's reign, this theatre lay buried and forgotten for centuries until 1951, when workers discovered it while demolishing a cultural centre. Now fully excavated and open to visitors.", mapUrl: "https://maps.google.com/?q=Roman+Theatre+Malaga" },
-  { id: "picasso-museum", image: "", wiki: "Picasso_Museum_Málaga", name: "Museo Picasso Málaga", category: "Art Museum", emoji: "palette", lat: 36.7219, lng: -4.4172, description: "Housed in the 16th-century Buenavista Palace, this museum holds over 200 works by Málaga's most famous son. Christine Ruiz-Picasso donated the collection to the city where Pablo spent his early childhood.", mapUrl: "https://maps.google.com/?q=Museo+Picasso+Malaga" },
-  { id: "casa-natal-picasso", image: "", wiki: "Musée_national_Picasso-Paris", name: "Picasso Birthplace", category: "Historic House", emoji: "palette", lat: 36.7232, lng: -4.4199, description: "The apartment at Plaza de la Merced 15 where Pablo Ruiz Picasso was born on 25 October 1881. Now a museum with rotating exhibitions, period furniture and Picasso family memorabilia.", mapUrl: "https://maps.google.com/?q=Casa+Natal+Picasso+Malaga" },
-  { id: "plaza-merced", image: "", wiki: "Pablo_Picasso", name: "Plaza de la Merced", category: "Historic Square", emoji: "map", lat: 36.7232, lng: -4.4200, description: "A wide 19th-century square at the heart of the old city, centred on an obelisk to the liberal hero General Torrijos. A bronze Picasso sits on a bench here, gazing at his birthplace across the square.", mapUrl: "https://maps.google.com/?q=Plaza+de+la+Merced+Malaga" },
-  { id: "centre-pompidou", image: "", wiki: "Centre_Pompidou", name: "Centre Pompidou Málaga", category: "Contemporary Art", emoji: "palette", lat: 36.7162, lng: -4.4236, description: "The only Centre Pompidou outside France, housed in a glass cube of coloured panels at the port. Its permanent collection spans Frida Kahlo, Francis Bacon and Miró, with blockbuster temporary exhibitions.", mapUrl: "https://maps.google.com/?q=Centre+Pompidou+Malaga" },
-  { id: "carmen-thyssen", image: "", wiki: "Carmen_Thyssen-Bornemisza", name: "Carmen Thyssen Museum", category: "Art Museum", emoji: "palette", lat: 36.7205, lng: -4.4215, description: "A jewel of 19th-century Spanish painting. Murillo, Zurbarán and a peerless collection of Andalusian scenes are displayed in a beautifully restored 16th-century palace. Carmen Thyssen-Bornemisza personally curated the collection.", mapUrl: "https://maps.google.com/?q=Carmen+Thyssen+Museum+Malaga" },
-  { id: "atarazanas-market", image: "", wiki: "Mercado_de_Atarazanas_(Málaga)", name: "Mercado de Atarazanas", category: "Historic Market", emoji: "map", lat: 36.7195, lng: -4.4245, description: "A 14th-century Nasrid shipyard converted into Málaga's main food market. Its original Moorish horseshoe arch remains intact at the entrance. Inside, under a spectacular stained-glass window, stalls overflow with local produce.", mapUrl: "https://maps.google.com/?q=Mercado+Atarazanas+Malaga" },
-  { id: "malagueta-beach", image: "", wiki: "La_Malagueta", name: "La Malagueta Beach", category: "Urban Beach", emoji: "sunrise", lat: 36.7170, lng: -4.4050, description: "The city's iconic urban beach, a ten-minute walk from the cathedral. The espigón breakwater gives it calm waters; the chiringuitos along the sand serve espetos, sardines grilled on cane skewers over driftwood fires.", mapUrl: "https://maps.google.com/?q=La+Malagueta+Beach+Malaga" },
-  { id: "muelle-uno", image: "", wiki: "Port_of_Málaga", name: "Muelle Uno", category: "Port Promenade", emoji: "sunrise", lat: 36.7165, lng: -4.4193, description: "The regenerated port promenade, lined with restaurants, boutiques and the glass cube of the Pompidou. On evenings the whole city seems to stroll here, with the floodlit Alcazaba framing the scene from above.", mapUrl: "https://maps.google.com/?q=Muelle+Uno+Malaga" },
-  { id: "soho-malaga", image: "", wiki: "Street_art_in_Málaga", name: "Soho Arts District", category: "Arts District", emoji: "palette", lat: 36.7180, lng: -4.4280, description: "Málaga's street-art neighbourhood, where entire building façades have been transformed by international muralists. The Centre for Contemporary Art anchors this post-industrial district that has become Spain's most talked-about arts quarter.", mapUrl: "https://maps.google.com/?q=Soho+Malaga" },
-  { id: "malaga-museum", image: "", wiki: "Palacio_de_la_Aduana,_Málaga", name: "Málaga Museum", category: "Museum", emoji: "tablet", lat: 36.7215, lng: -4.4155, description: "Housed in the elegant 18th-century Palacio de la Aduana, this double museum covers both archaeology (Roman mosaics, Moorish treasures, Paleolithic finds) and fine arts, including a gallery of Málaga-born painters.", mapUrl: "https://maps.google.com/?q=Malaga+Museum" },
-  { id: "constitution-square", image: "", wiki: "Málaga", name: "Plaza de la Constitución", category: "Historic Square", emoji: "map", lat: 36.7209, lng: -4.4218, description: "The historic heart of the city, where merchants once traded under the arcades. Today it opens into Calle Larios, Spain's fifth most expensive shopping street, and fills nightly with people watching, café culture and Christmas lights.", mapUrl: "https://maps.google.com/?q=Plaza+de+la+Constitucion+Malaga" },
-  { id: "hammam-al-andalus", image: "", wiki: "Hammam", name: "Hammam Al Ándalus", category: "Historic Bathhouse", emoji: "fountain", lat: 36.7225, lng: -4.4198, description: "A working Arab bathhouse in a restored 12th-century building with horseshoe arches, star-shaped skylights and warm marble pools. One of the few places in Spain where the ancient Moorish bathing ritual still lives on.", mapUrl: "https://maps.google.com/?q=Hammam+Al+Andalus+Malaga" },
-  { id: "concepcion-garden", image: "", wiki: "Jardín_Botánico-Histórico_La_Concepción", name: "La Concepción Gardens", category: "Historic Garden", emoji: "tree", lat: 36.7423, lng: -4.4241, description: "A 19th-century English landscape garden with over 150 years of history, filled with tropical and subtropical species from around the world. Its waterfalls, Roman ruins and labyrinthine paths feel like a secret world.", mapUrl: "https://maps.google.com/?q=La+Concepcion+Garden+Malaga" },
-  { id: "larios-street", image: "", wiki: "Calle_Marqués_de_Larios", name: "Calle Marqués de Larios", category: "Historic Street", emoji: "road", lat: 36.7208, lng: -4.4228, description: "A grand 19th-century pedestrian boulevard and Málaga's answer to Barcelona's Las Ramblas. Lined with orange trees and marble paving, it becomes the most spectacular street in Spain each Christmas, draped in lights.", mapUrl: "https://maps.google.com/?q=Calle+Larios+Malaga" },
-  { id: "english-cemetery", image: "", wiki: "British_Cemetery,_Málaga", name: "English Cemetery", category: "Historic Cemetery", emoji: "tree", lat: 36.7154, lng: -4.4072, description: "The first Protestant cemetery in Spain, opened in 1831 by the British consul. Conceived as a botanical garden on terraces overlooking the sea, its exotic plantings and 19th-century tombs make it one of Europe's most atmospheric burial grounds.", mapUrl: "https://maps.google.com/?q=English+Cemetery+Malaga" },
-  { id: "malagueta-bullring", image: "", wiki: "Plaza_de_Toros_de_La_Malagueta", name: "La Malagueta Bullring", category: "Historic Arena", emoji: "amphitheatre", lat: 36.7182, lng: -4.4057, description: "A neo-Mudéjar bullring from 1876, its distinctive red-brick towers a Málaga landmark. Whether or not bullfighting is your interest, the architecture and the museum inside tell the story of Andalusian popular culture.", mapUrl: "https://maps.google.com/?q=Plaza+de+Toros+La+Malagueta" }
+  { id: "alcazaba", image: "", tags: ["Sightseeing", "History"], wiki: "Alcazaba_of_Málaga", name: "Alcazaba of Málaga", category: "Moorish Fortress", emoji: "castle", lat: 36.7211, lng: -4.4178, description: "An 11th-century Hammudid palace-fortress built over Roman foundations. Over 100 towers, three concentric defence walls, and gardens fragrant with jasmine make this one of the best-preserved Alcazabas in Andalusia.", mapUrl: "https://maps.google.com/?q=Alcazaba+Malaga" },
+  { id: "gibralfaro", image: "", tags: ["Sightseeing", "History"], wiki: "Gibralfaro", name: "Castillo de Gibralfaro", category: "Medieval Castle", emoji: "castle", lat: 36.7228, lng: -4.4118, description: "The Phoenicians built a lighthouse here; the Moors built this castle in the 10th century to protect the Alcazaba below. Its ramparts offer the most commanding view in Málaga: city, port, bullring and Mediterranean in one sweep.", mapUrl: "https://maps.google.com/?q=Castillo+de+Gibralfaro+Malaga" },
+  { id: "malaga-cathedral", image: "", tags: ["Spiritual", "Architecture"], wiki: "Málaga_Cathedral", name: "Málaga Cathedral", category: "Renaissance Cathedral", emoji: "church", lat: 36.7200, lng: -4.4196, description: "Known as La Manquita, the one-armed lady, because its south tower was never finished, its funds diverted to American independence. Built over two centuries from 1528, its interior holds an extraordinary carved wooden choir.", mapUrl: "https://maps.google.com/?q=Malaga+Cathedral" },
+  { id: "roman-theatre-malaga", image: "", tags: ["History", "Sightseeing"], wiki: "Roman_theatre_of_Málaga", name: "Roman Theatre of Málaga", category: "Ancient Monument", emoji: "amphitheatre", lat: 36.7209, lng: -4.4172, description: "Built in the 1st century BC during Augustus's reign, this theatre lay buried and forgotten for centuries until 1951, when workers discovered it while demolishing a cultural centre. Now fully excavated and open to visitors.", mapUrl: "https://maps.google.com/?q=Roman+Theatre+Malaga" },
+  { id: "picasso-museum", image: "", tags: ["Art & Culture"], wiki: "Picasso_Museum_Málaga", name: "Museo Picasso Málaga", category: "Art Museum", emoji: "palette", lat: 36.7219, lng: -4.4172, description: "Housed in the 16th-century Buenavista Palace, this museum holds over 200 works by Málaga's most famous son. Christine Ruiz-Picasso donated the collection to the city where Pablo spent his early childhood.", mapUrl: "https://maps.google.com/?q=Museo+Picasso+Malaga" },
+  { id: "casa-natal-picasso", image: "", tags: ["Art & Culture", "History"], wiki: "Musée_national_Picasso-Paris", name: "Picasso Birthplace", category: "Historic House", emoji: "palette", lat: 36.7232, lng: -4.4199, description: "The apartment at Plaza de la Merced 15 where Pablo Ruiz Picasso was born on 25 October 1881. Now a museum with rotating exhibitions, period furniture and Picasso family memorabilia.", mapUrl: "https://maps.google.com/?q=Casa+Natal+Picasso+Malaga" },
+  { id: "plaza-merced", image: "", tags: ["Neighbourhood", "Sightseeing"], wiki: "Pablo_Picasso", name: "Plaza de la Merced", category: "Historic Square", emoji: "map", lat: 36.7232, lng: -4.4200, description: "A wide 19th-century square at the heart of the old city, centred on an obelisk to the liberal hero General Torrijos. A bronze Picasso sits on a bench here, gazing at his birthplace across the square.", mapUrl: "https://maps.google.com/?q=Plaza+de+la+Merced+Malaga" },
+  { id: "centre-pompidou", image: "", tags: ["Art & Culture", "Architecture"], wiki: "Centre_Pompidou", name: "Centre Pompidou Málaga", category: "Contemporary Art", emoji: "palette", lat: 36.7162, lng: -4.4236, description: "The only Centre Pompidou outside France, housed in a glass cube of coloured panels at the port. Its permanent collection spans Frida Kahlo, Francis Bacon and Miró, with blockbuster temporary exhibitions.", mapUrl: "https://maps.google.com/?q=Centre+Pompidou+Malaga" },
+  { id: "carmen-thyssen", image: "", tags: ["Art & Culture"], wiki: "Carmen_Thyssen-Bornemisza", name: "Carmen Thyssen Museum", category: "Art Museum", emoji: "palette", lat: 36.7205, lng: -4.4215, description: "A jewel of 19th-century Spanish painting. Murillo, Zurbarán and a peerless collection of Andalusian scenes are displayed in a beautifully restored 16th-century palace. Carmen Thyssen-Bornemisza personally curated the collection.", mapUrl: "https://maps.google.com/?q=Carmen+Thyssen+Museum+Malaga" },
+  { id: "atarazanas-market", image: "", tags: ["Food & Market", "History"], wiki: "Mercado_de_Atarazanas_(Málaga)", name: "Mercado de Atarazanas", category: "Historic Market", emoji: "map", lat: 36.7195, lng: -4.4245, description: "A 14th-century Nasrid shipyard converted into Málaga's main food market. Its original Moorish horseshoe arch remains intact at the entrance. Inside, under a spectacular stained-glass window, stalls overflow with local produce.", mapUrl: "https://maps.google.com/?q=Mercado+Atarazanas+Malaga" },
+  { id: "malagueta-beach", image: "", tags: ["Nature"], wiki: "La_Malagueta", name: "La Malagueta Beach", category: "Urban Beach", emoji: "sunrise", lat: 36.7170, lng: -4.4050, description: "The city's iconic urban beach, a ten-minute walk from the cathedral. The espigón breakwater gives it calm waters; the chiringuitos along the sand serve espetos, sardines grilled on cane skewers over driftwood fires.", mapUrl: "https://maps.google.com/?q=La+Malagueta+Beach+Malaga" },
+  { id: "muelle-uno", image: "", tags: ["Neighbourhood", "Sightseeing"], wiki: "Port_of_Málaga", name: "Muelle Uno", category: "Port Promenade", emoji: "sunrise", lat: 36.7165, lng: -4.4193, description: "The regenerated port promenade, lined with restaurants, boutiques and the glass cube of the Pompidou. On evenings the whole city seems to stroll here, with the floodlit Alcazaba framing the scene from above.", mapUrl: "https://maps.google.com/?q=Muelle+Uno+Malaga" },
+  { id: "soho-malaga", image: "", tags: ["Art & Culture", "Neighbourhood"], wiki: "Street_art_in_Málaga", name: "Soho Arts District", category: "Arts District", emoji: "palette", lat: 36.7180, lng: -4.4280, description: "Málaga's street-art neighbourhood, where entire building façades have been transformed by international muralists. The Centre for Contemporary Art anchors this post-industrial district that has become Spain's most talked-about arts quarter.", mapUrl: "https://maps.google.com/?q=Soho+Malaga" },
+  { id: "malaga-museum", image: "", tags: ["History", "Art & Culture"], wiki: "Palacio_de_la_Aduana,_Málaga", name: "Málaga Museum", category: "Museum", emoji: "tablet", lat: 36.7215, lng: -4.4155, description: "Housed in the elegant 18th-century Palacio de la Aduana, this double museum covers both archaeology (Roman mosaics, Moorish treasures, Paleolithic finds) and fine arts, including a gallery of Málaga-born painters.", mapUrl: "https://maps.google.com/?q=Malaga+Museum" },
+  { id: "constitution-square", image: "", tags: ["Neighbourhood", "Sightseeing"], wiki: "Málaga", name: "Plaza de la Constitución", category: "Historic Square", emoji: "map", lat: 36.7209, lng: -4.4218, description: "The historic heart of the city, where merchants once traded under the arcades. Today it opens into Calle Larios, Spain's fifth most expensive shopping street, and fills nightly with people watching, café culture and Christmas lights.", mapUrl: "https://maps.google.com/?q=Plaza+de+la+Constitucion+Malaga" },
+  { id: "hammam-al-andalus", image: "", tags: ["Spiritual", "History"], wiki: "Hammam", name: "Hammam Al Ándalus", category: "Historic Bathhouse", emoji: "fountain", lat: 36.7225, lng: -4.4198, description: "A working Arab bathhouse in a restored 12th-century building with horseshoe arches, star-shaped skylights and warm marble pools. One of the few places in Spain where the ancient Moorish bathing ritual still lives on.", mapUrl: "https://maps.google.com/?q=Hammam+Al+Andalus+Malaga" },
+  { id: "concepcion-garden", image: "", tags: ["Nature", "History"], wiki: "Jardín_Botánico-Histórico_La_Concepción", name: "La Concepción Gardens", category: "Historic Garden", emoji: "tree", lat: 36.7423, lng: -4.4241, description: "A 19th-century English landscape garden with over 150 years of history, filled with tropical and subtropical species from around the world. Its waterfalls, Roman ruins and labyrinthine paths feel like a secret world.", mapUrl: "https://maps.google.com/?q=La+Concepcion+Garden+Malaga" },
+  { id: "larios-street", image: "", tags: ["Neighbourhood", "Sightseeing"], wiki: "Calle_Marqués_de_Larios", name: "Calle Marqués de Larios", category: "Historic Street", emoji: "road", lat: 36.7208, lng: -4.4228, description: "A grand 19th-century pedestrian boulevard and Málaga's answer to Barcelona's Las Ramblas. Lined with orange trees and marble paving, it becomes the most spectacular street in Spain each Christmas, draped in lights.", mapUrl: "https://maps.google.com/?q=Calle+Larios+Malaga" },
+  { id: "english-cemetery", image: "", tags: ["History", "Nature"], wiki: "British_Cemetery,_Málaga", name: "English Cemetery", category: "Historic Cemetery", emoji: "tree", lat: 36.7154, lng: -4.4072, description: "The first Protestant cemetery in Spain, opened in 1831 by the British consul. Conceived as a botanical garden on terraces overlooking the sea, its exotic plantings and 19th-century tombs make it one of Europe's most atmospheric burial grounds.", mapUrl: "https://maps.google.com/?q=English+Cemetery+Malaga" },
+  { id: "malagueta-bullring", image: "", tags: ["History", "Sightseeing"], wiki: "Plaza_de_Toros_de_La_Malagueta", name: "La Malagueta Bullring", category: "Historic Arena", emoji: "amphitheatre", lat: 36.7182, lng: -4.4057, description: "A neo-Mudéjar bullring from 1876, its distinctive red-brick towers a Málaga landmark. Whether or not bullfighting is your interest, the architecture and the museum inside tell the story of Andalusian popular culture.", mapUrl: "https://maps.google.com/?q=Plaza+de+Toros+La+Malagueta" }
 ];
 
 // ══════════════════════════════════════════════
 //  TUNIS POIs
 // ══════════════════════════════════════════════
 const TUNIS_POIS = [
-  { id: "medina-tunis", image: "", wiki: "Medina_of_Tunis", name: "Medina of Tunis", category: "UNESCO Medina", emoji: "castle", lat: 36.7992, lng: 10.1699, description: "One of the Arab world's finest medieval cities, largely unchanged since the 7th century. Its 700 monuments, mosques, madrasas, fountains and palaces, are woven into a labyrinth of whitewashed lanes and covered souks.", mapUrl: "https://maps.google.com/?q=Medina+of+Tunis" },
-  { id: "zitouna-mosque", image: "", wiki: "Ez-Zitouna_Mosque", name: "Ez-Zitouna Mosque", category: "Sacred Architecture", emoji: "star", lat: 36.7990, lng: 10.1710, description: "The Great Mosque of Tunis, founded in 703 AD and rebuilt in the 9th century under the Aghlabids. Its prayer hall of 160 antique columns, salvaged from Roman Carthage, creates an effect of extraordinary depth and repetition.", mapUrl: "https://maps.google.com/?q=Zitouna+Mosque+Tunis" },
-  { id: "bardo-museum", image: "", wiki: "Bardo_National_Museum_(Tunisia)", name: "Bardo National Museum", category: "Museum", emoji: "tablet", lat: 36.8093, lng: 10.1340, description: "Home to the world's largest collection of Roman mosaics, housed in a former Hafsid palace. The floors alone, vivid scenes of mythology, hunting and daily life, represent a civilisation's entire visual universe preserved in stone.", mapUrl: "https://maps.google.com/?q=Bardo+Museum+Tunis" },
-  { id: "carthage-ruins", image: "", wiki: "Carthage", name: "Ancient Carthage", category: "Ancient Ruins", emoji: "castle", lat: 36.8528, lng: 10.3233, description: "Founded by Phoenicians in 814 BC and destroyed by Rome in 146 BC, Carthage was once the Mediterranean's greatest power. The hilltop Byrsa, the Punic ports, and the Antonine Baths reveal layers of civilisation stretching over three millennia.", mapUrl: "https://maps.google.com/?q=Carthage+Tunisia" },
-  { id: "sidi-bou-said", image: "", wiki: "Sidi_Bou_Said", name: "Sidi Bou Said", category: "Historic Village", emoji: "sunrise", lat: 36.8702, lng: 10.3418, description: "A cliff-top village of dazzling white walls and blue doors overlooking the Gulf of Tunis. Paul Klee, August Macke, and Gustave Flaubert all passed through; its beauty is almost too perfect to believe.", mapUrl: "https://maps.google.com/?q=Sidi+Bou+Said+Tunisia" },
-  { id: "dougga", image: "", wiki: "Dougga", name: "Dougga", category: "Roman City", emoji: "amphitheatre", lat: 36.4225, lng: 9.2196, description: "The best-preserved Roman town in North Africa, spread across a hillside in the Tunisian interior. Its Capitol temple, theatre, and forum are intact enough to conjure the full texture of provincial Roman life.", mapUrl: "https://maps.google.com/?q=Dougga+Tunisia" },
-  { id: "dar-hussein", image: "", wiki: "Dar_Hussein,_Tunis", name: "Dar Hussein Palace", category: "Palace Museum", emoji: "palette", lat: 36.7987, lng: 10.1706, description: "A magnificent 18th-century Husainid palace in the heart of the Medina, its courtyard a jewel of Andalusian-influenced Tunisian architecture. Now the Institut National du Patrimoine, it preserves archives of North African cultural heritage.", mapUrl: "https://maps.google.com/?q=Dar+Hussein+Tunis" },
-  { id: "souk-el-attarine", image: "", wiki: "Souk_El_Attarine", name: "Souk El Attarine", category: "Historic Souk", emoji: "map", lat: 36.7993, lng: 10.1704, description: "The perfume souk at the heart of the Medina, directly adjacent to Ez-Zitouna mosque. Its name comes from the Arabic for 'perfume sellers'. Attar of rose and jasmine have been traded here since the 13th century.", mapUrl: "https://maps.google.com/?q=Souk+El+Attarine+Tunis" },
-  { id: "antonine-baths", image: "", wiki: "Antonine_Baths", name: "Antonine Baths", category: "Roman Ruins", emoji: "fountain", lat: 36.8486, lng: 10.3258, description: "The third-largest Roman baths in the world, built on the seafront at Carthage under Emperor Antoninus Pius. The scale, with columns 15 metres tall, is staggering even in ruin; the site looks directly out over the Mediterranean.", mapUrl: "https://maps.google.com/?q=Antonine+Baths+Carthage" },
-  { id: "medina-sousse", image: "", wiki: "Medina_of_Sousse", name: "Medina of Sousse", category: "UNESCO Medina", emoji: "castle", lat: 35.8256, lng: 10.6369, description: "A perfectly preserved 9th-century Aghlabid medina, its ribat fortress and Great Mosque still dominating the skyline above the sea. The catacombs beneath the city hold one of the largest early Christian burial networks in the world.", mapUrl: "https://maps.google.com/?q=Medina+Sousse+Tunisia" },
-  { id: "el-jem", image: "", wiki: "El_Jem", name: "Amphitheatre of El Jem", category: "Roman Amphitheatre", emoji: "amphitheatre", lat: 35.2963, lng: 10.7071, description: "The third-largest colosseum in the Roman world, rising surreally from the flat Tunisian steppe. Built in the 3rd century AD without foundations, it could seat 35,000 spectators and is astonishingly intact.", mapUrl: "https://maps.google.com/?q=El+Jem+Amphitheatre+Tunisia" },
-  { id: "kairouan", image: "", wiki: "Kairouan", name: "Great Mosque of Kairouan", category: "Sacred Architecture", emoji: "star", lat: 35.6781, lng: 10.0963, description: "The oldest mosque in North Africa and one of Islam's holiest sites, founded in 670 AD. Its minaret, the world's oldest surviving, and vast hypostyle prayer hall set the template for Islamic architecture across the Maghreb.", mapUrl: "https://maps.google.com/?q=Great+Mosque+Kairouan+Tunisia" },
-  { id: "dar-ben-abdallah", image: "", wiki: "Dar_Ben_Abdallah", name: "Dar Ben Abdallah Museum", category: "Historic House", emoji: "palette", lat: 36.7983, lng: 10.1712, description: "An 18th-century palace in the Medina housing the Museum of Arts and Popular Traditions of Tunis. Its courtyard of marble floors, painted wooden ceilings and ceramic tile panels is one of the most beautiful domestic interiors in North Africa.", mapUrl: "https://maps.google.com/?q=Dar+Ben+Abdallah+Tunis" },
-  { id: "tophet-carthage", image: "", wiki: "Tophet_of_Carthage", name: "Tophet of Carthage", category: "Phoenician Site", emoji: "tablet", lat: 36.8489, lng: 10.3229, description: "The sacred Phoenician precinct at Carthage, used for millennia as a burial ground. Thousands of funerary urns have been unearthed here. The site remains one of the most significant and debated in ancient world archaeology.", mapUrl: "https://maps.google.com/?q=Tophet+Carthage+Tunisia" },
-  { id: "habib-bourguiba-avenue", image: "", wiki: "Avenue_Habib_Bourguiba", name: "Avenue Habib Bourguiba", category: "Historic Boulevard", emoji: "road", lat: 36.7975, lng: 10.1808, description: "Tunis's grand colonial boulevard, often called the 'Champs-Élysées of Tunis'. Lined with ficus trees, pavement cafés, and the ornate 19th-century French Municipal Theatre, it connects the Medina gate to the modern city.", mapUrl: "https://maps.google.com/?q=Avenue+Habib+Bourguiba+Tunis" },
-  { id: "museum-carthage", image: "", wiki: "Carthage_Museum", name: "Carthage National Museum", category: "Museum", emoji: "search", lat: 36.8530, lng: 10.3237, description: "Set on Byrsa Hill above the ruins, this museum holds Punic stelae, jewellery, masks, and the haunting Priest of Baal statue, artefacts that give human faces to a civilisation Rome tried to erase from history.", mapUrl: "https://maps.google.com/?q=Carthage+National+Museum+Tunisia" },
-  { id: "lake-tunis", image: "", wiki: "Lake_of_Tunis", name: "Lake of Tunis", category: "Natural Landmark", emoji: "sunrise", lat: 36.8200, lng: 10.2400, description: "A shallow saltwater lagoon separating the Medina from the sea, it was Carthage's ancient harbour and is now a site of flamingo colonies and quiet evening light. The old Pont de Khérédine crossing it at sunset is quietly magnificent.", mapUrl: "https://maps.google.com/?q=Lake+of+Tunis" },
-  { id: "villa-didon", image: "", wiki: "Sidi_Bou_Said", name: "Punic Ports of Carthage", category: "Ancient Harbour", emoji: "sunrise", lat: 36.8471, lng: 10.3258, description: "Two artificial harbours, a rectangular merchant port and a circular military port, engineered by Carthaginian naval architects. The circular island at the centre once housed the Admiralty building; the geometry is still visible from above.", mapUrl: "https://maps.google.com/?q=Punic+Ports+Carthage+Tunisia" },
-  { id: "ghar-el-melh", image: "", wiki: "Ghar_el_Melh", name: "Ghar el Melh", category: "Coastal Town", emoji: "sunrise", lat: 37.1667, lng: 10.1833, description: "A lagoon village 40km north of Tunis, once the base of Ottoman corsairs and home to three 17th-century forts. Today it is one of the most atmospheric small towns in Tunisia, its coloured boats reflected in still water at dusk.", mapUrl: "https://maps.google.com/?q=Ghar+el+Melh+Tunisia" },
-  { id: "museum-tunis-city", image: "", wiki: "Tunis", name: "Place de la Kasbah", category: "Historic Quarter", emoji: "map", lat: 36.7989, lng: 10.1641, description: "The political heart of Tunis since the Hafsid dynasty, the Kasbah square is framed by a 13th-century mosque and the prime ministerial palace. The square was the epicentre of the 2011 revolution and its stones carry recent as well as medieval history.", mapUrl: "https://maps.google.com/?q=Kasbah+Tunis" }
+  { id: "medina-tunis", image: "", tags: ["History", "Neighbourhood"], wiki: "Medina_of_Tunis", name: "Medina of Tunis", category: "UNESCO Medina", emoji: "castle", lat: 36.7992, lng: 10.1699, description: "One of the Arab world's finest medieval cities, largely unchanged since the 7th century. Its 700 monuments, mosques, madrasas, fountains and palaces, are woven into a labyrinth of whitewashed lanes and covered souks.", mapUrl: "https://maps.google.com/?q=Medina+of+Tunis" },
+  { id: "zitouna-mosque", image: "", tags: ["Spiritual", "History"], wiki: "Ez-Zitouna_Mosque", name: "Ez-Zitouna Mosque", category: "Sacred Architecture", emoji: "star", lat: 36.7990, lng: 10.1710, description: "The Great Mosque of Tunis, founded in 703 AD and rebuilt in the 9th century under the Aghlabids. Its prayer hall of 160 antique columns, salvaged from Roman Carthage, creates an effect of extraordinary depth and repetition.", mapUrl: "https://maps.google.com/?q=Zitouna+Mosque+Tunis" },
+  { id: "bardo-museum", image: "", tags: ["History", "Art & Culture"], wiki: "Bardo_National_Museum_(Tunisia)", name: "Bardo National Museum", category: "Museum", emoji: "tablet", lat: 36.8093, lng: 10.1340, description: "Home to the world's largest collection of Roman mosaics, housed in a former Hafsid palace. The floors alone, vivid scenes of mythology, hunting and daily life, represent a civilisation's entire visual universe preserved in stone.", mapUrl: "https://maps.google.com/?q=Bardo+Museum+Tunis" },
+  { id: "carthage-ruins", image: "", tags: ["History", "Sightseeing"], wiki: "Carthage", name: "Ancient Carthage", category: "Ancient Ruins", emoji: "castle", lat: 36.8528, lng: 10.3233, description: "Founded by Phoenicians in 814 BC and destroyed by Rome in 146 BC, Carthage was once the Mediterranean's greatest power. The hilltop Byrsa, the Punic ports, and the Antonine Baths reveal layers of civilisation stretching over three millennia.", mapUrl: "https://maps.google.com/?q=Carthage+Tunisia" },
+  { id: "sidi-bou-said", image: "", tags: ["Neighbourhood", "Sightseeing"], wiki: "Sidi_Bou_Said", name: "Sidi Bou Said", category: "Historic Village", emoji: "sunrise", lat: 36.8702, lng: 10.3418, description: "A cliff-top village of dazzling white walls and blue doors overlooking the Gulf of Tunis. Paul Klee, August Macke, and Gustave Flaubert all passed through; its beauty is almost too perfect to believe.", mapUrl: "https://maps.google.com/?q=Sidi+Bou+Said+Tunisia" },
+  { id: "dougga", image: "", tags: ["History", "Sightseeing"], wiki: "Dougga", name: "Dougga", category: "Roman City", emoji: "amphitheatre", lat: 36.4225, lng: 9.2196, description: "The best-preserved Roman town in North Africa, spread across a hillside in the Tunisian interior. Its Capitol temple, theatre, and forum are intact enough to conjure the full texture of provincial Roman life.", mapUrl: "https://maps.google.com/?q=Dougga+Tunisia" },
+  { id: "dar-hussein", image: "", tags: ["History", "Architecture"], wiki: "Dar_Hussein,_Tunis", name: "Dar Hussein Palace", category: "Palace Museum", emoji: "palette", lat: 36.7987, lng: 10.1706, description: "A magnificent 18th-century Husainid palace in the heart of the Medina, its courtyard a jewel of Andalusian-influenced Tunisian architecture. Now the Institut National du Patrimoine, it preserves archives of North African cultural heritage.", mapUrl: "https://maps.google.com/?q=Dar+Hussein+Tunis" },
+  { id: "souk-el-attarine", image: "", tags: ["Food & Market", "History"], wiki: "Souk_El_Attarine", name: "Souk El Attarine", category: "Historic Souk", emoji: "map", lat: 36.7993, lng: 10.1704, description: "The perfume souk at the heart of the Medina, directly adjacent to Ez-Zitouna mosque. Its name comes from the Arabic for 'perfume sellers'. Attar of rose and jasmine have been traded here since the 13th century.", mapUrl: "https://maps.google.com/?q=Souk+El+Attarine+Tunis" },
+  { id: "antonine-baths", image: "", tags: ["History", "Sightseeing"], wiki: "Antonine_Baths", name: "Antonine Baths", category: "Roman Ruins", emoji: "fountain", lat: 36.8486, lng: 10.3258, description: "The third-largest Roman baths in the world, built on the seafront at Carthage under Emperor Antoninus Pius. The scale, with columns 15 metres tall, is staggering even in ruin; the site looks directly out over the Mediterranean.", mapUrl: "https://maps.google.com/?q=Antonine+Baths+Carthage" },
+  { id: "medina-sousse", image: "", tags: ["History", "Neighbourhood"], wiki: "Medina_of_Sousse", name: "Medina of Sousse", category: "UNESCO Medina", emoji: "castle", lat: 35.8256, lng: 10.6369, description: "A perfectly preserved 9th-century Aghlabid medina, its ribat fortress and Great Mosque still dominating the skyline above the sea. The catacombs beneath the city hold one of the largest early Christian burial networks in the world.", mapUrl: "https://maps.google.com/?q=Medina+Sousse+Tunisia" },
+  { id: "el-jem", image: "", tags: ["History", "Sightseeing"], wiki: "El_Jem", name: "Amphitheatre of El Jem", category: "Roman Amphitheatre", emoji: "amphitheatre", lat: 35.2963, lng: 10.7071, description: "The third-largest colosseum in the Roman world, rising surreally from the flat Tunisian steppe. Built in the 3rd century AD without foundations, it could seat 35,000 spectators and is astonishingly intact.", mapUrl: "https://maps.google.com/?q=El+Jem+Amphitheatre+Tunisia" },
+  { id: "kairouan", image: "", tags: ["Spiritual", "History"], wiki: "Kairouan", name: "Great Mosque of Kairouan", category: "Sacred Architecture", emoji: "star", lat: 35.6781, lng: 10.0963, description: "The oldest mosque in North Africa and one of Islam's holiest sites, founded in 670 AD. Its minaret, the world's oldest surviving, and vast hypostyle prayer hall set the template for Islamic architecture across the Maghreb.", mapUrl: "https://maps.google.com/?q=Great+Mosque+Kairouan+Tunisia" },
+  { id: "dar-ben-abdallah", image: "", tags: ["History", "Art & Culture"], wiki: "Dar_Ben_Abdallah", name: "Dar Ben Abdallah Museum", category: "Historic House", emoji: "palette", lat: 36.7983, lng: 10.1712, description: "An 18th-century palace in the Medina housing the Museum of Arts and Popular Traditions of Tunis. Its courtyard of marble floors, painted wooden ceilings and ceramic tile panels is one of the most beautiful domestic interiors in North Africa.", mapUrl: "https://maps.google.com/?q=Dar+Ben+Abdallah+Tunis" },
+  { id: "tophet-carthage", image: "", tags: ["History", "Spiritual"], wiki: "Tophet_of_Carthage", name: "Tophet of Carthage", category: "Phoenician Site", emoji: "tablet", lat: 36.8489, lng: 10.3229, description: "The sacred Phoenician precinct at Carthage, used for millennia as a burial ground. Thousands of funerary urns have been unearthed here. The site remains one of the most significant and debated in ancient world archaeology.", mapUrl: "https://maps.google.com/?q=Tophet+Carthage+Tunisia" },
+  { id: "habib-bourguiba-avenue", image: "", tags: ["Neighbourhood", "Sightseeing"], wiki: "Avenue_Habib_Bourguiba", name: "Avenue Habib Bourguiba", category: "Historic Boulevard", emoji: "road", lat: 36.7975, lng: 10.1808, description: "Tunis's grand colonial boulevard, often called the 'Champs-Élysées of Tunis'. Lined with ficus trees, pavement cafés, and the ornate 19th-century French Municipal Theatre, it connects the Medina gate to the modern city.", mapUrl: "https://maps.google.com/?q=Avenue+Habib+Bourguiba+Tunis" },
+  { id: "museum-carthage", image: "", tags: ["History", "Art & Culture"], wiki: "Carthage_Museum", name: "Carthage National Museum", category: "Museum", emoji: "search", lat: 36.8530, lng: 10.3237, description: "Set on Byrsa Hill above the ruins, this museum holds Punic stelae, jewellery, masks, and the haunting Priest of Baal statue, artefacts that give human faces to a civilisation Rome tried to erase from history.", mapUrl: "https://maps.google.com/?q=Carthage+National+Museum+Tunisia" },
+  { id: "lake-tunis", image: "", tags: ["Nature", "Sightseeing"], wiki: "Lake_of_Tunis", name: "Lake of Tunis", category: "Natural Landmark", emoji: "sunrise", lat: 36.8200, lng: 10.2400, description: "A shallow saltwater lagoon separating the Medina from the sea, it was Carthage's ancient harbour and is now a site of flamingo colonies and quiet evening light. The old Pont de Khérédine crossing it at sunset is quietly magnificent.", mapUrl: "https://maps.google.com/?q=Lake+of+Tunis" },
+  { id: "villa-didon", image: "", tags: ["History", "Sightseeing"], wiki: "Sidi_Bou_Said", name: "Punic Ports of Carthage", category: "Ancient Harbour", emoji: "sunrise", lat: 36.8471, lng: 10.3258, description: "Two artificial harbours, a rectangular merchant port and a circular military port, engineered by Carthaginian naval architects. The circular island at the centre once housed the Admiralty building; the geometry is still visible from above.", mapUrl: "https://maps.google.com/?q=Punic+Ports+Carthage+Tunisia" },
+  { id: "ghar-el-melh", image: "", tags: ["Neighbourhood", "Nature"], wiki: "Ghar_el_Melh", name: "Ghar el Melh", category: "Coastal Town", emoji: "sunrise", lat: 37.1667, lng: 10.1833, description: "A lagoon village 40km north of Tunis, once the base of Ottoman corsairs and home to three 17th-century forts. Today it is one of the most atmospheric small towns in Tunisia, its coloured boats reflected in still water at dusk.", mapUrl: "https://maps.google.com/?q=Ghar+el+Melh+Tunisia" },
+  { id: "museum-tunis-city", image: "", tags: ["History", "Sightseeing"], wiki: "Tunis", name: "Place de la Kasbah", category: "Historic Quarter", emoji: "map", lat: 36.7989, lng: 10.1641, description: "The political heart of Tunis since the Hafsid dynasty, the Kasbah square is framed by a 13th-century mosque and the prime ministerial palace. The square was the epicentre of the 2011 revolution and its stones carry recent as well as medieval history.", mapUrl: "https://maps.google.com/?q=Kasbah+Tunis" }
 ];
 
 // ══════════════════════════════════════════════
 //  MONTREAL POIs
 // ══════════════════════════════════════════════
 const MONTREAL_POIS = [
-  { id: "old-montreal", image: "", wiki: "Old_Montreal", name: "Old Montréal", category: "Historic District", emoji: "map", lat: 45.5075, lng: -73.5540, description: "The 17th-century heart of the city, where cobblestone streets, stone warehouses, and the old port sit beside the St. Lawrence. Its architecture is some of the finest in North America, a rare intact colonial streetscape on this scale.", mapUrl: "https://maps.google.com/?q=Old+Montreal" },
-  { id: "notre-dame-basilica", image: "", wiki: "Notre-Dame_Basilica_(Montreal)", name: "Notre-Dame Basilica", category: "Sacred Architecture", emoji: "church", lat: 45.5046, lng: -73.5566, description: "One of the most spectacular church interiors in North America: a deep blue and gold Gothic Revival nave built in 1829, designed by the Irish-American architect James O'Donnell. The pipe organ and stained glass are extraordinary.", mapUrl: "https://maps.google.com/?q=Notre+Dame+Basilica+Montreal" },
-  { id: "mont-royal", image: "", wiki: "Mount_Royal", name: "Mount Royal", category: "Urban Park", emoji: "mountain", lat: 45.5088, lng: -73.5878, description: "The wooded hill rising over the city, designed by Frederick Law Olmsted of Central Park fame, is Montréal's lungs and living room. The summit chalet offers the defining panoramic view of the island and the St. Lawrence.", mapUrl: "https://maps.google.com/?q=Mount+Royal+Montreal" },
-  { id: "plateau-mont-royal", image: "", wiki: "Plateau-Mont-Royal", name: "Plateau-Mont-Royal", category: "Cultural Neighbourhood", emoji: "palette", lat: 45.5221, lng: -73.5757, description: "The bohemian heartland of Montréal with spiralling exterior staircases, duplexes painted in warm colours, street murals, and independent bookshops. The neighbourhood that produced Leonard Cohen and countless Montreal novels.", mapUrl: "https://maps.google.com/?q=Plateau+Mont+Royal+Montreal" },
-  { id: "musee-beaux-arts", image: "", wiki: "Montreal_Museum_of_Fine_Arts", name: "Musée des Beaux-Arts", category: "Art Museum", emoji: "palette", lat: 45.4988, lng: -73.5797, description: "Canada's oldest and most visited art museum, with a permanent collection spanning 4,000 years. Its five pavilions include a stunning Bourgie Concert Hall carved into a former church, where chamber music plays among stained glass.", mapUrl: "https://maps.google.com/?q=Montreal+Museum+Fine+Arts" },
-  { id: "marche-jean-talon", image: "", wiki: "Jean-Talon_Market", name: "Marché Jean-Talon", category: "Historic Market", emoji: "map", lat: 45.5360, lng: -73.6148, description: "The largest outdoor market in North America, at the heart of Little Italy. Québec farmers bring heritage tomatoes, fiddleheads, and maple products; the covered stalls overflow with the produce of a short but fierce growing season.", mapUrl: "https://maps.google.com/?q=Jean-Talon+Market+Montreal" },
-  { id: "underground-city", image: "", wiki: "Montreal_Underground_City", name: "Underground City (RÉSO)", category: "Urban Infrastructure", emoji: "map", lat: 45.5017, lng: -73.5673, description: "The world's largest underground complex, 33km of tunnels connecting metro stations, shopping centres, hotels, and office towers. Built to escape the brutal winters, it now forms an entire parallel city beneath the streets.", mapUrl: "https://maps.google.com/?q=Montreal+Underground+City" },
-  { id: "pointe-a-calliere", image: "", wiki: "Pointe-à-Callière_Museum", name: "Pointe-à-Callière Museum", category: "Archaeology Museum", emoji: "search", lat: 45.5072, lng: -73.5554, description: "Built over the exact spot where Montréal was founded in 1642, this museum descends through layers of the city's archaeology. The ruins of the original settlement, the first Catholic cemetery, and the old sewage system are all visible beneath your feet.", mapUrl: "https://maps.google.com/?q=Pointe+a+Calliere+Museum+Montreal" },
-  { id: "mile-end", image: "", wiki: "Mile_End,_Montreal", name: "Mile End", category: "Creative Quarter", emoji: "palette", lat: 45.5236, lng: -73.5990, description: "A neighbourhood that shaped a generation of musicians, writers and designers. Arcade Fire, Godspeed You! Black Emperor, and the Barenaked Ladies all emerged from here. Its bagel shops, recording studios and coffee roasters coexist in unlikely harmony.", mapUrl: "https://maps.google.com/?q=Mile+End+Montreal" },
-  { id: "olympic-stadium", image: "", wiki: "Olympic_Stadium_(Montreal)", name: "Olympic Stadium", category: "Iconic Architecture", emoji: "amphitheatre", lat: 45.5597, lng: -73.5517, description: "The leaning tower and sweeping retractable roof of the 1976 Olympics stadium remain one of the most audacious architectural gestures in North America. Roger Taillibert's design was budget-busting, controversial and unforgettable.", mapUrl: "https://maps.google.com/?q=Olympic+Stadium+Montreal" },
-  { id: "tam-tams", image: "", wiki: "Mount_Royal", name: "Tam-Tams (George-Étienne Cartier)", category: "Cultural Gathering", emoji: "sunrise", lat: 45.5110, lng: -73.5816, description: "Every Sunday in summer, hundreds gather around the monument to George-Étienne Cartier at the foot of Mount Royal for an informal drumming circle and flea market. The Tam-Tams is a genuinely spontaneous Montréal institution.", mapUrl: "https://maps.google.com/?q=George+Etienne+Cartier+Monument+Montreal" },
-  { id: "sainte-helene-island", image: "", wiki: "Île_Sainte-Hélène", name: "Île Sainte-Hélène", category: "Island Park", emoji: "tree", lat: 45.5100, lng: -73.5300, description: "The island in the St. Lawrence that hosted Expo 67 still holds Buckminster Fuller's geodesic dome (now the Biosphere), La Ronde amusement park, and long riverfront paths. The view back to the city skyline from the island is iconic.", mapUrl: "https://maps.google.com/?q=Sainte+Helene+Island+Montreal" },
-  { id: "mcgill-university", image: "", wiki: "McGill_University", name: "McGill University", category: "Historic Campus", emoji: "tablet", lat: 45.5048, lng: -73.5772, description: "One of the world's great universities, its Victorian stone buildings and sloping lawns set against the flank of Mount Royal. The Redpath Museum on campus is a wonderful Victorian natural history collection, free and largely unchanged since 1882.", mapUrl: "https://maps.google.com/?q=McGill+University+Montreal" },
-  { id: "rue-saint-denis", image: "", wiki: "Rue_Saint-Denis,_Montreal", name: "Rue Saint-Denis", category: "Cultural Boulevard", emoji: "road", lat: 45.5173, lng: -73.5686, description: "The main artery of French Montréal, lined with terrace cafés, bookshops, jazz bars, and some of the city's best bistros. At night in summer, with the terrasses full and the air warm, this street is about as good as urban life gets.", mapUrl: "https://maps.google.com/?q=Rue+Saint+Denis+Montreal" },
-  { id: "habitat-67", image: "", wiki: "Habitat_67", name: "Habitat 67", category: "Iconic Architecture", emoji: "map", lat: 45.5002, lng: -73.5421, description: "Moshe Safdie's stacked concrete housing complex, built for Expo 67 as a vision of democratic modern living. Its 354 interlocking modules look like a Tetris game frozen mid-fall and it remains one of the most recognisable buildings in Canada.", mapUrl: "https://maps.google.com/?q=Habitat+67+Montreal" },
-  { id: "botanical-garden", image: "", wiki: "Montreal_Botanical_Garden", name: "Jardin Botanique", category: "Botanical Garden", emoji: "tree", lat: 45.5590, lng: -73.5560, description: "One of the world's great botanical gardens, covering 75 hectares beside the Olympic Park. The Chinese and Japanese gardens, the finest of their kind outside Asia, are particularly extraordinary, especially during autumn lantern festivals.", mapUrl: "https://maps.google.com/?q=Montreal+Botanical+Garden" },
-  { id: "chinatown-montreal", image: "", wiki: "Chinatown,_Montreal", name: "Chinatown", category: "Historic District", emoji: "map", lat: 45.5083, lng: -73.5619, description: "One of Canada's oldest Chinese communities, established in the 1870s. The ornamental gates on Rue de la Gauchetière mark a dense neighbourhood of restaurants, herbalists, and bakeries, with the city's best dim sum.", mapUrl: "https://maps.google.com/?q=Chinatown+Montreal" },
-  { id: "canal-lachine", image: "", wiki: "Lachine_Canal", name: "Lachine Canal", category: "Industrial Heritage", emoji: "road", lat: 45.4889, lng: -73.5773, description: "The 14km canal that bypassed the Lachine Rapids and made Montréal the industrial engine of Canada. Now a linear park and cycling trail, its old grain silos and warehouses are being converted into some of the most desirable lofts in the city.", mapUrl: "https://maps.google.com/?q=Lachine+Canal+Montreal" },
-  { id: "st-joseph-oratory", image: "", wiki: "Saint_Joseph%27s_Oratory", name: "Saint Joseph's Oratory", category: "Sacred Architecture", emoji: "church", lat: 45.4924, lng: -73.6164, description: "The largest church in Canada, its dome, the third-largest in the world, rising above the western slope of Mount Royal. Brother André, who reputedly performed miraculous healings here, was canonised in 2010; his preserved heart is on display.", mapUrl: "https://maps.google.com/?q=Saint+Joseph+Oratory+Montreal" },
-  { id: "mont-royal-cemetery", image: "", wiki: "Mount_Royal_Cemetery", name: "Mount Royal Cemetery", category: "Historic Cemetery", emoji: "tree", lat: 45.5080, lng: -73.6020, description: "A landscaped Victorian cemetery on the north slope of the mountain, where some of Canada's most significant figures are buried. Its paths through mature trees make it one of the most peaceful walks in the city, the gravestones like a Who's Who of Canadian history.", mapUrl: "https://maps.google.com/?q=Mount+Royal+Cemetery+Montreal" }
+  { id: "old-montreal", image: "", tags: ["History", "Neighbourhood"], wiki: "Old_Montreal", name: "Old Montréal", category: "Historic District", emoji: "map", lat: 45.5075, lng: -73.5540, description: "The 17th-century heart of the city, where cobblestone streets, stone warehouses, and the old port sit beside the St. Lawrence. Its architecture is some of the finest in North America, a rare intact colonial streetscape on this scale.", mapUrl: "https://maps.google.com/?q=Old+Montreal" },
+  { id: "notre-dame-basilica", image: "", tags: ["Spiritual", "Architecture"], wiki: "Notre-Dame_Basilica_(Montreal)", name: "Notre-Dame Basilica", category: "Sacred Architecture", emoji: "church", lat: 45.5046, lng: -73.5566, description: "One of the most spectacular church interiors in North America: a deep blue and gold Gothic Revival nave built in 1829, designed by the Irish-American architect James O'Donnell. The pipe organ and stained glass are extraordinary.", mapUrl: "https://maps.google.com/?q=Notre+Dame+Basilica+Montreal" },
+  { id: "mont-royal", image: "", tags: ["Nature", "Sightseeing"], wiki: "Mount_Royal", name: "Mount Royal", category: "Urban Park", emoji: "mountain", lat: 45.5088, lng: -73.5878, description: "The wooded hill rising over the city, designed by Frederick Law Olmsted of Central Park fame, is Montréal's lungs and living room. The summit chalet offers the defining panoramic view of the island and the St. Lawrence.", mapUrl: "https://maps.google.com/?q=Mount+Royal+Montreal" },
+  { id: "plateau-mont-royal", image: "", tags: ["Neighbourhood", "Art & Culture"], wiki: "Plateau-Mont-Royal", name: "Plateau-Mont-Royal", category: "Cultural Neighbourhood", emoji: "palette", lat: 45.5221, lng: -73.5757, description: "The bohemian heartland of Montréal with spiralling exterior staircases, duplexes painted in warm colours, street murals, and independent bookshops. The neighbourhood that produced Leonard Cohen and countless Montreal novels.", mapUrl: "https://maps.google.com/?q=Plateau+Mont+Royal+Montreal" },
+  { id: "musee-beaux-arts", image: "", tags: ["Art & Culture"], wiki: "Montreal_Museum_of_Fine_Arts", name: "Musée des Beaux-Arts", category: "Art Museum", emoji: "palette", lat: 45.4988, lng: -73.5797, description: "Canada's oldest and most visited art museum, with a permanent collection spanning 4,000 years. Its five pavilions include a stunning Bourgie Concert Hall carved into a former church, where chamber music plays among stained glass.", mapUrl: "https://maps.google.com/?q=Montreal+Museum+Fine+Arts" },
+  { id: "marche-jean-talon", image: "", tags: ["Food & Market", "Neighbourhood"], wiki: "Jean-Talon_Market", name: "Marché Jean-Talon", category: "Historic Market", emoji: "map", lat: 45.5360, lng: -73.6148, description: "The largest outdoor market in North America, at the heart of Little Italy. Québec farmers bring heritage tomatoes, fiddleheads, and maple products; the covered stalls overflow with the produce of a short but fierce growing season.", mapUrl: "https://maps.google.com/?q=Jean-Talon+Market+Montreal" },
+  { id: "underground-city", image: "", tags: ["Architecture", "Sightseeing"], wiki: "Montreal_Underground_City", name: "Underground City (RÉSO)", category: "Urban Infrastructure", emoji: "map", lat: 45.5017, lng: -73.5673, description: "The world's largest underground complex, 33km of tunnels connecting metro stations, shopping centres, hotels, and office towers. Built to escape the brutal winters, it now forms an entire parallel city beneath the streets.", mapUrl: "https://maps.google.com/?q=Montreal+Underground+City" },
+  { id: "pointe-a-calliere", image: "", tags: ["History", "Art & Culture"], wiki: "Pointe-à-Callière_Museum", name: "Pointe-à-Callière Museum", category: "Archaeology Museum", emoji: "search", lat: 45.5072, lng: -73.5554, description: "Built over the exact spot where Montréal was founded in 1642, this museum descends through layers of the city's archaeology. The ruins of the original settlement, the first Catholic cemetery, and the old sewage system are all visible beneath your feet.", mapUrl: "https://maps.google.com/?q=Pointe+a+Calliere+Museum+Montreal" },
+  { id: "mile-end", image: "", tags: ["Neighbourhood", "Art & Culture"], wiki: "Mile_End,_Montreal", name: "Mile End", category: "Creative Quarter", emoji: "palette", lat: 45.5236, lng: -73.5990, description: "A neighbourhood that shaped a generation of musicians, writers and designers. Arcade Fire, Godspeed You! Black Emperor, and the Barenaked Ladies all emerged from here. Its bagel shops, recording studios and coffee roasters coexist in unlikely harmony.", mapUrl: "https://maps.google.com/?q=Mile+End+Montreal" },
+  { id: "olympic-stadium", image: "", tags: ["Architecture", "Sightseeing"], wiki: "Olympic_Stadium_(Montreal)", name: "Olympic Stadium", category: "Iconic Architecture", emoji: "amphitheatre", lat: 45.5597, lng: -73.5517, description: "The leaning tower and sweeping retractable roof of the 1976 Olympics stadium remain one of the most audacious architectural gestures in North America. Roger Taillibert's design was budget-busting, controversial and unforgettable.", mapUrl: "https://maps.google.com/?q=Olympic+Stadium+Montreal" },
+  { id: "tam-tams", image: "", tags: ["Neighbourhood", "Art & Culture"], wiki: "Mount_Royal", name: "Tam-Tams (George-Étienne Cartier)", category: "Cultural Gathering", emoji: "sunrise", lat: 45.5110, lng: -73.5816, description: "Every Sunday in summer, hundreds gather around the monument to George-Étienne Cartier at the foot of Mount Royal for an informal drumming circle and flea market. The Tam-Tams is a genuinely spontaneous Montréal institution.", mapUrl: "https://maps.google.com/?q=George+Etienne+Cartier+Monument+Montreal" },
+  { id: "sainte-helene-island", image: "", tags: ["Nature", "History"], wiki: "Île_Sainte-Hélène", name: "Île Sainte-Hélène", category: "Island Park", emoji: "tree", lat: 45.5100, lng: -73.5300, description: "The island in the St. Lawrence that hosted Expo 67 still holds Buckminster Fuller's geodesic dome (now the Biosphere), La Ronde amusement park, and long riverfront paths. The view back to the city skyline from the island is iconic.", mapUrl: "https://maps.google.com/?q=Sainte+Helene+Island+Montreal" },
+  { id: "mcgill-university", image: "", tags: ["History", "Architecture"], wiki: "McGill_University", name: "McGill University", category: "Historic Campus", emoji: "tablet", lat: 45.5048, lng: -73.5772, description: "One of the world's great universities, its Victorian stone buildings and sloping lawns set against the flank of Mount Royal. The Redpath Museum on campus is a wonderful Victorian natural history collection, free and largely unchanged since 1882.", mapUrl: "https://maps.google.com/?q=McGill+University+Montreal" },
+  { id: "rue-saint-denis", image: "", tags: ["Neighbourhood", "Food & Market"], wiki: "Rue_Saint-Denis,_Montreal", name: "Rue Saint-Denis", category: "Cultural Boulevard", emoji: "road", lat: 45.5173, lng: -73.5686, description: "The main artery of French Montréal, lined with terrace cafés, bookshops, jazz bars, and some of the city's best bistros. At night in summer, with the terrasses full and the air warm, this street is about as good as urban life gets.", mapUrl: "https://maps.google.com/?q=Rue+Saint+Denis+Montreal" },
+  { id: "habitat-67", image: "", tags: ["Architecture", "Sightseeing"], wiki: "Habitat_67", name: "Habitat 67", category: "Iconic Architecture", emoji: "map", lat: 45.5002, lng: -73.5421, description: "Moshe Safdie's stacked concrete housing complex, built for Expo 67 as a vision of democratic modern living. Its 354 interlocking modules look like a Tetris game frozen mid-fall and it remains one of the most recognisable buildings in Canada.", mapUrl: "https://maps.google.com/?q=Habitat+67+Montreal" },
+  { id: "botanical-garden", image: "", tags: ["Nature"], wiki: "Montreal_Botanical_Garden", name: "Jardin Botanique", category: "Botanical Garden", emoji: "tree", lat: 45.5590, lng: -73.5560, description: "One of the world's great botanical gardens, covering 75 hectares beside the Olympic Park. The Chinese and Japanese gardens, the finest of their kind outside Asia, are particularly extraordinary, especially during autumn lantern festivals.", mapUrl: "https://maps.google.com/?q=Montreal+Botanical+Garden" },
+  { id: "chinatown-montreal", image: "", tags: ["Neighbourhood", "Food & Market"], wiki: "Chinatown,_Montreal", name: "Chinatown", category: "Historic District", emoji: "map", lat: 45.5083, lng: -73.5619, description: "One of Canada's oldest Chinese communities, established in the 1870s. The ornamental gates on Rue de la Gauchetière mark a dense neighbourhood of restaurants, herbalists, and bakeries, with the city's best dim sum.", mapUrl: "https://maps.google.com/?q=Chinatown+Montreal" },
+  { id: "canal-lachine", image: "", tags: ["History", "Nature"], wiki: "Lachine_Canal", name: "Lachine Canal", category: "Industrial Heritage", emoji: "road", lat: 45.4889, lng: -73.5773, description: "The 14km canal that bypassed the Lachine Rapids and made Montréal the industrial engine of Canada. Now a linear park and cycling trail, its old grain silos and warehouses are being converted into some of the most desirable lofts in the city.", mapUrl: "https://maps.google.com/?q=Lachine+Canal+Montreal" },
+  { id: "st-joseph-oratory", image: "", tags: ["Spiritual", "Architecture"], wiki: "Saint_Joseph%27s_Oratory", name: "Saint Joseph's Oratory", category: "Sacred Architecture", emoji: "church", lat: 45.4924, lng: -73.6164, description: "The largest church in Canada, its dome, the third-largest in the world, rising above the western slope of Mount Royal. Brother André, who reputedly performed miraculous healings here, was canonised in 2010; his preserved heart is on display.", mapUrl: "https://maps.google.com/?q=Saint+Joseph+Oratory+Montreal" },
+  { id: "mont-royal-cemetery", image: "", tags: ["History", "Nature"], wiki: "Mount_Royal_Cemetery", name: "Mount Royal Cemetery", category: "Historic Cemetery", emoji: "tree", lat: 45.5080, lng: -73.6020, description: "A landscaped Victorian cemetery on the north slope of the mountain, where some of Canada's most significant figures are buried. Its paths through mature trees make it one of the most peaceful walks in the city, the gravestones like a Who's Who of Canadian history.", mapUrl: "https://maps.google.com/?q=Mount+Royal+Cemetery+Montreal" }
 ];
 
 // ══════════════════════════════════════════════
 //  DUBAI POIs
 // ══════════════════════════════════════════════
 const DUBAI_POIS = [
-  { id: "burj-khalifa", image: "", wiki: "Burj_Khalifa", name: "Burj Khalifa", category: "Iconic Tower", emoji: "sunrise", lat: 25.1972, lng: 55.2744, description: "The world's tallest building at 828 metres, its tapered form inspired by the Hymenocallis desert flower. The At the Top observation deck on the 124th floor offers views across desert, city and Gulf that can stretch to the horizon of the Earth's curvature.", mapUrl: "https://maps.google.com/?q=Burj+Khalifa+Dubai" },
-  { id: "dubai-creek", image: "", wiki: "Dubai_Creek", name: "Dubai Creek (Khor Dubai)", category: "Historic Waterway", emoji: "sunrise", lat: 25.2631, lng: 55.3007, description: "The original Dubai: a tidal creek where pearl divers and traders built the city's fortunes. Abra water taxis still cross between Deira and Bur Dubai; the gold and spice souks on either bank are unchanged in atmosphere from the trading port of a century ago.", mapUrl: "https://maps.google.com/?q=Dubai+Creek" },
-  { id: "al-fahidi", image: "", wiki: "Al_Fahidi_Historical_Neighbourhood", name: "Al Fahidi Historic District", category: "Historic Quarter", emoji: "castle", lat: 25.2633, lng: 55.2975, description: "The oldest surviving neighbourhood in Dubai, its wind towers, the barajeel, the original air conditioning of the Gulf. The narrow lanes of coral-and-gypsum houses now shelter art galleries, the Dubai Museum, and one of the few authentic glimpses of pre-oil city life.", mapUrl: "https://maps.google.com/?q=Al+Fahidi+Dubai" },
-  { id: "dubai-museum", image: "", wiki: "Dubai_Museum", name: "Dubai Museum", category: "Museum", emoji: "tablet", lat: 25.2632, lng: 55.2971, description: "Housed in Al Fahidi Fort, the oldest building in Dubai built in 1787, this museum traces the city's transformation from pearl-diving village to global metropolis in a single generation. The contrast between then and now is almost incomprehensible.", mapUrl: "https://maps.google.com/?q=Dubai+Museum" },
-  { id: "gold-souk", image: "", wiki: "Gold_Souk,_Dubai", name: "Gold Souk", category: "Historic Market", emoji: "map", lat: 25.2697, lng: 55.3045, description: "The largest gold market in the world, its covered lanes glittering with over 10 tonnes of gold jewellery at any given time. The concentration of craftsmanship, Indian, Arab and Iranian, and the sheer quantity of precious metal on display is genuinely astounding.", mapUrl: "https://maps.google.com/?q=Gold+Souk+Dubai" },
-  { id: "spice-souk", image: "", wiki: "Spice_Souk,_Dubai", name: "Spice Souk", category: "Historic Market", emoji: "map", lat: 25.2683, lng: 55.3021, description: "Sacks of saffron, dried limes, frankincense, and a hundred other spices spill onto the lanes of Deira's spice market. The smells alone transport you across the Indian Ocean trade routes that built this city long before oil.", mapUrl: "https://maps.google.com/?q=Spice+Souk+Dubai" },
-  { id: "sheikh-zayed-road", image: "", wiki: "Sheikh_Zayed_Road", name: "Sheikh Zayed Road", category: "Iconic Boulevard", emoji: "road", lat: 25.2048, lng: 55.2708, description: "The 12-lane artery lined with the most spectacular skyline in the world: a corridor of glass towers each trying to outdo the last. At night, lit from within, you are looking at a city that has decided ordinary architecture simply is not enough.", mapUrl: "https://maps.google.com/?q=Sheikh+Zayed+Road+Dubai" },
-  { id: "jumeirah-mosque", image: "", wiki: "Jumeirah_Mosque", name: "Jumeirah Mosque", category: "Sacred Architecture", emoji: "star", lat: 25.2290, lng: 55.2519, description: "The most photographed mosque in Dubai, a white Fatimid-style structure built in 1979 that glows gold at night. One of the few mosques in the UAE to offer regular guided tours to non-Muslim visitors, it provides a genuine introduction to Islamic worship.", mapUrl: "https://maps.google.com/?q=Jumeirah+Mosque+Dubai" },
-  { id: "dubai-frame", image: "", wiki: "Dubai_Frame", name: "Dubai Frame", category: "Iconic Structure", emoji: "map", lat: 25.2353, lng: 55.3003, description: "A 150-metre picture frame straddling old and new Dubai. The historic Zabeel district sits on one side, the modern skyline on the other. The glass floor walkway at the top is not for the faint-hearted; the symbolism is unusually literal for a city that usually prefers spectacle over metaphor.", mapUrl: "https://maps.google.com/?q=Dubai+Frame" },
-  { id: "al-seef", image: "", wiki: "Al_Seef,_Dubai", name: "Al Seef Heritage District", category: "Waterfront District", emoji: "road", lat: 25.2595, lng: 55.3008, description: "A new heritage district built along the Creek in the style of old Dubai: wind towers, coral-block facades and abra docks. A deliberate act of memory in a city that reinvents itself constantly, it has become one of the most pleasant places to walk in Dubai.", mapUrl: "https://maps.google.com/?q=Al+Seef+Dubai" },
-  { id: "la-mer", image: "", wiki: "La_Mer,_Dubai", name: "La Mer Beach", category: "Urban Beach", emoji: "sunrise", lat: 25.2296, lng: 55.2729, description: "An open-air beach district of low-rise painted buildings, street food, murals, and 2km of public beach, a rare human-scale development in a city that usually builds big. The Burj Al Arab on the horizon beside ice-cream shops captures modern Dubai perfectly.", mapUrl: "https://maps.google.com/?q=La+Mer+Dubai" },
-  { id: "alserkal-avenue", image: "", wiki: "Alserkal_Avenue", name: "Alserkal Avenue", category: "Arts District", emoji: "palette", lat: 25.1472, lng: 55.2289, description: "A converted industrial district in Al Quoz that has become the UAE's most important contemporary arts hub. Over 50 galleries, project spaces and experimental venues occupy former warehouses, the most concentrated density of contemporary art in the Gulf.", mapUrl: "https://maps.google.com/?q=Alserkal+Avenue+Dubai" },
-  { id: "bastakia", image: "", wiki: "Al_Fahidi_Historical_Neighbourhood", name: "Bastakiya Wind Towers", category: "Vernacular Architecture", emoji: "castle", lat: 25.2637, lng: 55.2979, description: "The wind tower houses of the Bastakia quarter were built by Persian merchants in the early 20th century. Each tower is a passive ventilation system catching breeze and funnelling cool air into the rooms below. Engineering and beauty in perfect agreement.", mapUrl: "https://maps.google.com/?q=Bastakiya+Wind+Towers+Dubai" },
-  { id: "coffee-museum", image: "", wiki: "Coffee_Museum,_Dubai", name: "Coffee Museum", category: "Specialist Museum", emoji: "tablet", lat: 25.2634, lng: 55.2972, description: "A small but perfectly formed museum in Al Fahidi dedicated to coffee's 500-year journey from Ethiopian highlands to Yemeni trade routes to the world. The collection of antique pots and grinding tools traces a commodity that shaped Arab culture as profoundly as oil later would.", mapUrl: "https://maps.google.com/?q=Coffee+Museum+Dubai" },
-  { id: "hatta", image: "", wiki: "Hatta,_Dubai", name: "Hatta Heritage Village", category: "Mountain Heritage", emoji: "mountain", lat: 24.8007, lng: 56.1156, description: "An Emirati village in the Hajar Mountains 100km from Dubai, its restored mud-brick fort and traditional houses offering a completely different face of the emirate. The mountain pools and trails feel like another world from the glass towers of the coast.", mapUrl: "https://maps.google.com/?q=Hatta+Heritage+Village+Dubai" },
-  { id: "creek-dhow", image: "", wiki: "Dubai_Creek", name: "Dhow Wharfage", category: "Working Harbour", emoji: "sunrise", lat: 25.2700, lng: 55.3080, description: "Wooden dhows still load and unload cargo on the Deira side of the Creek. Refrigerators, tyres and electronics bound for Iran and East Africa. The wharfage operates exactly as it has for a century, an anachronism of extraordinary vitality in the world's most modern city.", mapUrl: "https://maps.google.com/?q=Dhow+Wharfage+Dubai+Creek" },
-  { id: "camel-racetrack", image: "", wiki: "Al_Marmoom_Camel_Racecourse", name: "Al Marmoom Camel Racecourse", category: "Cultural Sport", emoji: "road", lat: 24.9856, lng: 55.3952, description: "The world's longest camel racetrack at 10km, set in the desert outside Dubai. On winter race mornings, robot jockeys (which replaced child jockeys in 2005) are strapped to the camels' backs, operated by owners chasing alongside in 4x4s across the red sand.", mapUrl: "https://maps.google.com/?q=Al+Marmoom+Camel+Racecourse+Dubai" },
-  { id: "xva-gallery", image: "", wiki: "XVA_Gallery", name: "XVA Gallery & Hotel", category: "Arts & Heritage", emoji: "palette", lat: 25.2633, lng: 55.2977, description: "A boutique hotel and contemporary art gallery occupying a restored wind-tower house in the Al Fahidi district. Its courtyard restaurant, whitewashed walls, and programme of Arab and Iranian artists make it one of the most distinctive small cultural spaces in the Gulf.", mapUrl: "https://maps.google.com/?q=XVA+Gallery+Dubai" },
-  { id: "dubai-opera", image: "", wiki: "Dubai_Opera", name: "Dubai Opera", category: "Cultural Venue", emoji: "amphitheatre", lat: 25.1965, lng: 55.2786, description: "A dhow-shaped performing arts venue in the Downtown district, its hull of wood and steel rising beside the Dubai Fountain. Since opening in 2016 it has presented opera, ballet, and orchestral music in a city that built a world-class cultural institution in the same generation it built the Burj.", mapUrl: "https://maps.google.com/?q=Dubai+Opera" },
-  { id: "dubai-design-district", image: "", wiki: "Dubai_Design_District", name: "Dubai Design District (d3)", category: "Creative Quarter", emoji: "palette", lat: 25.1869, lng: 55.2793, description: "A purpose-built creative campus on the Canal that has drawn fashion houses, architecture studios, and design agencies into a walkable district of low-rise industrial-style buildings. The public art, pop-up markets and outdoor events make it Dubai's most genuinely urban neighbourhood.", mapUrl: "https://maps.google.com/?q=Dubai+Design+District" }
+  { id: "burj-khalifa", image: "", tags: ["Architecture", "Sightseeing"], wiki: "Burj_Khalifa", name: "Burj Khalifa", category: "Iconic Tower", emoji: "sunrise", lat: 25.1972, lng: 55.2744, description: "The world's tallest building at 828 metres, its tapered form inspired by the Hymenocallis desert flower. The At the Top observation deck on the 124th floor offers views across desert, city and Gulf that can stretch to the horizon of the Earth's curvature.", mapUrl: "https://maps.google.com/?q=Burj+Khalifa+Dubai" },
+  { id: "dubai-creek", image: "", tags: ["History", "Neighbourhood"], wiki: "Dubai_Creek", name: "Dubai Creek (Khor Dubai)", category: "Historic Waterway", emoji: "sunrise", lat: 25.2631, lng: 55.3007, description: "The original Dubai: a tidal creek where pearl divers and traders built the city's fortunes. Abra water taxis still cross between Deira and Bur Dubai; the gold and spice souks on either bank are unchanged in atmosphere from the trading port of a century ago.", mapUrl: "https://maps.google.com/?q=Dubai+Creek" },
+  { id: "al-fahidi", image: "", tags: ["History", "Neighbourhood"], wiki: "Al_Fahidi_Historical_Neighbourhood", name: "Al Fahidi Historic District", category: "Historic Quarter", emoji: "castle", lat: 25.2633, lng: 55.2975, description: "The oldest surviving neighbourhood in Dubai, its wind towers, the barajeel, the original air conditioning of the Gulf. The narrow lanes of coral-and-gypsum houses now shelter art galleries, the Dubai Museum, and one of the few authentic glimpses of pre-oil city life.", mapUrl: "https://maps.google.com/?q=Al+Fahidi+Dubai" },
+  { id: "dubai-museum", image: "", tags: ["History"], wiki: "Dubai_Museum", name: "Dubai Museum", category: "Museum", emoji: "tablet", lat: 25.2632, lng: 55.2971, description: "Housed in Al Fahidi Fort, the oldest building in Dubai built in 1787, this museum traces the city's transformation from pearl-diving village to global metropolis in a single generation. The contrast between then and now is almost incomprehensible.", mapUrl: "https://maps.google.com/?q=Dubai+Museum" },
+  { id: "gold-souk", image: "", tags: ["Food & Market", "History"], wiki: "Gold_Souk,_Dubai", name: "Gold Souk", category: "Historic Market", emoji: "map", lat: 25.2697, lng: 55.3045, description: "The largest gold market in the world, its covered lanes glittering with over 10 tonnes of gold jewellery at any given time. The concentration of craftsmanship, Indian, Arab and Iranian, and the sheer quantity of precious metal on display is genuinely astounding.", mapUrl: "https://maps.google.com/?q=Gold+Souk+Dubai" },
+  { id: "spice-souk", image: "", tags: ["Food & Market", "History"], wiki: "Spice_Souk,_Dubai", name: "Spice Souk", category: "Historic Market", emoji: "map", lat: 25.2683, lng: 55.3021, description: "Sacks of saffron, dried limes, frankincense, and a hundred other spices spill onto the lanes of Deira's spice market. The smells alone transport you across the Indian Ocean trade routes that built this city long before oil.", mapUrl: "https://maps.google.com/?q=Spice+Souk+Dubai" },
+  { id: "sheikh-zayed-road", image: "", tags: ["Architecture", "Sightseeing"], wiki: "Sheikh_Zayed_Road", name: "Sheikh Zayed Road", category: "Iconic Boulevard", emoji: "road", lat: 25.2048, lng: 55.2708, description: "The 12-lane artery lined with the most spectacular skyline in the world: a corridor of glass towers each trying to outdo the last. At night, lit from within, you are looking at a city that has decided ordinary architecture simply is not enough.", mapUrl: "https://maps.google.com/?q=Sheikh+Zayed+Road+Dubai" },
+  { id: "jumeirah-mosque", image: "", tags: ["Spiritual", "Architecture"], wiki: "Jumeirah_Mosque", name: "Jumeirah Mosque", category: "Sacred Architecture", emoji: "star", lat: 25.2290, lng: 55.2519, description: "The most photographed mosque in Dubai, a white Fatimid-style structure built in 1979 that glows gold at night. One of the few mosques in the UAE to offer regular guided tours to non-Muslim visitors, it provides a genuine introduction to Islamic worship.", mapUrl: "https://maps.google.com/?q=Jumeirah+Mosque+Dubai" },
+  { id: "dubai-frame", image: "", tags: ["Architecture", "Sightseeing"], wiki: "Dubai_Frame", name: "Dubai Frame", category: "Iconic Structure", emoji: "map", lat: 25.2353, lng: 55.3003, description: "A 150-metre picture frame straddling old and new Dubai. The historic Zabeel district sits on one side, the modern skyline on the other. The glass floor walkway at the top is not for the faint-hearted; the symbolism is unusually literal for a city that usually prefers spectacle over metaphor.", mapUrl: "https://maps.google.com/?q=Dubai+Frame" },
+  { id: "al-seef", image: "", tags: ["Neighbourhood", "History"], wiki: "Al_Seef,_Dubai", name: "Al Seef Heritage District", category: "Waterfront District", emoji: "road", lat: 25.2595, lng: 55.3008, description: "A new heritage district built along the Creek in the style of old Dubai: wind towers, coral-block facades and abra docks. A deliberate act of memory in a city that reinvents itself constantly, it has become one of the most pleasant places to walk in Dubai.", mapUrl: "https://maps.google.com/?q=Al+Seef+Dubai" },
+  { id: "la-mer", image: "", tags: ["Nature", "Neighbourhood"], wiki: "La_Mer,_Dubai", name: "La Mer Beach", category: "Urban Beach", emoji: "sunrise", lat: 25.2296, lng: 55.2729, description: "An open-air beach district of low-rise painted buildings, street food, murals, and 2km of public beach, a rare human-scale development in a city that usually builds big. The Burj Al Arab on the horizon beside ice-cream shops captures modern Dubai perfectly.", mapUrl: "https://maps.google.com/?q=La+Mer+Dubai" },
+  { id: "alserkal-avenue", image: "", tags: ["Art & Culture"], wiki: "Alserkal_Avenue", name: "Alserkal Avenue", category: "Arts District", emoji: "palette", lat: 25.1472, lng: 55.2289, description: "A converted industrial district in Al Quoz that has become the UAE's most important contemporary arts hub. Over 50 galleries, project spaces and experimental venues occupy former warehouses, the most concentrated density of contemporary art in the Gulf.", mapUrl: "https://maps.google.com/?q=Alserkal+Avenue+Dubai" },
+  { id: "bastakia", image: "", tags: ["History", "Architecture"], wiki: "Al_Fahidi_Historical_Neighbourhood", name: "Bastakiya Wind Towers", category: "Vernacular Architecture", emoji: "castle", lat: 25.2637, lng: 55.2979, description: "The wind tower houses of the Bastakia quarter were built by Persian merchants in the early 20th century. Each tower is a passive ventilation system catching breeze and funnelling cool air into the rooms below. Engineering and beauty in perfect agreement.", mapUrl: "https://maps.google.com/?q=Bastakiya+Wind+Towers+Dubai" },
+  { id: "coffee-museum", image: "", tags: ["History", "Food & Market"], wiki: "Coffee_Museum,_Dubai", name: "Coffee Museum", category: "Specialist Museum", emoji: "tablet", lat: 25.2634, lng: 55.2972, description: "A small but perfectly formed museum in Al Fahidi dedicated to coffee's 500-year journey from Ethiopian highlands to Yemeni trade routes to the world. The collection of antique pots and grinding tools traces a commodity that shaped Arab culture as profoundly as oil later would.", mapUrl: "https://maps.google.com/?q=Coffee+Museum+Dubai" },
+  { id: "hatta", image: "", tags: ["History", "Nature"], wiki: "Hatta,_Dubai", name: "Hatta Heritage Village", category: "Mountain Heritage", emoji: "mountain", lat: 24.8007, lng: 56.1156, description: "An Emirati village in the Hajar Mountains 100km from Dubai, its restored mud-brick fort and traditional houses offering a completely different face of the emirate. The mountain pools and trails feel like another world from the glass towers of the coast.", mapUrl: "https://maps.google.com/?q=Hatta+Heritage+Village+Dubai" },
+  { id: "creek-dhow", image: "", tags: ["History", "Sightseeing"], wiki: "Dubai_Creek", name: "Dhow Wharfage", category: "Working Harbour", emoji: "sunrise", lat: 25.2700, lng: 55.3080, description: "Wooden dhows still load and unload cargo on the Deira side of the Creek. Refrigerators, tyres and electronics bound for Iran and East Africa. The wharfage operates exactly as it has for a century, an anachronism of extraordinary vitality in the world's most modern city.", mapUrl: "https://maps.google.com/?q=Dhow+Wharfage+Dubai+Creek" },
+  { id: "camel-racetrack", image: "", tags: ["History", "Sightseeing"], wiki: "Al_Marmoom_Camel_Racecourse", name: "Al Marmoom Camel Racecourse", category: "Cultural Sport", emoji: "road", lat: 24.9856, lng: 55.3952, description: "The world's longest camel racetrack at 10km, set in the desert outside Dubai. On winter race mornings, robot jockeys (which replaced child jockeys in 2005) are strapped to the camels' backs, operated by owners chasing alongside in 4x4s across the red sand.", mapUrl: "https://maps.google.com/?q=Al+Marmoom+Camel+Racecourse+Dubai" },
+  { id: "xva-gallery", image: "", tags: ["Art & Culture", "History"], wiki: "XVA_Gallery", name: "XVA Gallery & Hotel", category: "Arts & Heritage", emoji: "palette", lat: 25.2633, lng: 55.2977, description: "A boutique hotel and contemporary art gallery occupying a restored wind-tower house in the Al Fahidi district. Its courtyard restaurant, whitewashed walls, and programme of Arab and Iranian artists make it one of the most distinctive small cultural spaces in the Gulf.", mapUrl: "https://maps.google.com/?q=XVA+Gallery+Dubai" },
+  { id: "dubai-opera", image: "", tags: ["Art & Culture", "Architecture"], wiki: "Dubai_Opera", name: "Dubai Opera", category: "Cultural Venue", emoji: "amphitheatre", lat: 25.1965, lng: 55.2786, description: "A dhow-shaped performing arts venue in the Downtown district, its hull of wood and steel rising beside the Dubai Fountain. Since opening in 2016 it has presented opera, ballet, and orchestral music in a city that built a world-class cultural institution in the same generation it built the Burj.", mapUrl: "https://maps.google.com/?q=Dubai+Opera" },
+  { id: "dubai-design-district", image: "", tags: ["Art & Culture", "Neighbourhood"], wiki: "Dubai_Design_District", name: "Dubai Design District (d3)", category: "Creative Quarter", emoji: "palette", lat: 25.1869, lng: 55.2793, description: "A purpose-built creative campus on the Canal that has drawn fashion houses, architecture studios, and design agencies into a walkable district of low-rise industrial-style buildings. The public art, pop-up markets and outdoor events make it Dubai's most genuinely urban neighbourhood.", mapUrl: "https://maps.google.com/?q=Dubai+Design+District" }
 ];
 
 // ══════════════════════════════════════════════
@@ -1609,6 +1693,14 @@ function switchCity(city) {
   // Reset exploration state for new city
   notifiedToday.clear();
   currentPos = null;
+  activeTagsExplore.clear();
+  activeTagsSites.clear();
+  document.querySelectorAll('#tagFilterBarExplore .tag-filter-btn, #tagFilterBarSites .tag-filter-btn').forEach((b, i) => {
+    b.classList.remove('active-tag');
+  });
+  document.querySelectorAll('#tagFilterBarExplore .tag-filter-btn:first-child, #tagFilterBarSites .tag-filter-btn:first-child').forEach(b => {
+    b.classList.add('active-tag');
+  });
   renderTestButtons();
   updateStats();
   renderAllSites('');
@@ -1673,6 +1765,8 @@ function applyCityHero(src, city) {
 //  STATE
 // ══════════════════════════════════════════════
 let isExploring = false;
+let activeTagsExplore = new Set();
+let activeTagsSites = new Set();
 let watchId = null;
 let currentPos = null;
 let notifiedToday = new Set(JSON.parse(localStorage.getItem('bh_notified') || '[]'));
@@ -1816,7 +1910,10 @@ function checkNearby() {
   }
 
   nearby.sort((a, b) => a.dist - b.dist);
-  renderNearby(nearby);
+  const filteredNearby = activeTagsExplore.size === 0
+    ? nearby
+    : nearby.filter(p => p.tags && p.tags.some(t => activeTagsExplore.has(t)));
+  renderNearby(filteredNearby);
   updateStats();
 }
 
@@ -1993,13 +2090,58 @@ function showView(view) {
 // ══════════════════════════════════════════════
 //  ALL SITES
 // ══════════════════════════════════════════════
+function toggleTagSites(tag, btn) {
+  const allBtn = document.querySelector('#tagFilterBarSites .tag-filter-btn');
+  if (!tag) {
+    activeTagsSites.clear();
+    document.querySelectorAll('#tagFilterBarSites .tag-filter-btn').forEach(b => b.classList.remove('active-tag'));
+    if (allBtn) allBtn.classList.add('active-tag');
+  } else {
+    if (allBtn) allBtn.classList.remove('active-tag');
+    if (activeTagsSites.has(tag)) {
+      activeTagsSites.delete(tag);
+      if (btn) btn.classList.remove('active-tag');
+      if (activeTagsSites.size === 0 && allBtn) allBtn.classList.add('active-tag');
+    } else {
+      activeTagsSites.add(tag);
+      if (btn) btn.classList.add('active-tag');
+    }
+  }
+  renderAllSites(document.getElementById('searchInput')?.value || '');
+}
+
+function toggleTagExplore(tag, btn) {
+  const allBtn = document.querySelector('#tagFilterBarExplore .tag-filter-btn');
+  if (!tag) {
+    activeTagsExplore.clear();
+    document.querySelectorAll('#tagFilterBarExplore .tag-filter-btn').forEach(b => b.classList.remove('active-tag'));
+    if (allBtn) allBtn.classList.add('active-tag');
+  } else {
+    if (allBtn) allBtn.classList.remove('active-tag');
+    if (activeTagsExplore.has(tag)) {
+      activeTagsExplore.delete(tag);
+      if (btn) btn.classList.remove('active-tag');
+      if (activeTagsExplore.size === 0 && allBtn) allBtn.classList.add('active-tag');
+    } else {
+      activeTagsExplore.add(tag);
+      if (btn) btn.classList.add('active-tag');
+    }
+  }
+  if (currentPos) checkNearby(currentPos.lat, currentPos.lng);
+  else renderNearby([]);
+}
+
 function renderAllSites(query) {
   const q = query.toLowerCase();
-  const filtered = getActivePois().filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    p.category.toLowerCase().includes(q) ||
-    p.description.toLowerCase().includes(q)
-  );
+  const filtered = getActivePois().filter(p => {
+    const matchesSearch = !q ||
+      p.name.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q);
+    const matchesTag = activeTagsSites.size === 0 ||
+      (p.tags && p.tags.some(t => activeTagsSites.has(t)));
+    return matchesSearch && matchesTag;
+  });
 
   const el = document.getElementById('allSitesList');
   if (filtered.length === 0) {
@@ -2014,7 +2156,9 @@ function renderAllSites(query) {
           <div class="all-poi-name">${poi.name}</div>
           ${visitedSites.has(poi.id) ? '<span class="visited-badge"><svg fill="none" stroke="#6f8b6d" viewBox="0 0 24 24" width="9" height="9" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> VISITED</span>' : ''}
         </div>
-        <div class="all-poi-cat">${poi.category.toUpperCase()}</div>
+        <div style="margin:4px 0 8px;">
+          ${(poi.tags || []).map(t => `<span class="poi-tag">${t}</span>`).join('')}
+        </div>
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
           <div class="all-poi-desc">${poi.description}</div>
           <button class="check-btn ${visitedSites.has(poi.id) ? 'checked' : ''}" style="flex-shrink:0;margin-top:6px;" data-visit-id="${poi.id}">
@@ -2175,7 +2319,10 @@ function toggleVisited(id) {
       ...poi,
       dist: haversine(currentPos.lat, currentPos.lng, poi.lat, poi.lng)
     })).filter(p => p.dist <= radius).sort((a,b) => a.dist - b.dist);
-    renderNearby(nearby);
+    const filteredNearby = activeTagsExplore.size === 0
+      ? nearby
+      : nearby.filter(p => p.tags && p.tags.some(t => activeTagsExplore.has(t)));
+    renderNearby(filteredNearby);
   }
   // Only re-render all-sites if it's currently the active tab
   const allSitesEl = document.getElementById('all-sites');
