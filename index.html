@@ -653,39 +653,46 @@
       margin-top: 2px;
     }
 
-    /* ── CARD IMAGE ── */
-    .poi-card-img-wrap {
-      position: relative;
+    /* ── CITY HERO ── */
+    .city-hero {
       width: 100%;
-      height: 140px;
-      border-radius: 2px;
-      margin-bottom: 14px;
+      height: 200px;
+      position: relative;
       overflow: hidden;
+      margin-bottom: 20px;
+      background: var(--surface-deep);
     }
-    .poi-card-img {
+    .city-hero-img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.6s;
+      opacity: 0;
+    }
+    .city-hero-img.loaded { opacity: 1; }
+    .city-hero-overlay {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .poi-card-placeholder {
-      width: 100%;
-      height: 100%;
+      background: linear-gradient(to top, rgba(61,46,38,0.72) 0%, rgba(61,46,38,0.1) 60%, transparent 100%);
       display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
     }
-
-    .detail-img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      display: block;
-      background: var(--surface);
+    .city-hero-name {
+      font-family: 'Raleway', sans-serif;
+      font-size: 22px; font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.04em;
+      line-height: 1.2;
+    }
+    .city-hero-sub {
+      font-family: 'Raleway', sans-serif;
+      font-size: 11px; font-weight: 500;
+      color: rgba(255,255,255,0.72);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-top: 3px;
     }
 
     /* ── SPINNER ── */
@@ -843,6 +850,14 @@
 
     <!-- EXPLORER VIEW -->
     <div id="explorer">
+      <!-- City hero image -->
+      <div class="city-hero" id="cityHero">
+        <img class="city-hero-img" id="cityHeroImg" src="" alt="" />
+        <div class="city-hero-overlay">
+          <div class="city-hero-name" id="cityHeroName"></div>
+          <div class="city-hero-sub" id="cityHeroSub"></div>
+        </div>
+      </div>
 
       <div class="location-bar">
         <span class="location-icon"><svg width="16" height="16" fill="none" stroke="#8fb7c1" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
@@ -853,7 +868,18 @@
       </div>
 
       <div class="nearby-section">
-        <div class="section-label">Nearby · Within Range</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="section-label" style="margin-bottom:0;">Nearby · Within Range</div>
+          <select class="radius-select" id="radiusQuick" onchange="setRadiusQuick(parseInt(this.value))">
+            <option value="500">500 m</option>
+            <option value="1000">1 km</option>
+            <option value="1500">1.5 km</option>
+            <option value="2000">2 km</option>
+            <option value="5000">5 km</option>
+            <option value="10000">10 km</option>
+            <option value="20000">20 km</option>
+          </select>
+        </div>
         <div id="nearbyList">
           <div class="empty-state">
             <div class="empty-icon"><svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" class="battuta-spin">
@@ -868,6 +894,14 @@
 
     <!-- ALL SITES VIEW -->
     <div id="all-sites" style="display:none">
+      <!-- City hero image -->
+      <div class="city-hero" id="cityHeroAllSites">
+        <img class="city-hero-img" id="cityHeroImgAllSites" src="" alt="" />
+        <div class="city-hero-overlay">
+          <div class="city-hero-name" id="cityHeroNameAllSites"></div>
+          <div class="city-hero-sub" id="cityHeroSubAllSites"></div>
+        </div>
+      </div>
       <div class="section-label" id="allSitesLabel">All Sites · Rome</div>
       <div class="search-bar">
         <span class="search-icon"><svg width="14" height="14" fill="none" stroke="#6f7f96" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg></span>
@@ -996,7 +1030,7 @@
 <div id="detail-overlay" onclick="closeDetail(event)">
   <div class="detail-sheet" id="detailSheet">
     <div class="detail-handle"></div>
-    <img id="detailImg" class="detail-img" src="" alt="" style="display:none;" />
+
     <div id="detailCategory" class="detail-category"></div>
     <div id="detailName" class="detail-name"></div>
     <div class="detail-divider"></div>
@@ -1454,42 +1488,42 @@ const DUBAI_POIS = [
 //  CITY MANAGEMENT
 // ══════════════════════════════════════════════
 const CITY_DATA = {
-  rome:   { pois: null, name: 'Rome',   flag: '🏛️', testLocs: [
+  rome:   { pois: null, name: 'Rome',     flag: '🏛️', wiki: 'Rome', testLocs: [
     { lat: 41.8986, lng: 12.4769, label: '🏛️ Pantheon area' },
     { lat: 41.8902, lng: 12.4922, label: '🏟️ Colosseum area' },
     { lat: 41.9022, lng: 12.4539, label: '⛪ Vatican area' },
     { lat: 41.8992, lng: 12.4731, label: '🗺️ Piazza Navona area' },
     { lat: 41.8898, lng: 12.4697, label: '✨ Trastevere area' },
   ]},
-  amman:  { pois: null, name: 'Amman',  flag: '🕌', testLocs: [
+  amman:  { pois: null, name: 'Amman',   flag: '🕌', wiki: 'Amman', testLocs: [
     { lat: 31.9552, lng: 35.9337, label: '🏰 Citadel area' },
     { lat: 31.9520, lng: 35.9366, label: '🎭 Roman Theatre area' },
     { lat: 31.9590, lng: 35.9170, label: '🎨 Luweibdeh / Rainbow St' },
     { lat: 31.9637, lng: 35.9196, label: '🕌 King Abdullah Mosque' },
     { lat: 31.9434, lng: 35.9380, label: '🕌 Abu Darwish Mosque' },
   ]},
-  malaga: { pois: null, name: 'Málaga', flag: '🌊', testLocs: [
+  malaga: { pois: null, name: 'Málaga',  flag: '🌊', wiki: 'Málaga', testLocs: [
     { lat: 36.7211, lng: -4.4178, label: '🏰 Alcazaba area' },
     { lat: 36.7200, lng: -4.4196, label: '⛪ Cathedral area' },
     { lat: 36.7232, lng: -4.4200, label: '🎨 Plaza de la Merced' },
     { lat: 36.7162, lng: -4.4236, label: '🎭 Port / Pompidou' },
     { lat: 36.7170, lng: -4.4050, label: '🏖️ La Malagueta beach' },
   ]},
-  tunis: { pois: null, name: 'Tunis', flag: '🫒', testLocs: [
+  tunis:  { pois: null, name: 'Tunis',   flag: '🫒', wiki: 'Tunis', testLocs: [
     { lat: 36.7992, lng: 10.1699, label: '🕌 Medina centre' },
     { lat: 36.7990, lng: 10.1710, label: '🕌 Ez-Zitouna Mosque' },
     { lat: 36.8093, lng: 10.1340, label: '🏛️ Bardo Museum' },
     { lat: 36.8528, lng: 10.3233, label: '🏺 Carthage ruins' },
     { lat: 36.8702, lng: 10.3418, label: '🌊 Sidi Bou Said' },
   ]},
-  montreal: { pois: null, name: 'Montréal', flag: '🍁', testLocs: [
+  montreal: { pois: null, name: 'Montréal', flag: '🍁', wiki: 'Montreal', testLocs: [
     { lat: 45.5075, lng: -73.5540, label: '🏙️ Old Montréal' },
     { lat: 45.5046, lng: -73.5566, label: '⛪ Notre-Dame Basilica' },
     { lat: 45.5088, lng: -73.5878, label: '🌲 Mount Royal' },
     { lat: 45.5221, lng: -73.5757, label: '🎨 Plateau-Mont-Royal' },
     { lat: 45.5360, lng: -73.6148, label: '🛒 Marché Jean-Talon' },
   ]},
-  dubai: { pois: null, name: 'Dubai', flag: '🏙️', testLocs: [
+  dubai:  { pois: null, name: 'Dubai',   flag: '🏙️', wiki: 'Dubai', testLocs: [
     { lat: 25.1972, lng: 55.2744, label: '🏙️ Burj Khalifa' },
     { lat: 25.2633, lng: 55.2975, label: '🏰 Al Fahidi district' },
     { lat: 25.2697, lng: 55.3045, label: '✨ Gold Souk / Creek' },
@@ -1504,7 +1538,58 @@ CITY_DATA.tunis.pois   = TUNIS_POIS;
 CITY_DATA.montreal.pois = MONTREAL_POIS;
 CITY_DATA.dubai.pois   = DUBAI_POIS;
 
-let currentCity = localStorage.getItem('bh_city') || 'rome';
+let currentCity = localStorage.getItem('bh_city') || null;
+
+// City centres for auto-detection (lat, lng, max radius in km)
+const CITY_CENTRES = {
+  rome:     { lat: 41.8967, lng: 12.4822, radius: 50 },
+  amman:    { lat: 31.9539, lng: 35.9106, radius: 50 },
+  malaga:   { lat: 36.7213, lng: -4.4216, radius: 50 },
+  tunis:    { lat: 36.8190, lng: 10.1658, radius: 80 },
+  montreal: { lat: 45.5019, lng: -73.5674, radius: 50 },
+  dubai:    { lat: 25.2048, lng: 55.2708, radius: 80 },
+};
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function detectCityFromCoords(lat, lng) {
+  let nearest = null, nearestDist = Infinity;
+  for (const [city, centre] of Object.entries(CITY_CENTRES)) {
+    const dist = haversineKm(lat, lng, centre.lat, centre.lng);
+    if (dist < centre.radius && dist < nearestDist) {
+      nearest = city;
+      nearestDist = dist;
+    }
+  }
+  return nearest; // null if not near any supported city
+}
+
+function autoDetectCity() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const detected = detectCityFromCoords(pos.coords.latitude, pos.coords.longitude);
+    if (detected && detected !== currentCity) {
+      switchCity(detected);
+      showInfoToast('📍 Switched to ' + CITY_DATA[detected].name + ' based on your location');
+    }
+  }, () => { /* permission denied or error — stay on current city */ }, {
+    timeout: 8000,
+    maximumAge: 60000
+  });
+}
+
+if (!currentCity) {
+  // First ever visit — default to rome until GPS resolves
+  currentCity = 'rome';
+}
 function getActivePois() { return CITY_DATA[currentCity].pois; }
 
 function switchCity(city) {
@@ -1534,8 +1619,9 @@ function switchCity(city) {
   renderAllSites('');
   const searchInput = document.getElementById('searchInput');
   if (searchInput) searchInput.value = '';
-  // Pre-fetch images for new city
-  prefetchAllImages();
+  // Update hero text immediately, fetch image
+  applyCityHeroText(city);
+  fetchCityHero(city);
   showInfoToast('📍 Switched to ' + cityName);
 }
 
@@ -1547,40 +1633,44 @@ function renderTestButtons() {
     `<button class="test-loc-btn" onclick="simulateLocation(${loc.lat}, ${loc.lng}, '${loc.label}')">${loc.label}</button>`
   ).join('');
 }
-const wikiImageCache = {};
+// City hero Wikipedia images
 
-async function fetchWikiImage(poi) {
-  if (!poi.wiki) return;
-  if (wikiImageCache[poi.id]) {
-    poi.image = wikiImageCache[poi.id];
+// City hero image — one per city, cached
+const cityHeroCache = {};
+
+async function fetchCityHero(city) {
+  if (cityHeroCache[city]) {
+    applyCityHero(cityHeroCache[city], city);
     return;
   }
   try {
-    const url = `/.netlify/functions/wiki-image?title=${encodeURIComponent(poi.wiki)}`;
+    const wiki = CITY_DATA[city].wiki;
+    const url = `/.netlify/functions/wiki-image?title=${encodeURIComponent(wiki)}`;
     const res = await fetch(url);
     const data = await res.json();
-    console.log(`[wiki] ${poi.id}:`, data.url || 'NO IMAGE');
     if (data.url) {
-      const src = data.url;
-      wikiImageCache[poi.id] = src;
-      poi.image = src;
-      document.querySelectorAll(`[data-poi-id="${poi.id}"] .poi-card-img`).forEach(img => {
-        img.src = src;
-        img.style.display = 'block';
-      });
-      const detailSheet = document.getElementById('detailSheet');
-      if (detailSheet && detailSheet.dataset.poiId === poi.id) {
-        const detailImg = document.getElementById('detailImg');
-        if (detailImg) { detailImg.src = src; detailImg.style.display = 'block'; }
-      }
+      cityHeroCache[city] = data.url;
+      applyCityHero(data.url, city);
     }
-  } catch(e) { console.warn(`[wiki] ${poi.id} error:`, e); }
+  } catch(e) { console.warn(`[hero] ${city}:`, e); }
 }
 
-// Prefetch all images in the background
-function prefetchAllImages() {
-  getActivePois().forEach((poi, i) => {
-    setTimeout(() => fetchWikiImage(poi), i * 300);
+function applyCityHeroText(city) {
+  const cityName = CITY_DATA[city].name;
+  const poiCount = CITY_DATA[city].pois ? CITY_DATA[city].pois.length : 0;
+  ['', 'AllSites'].forEach(suffix => {
+    const name = document.getElementById('cityHeroName' + suffix);
+    const sub  = document.getElementById('cityHeroSub' + suffix);
+    if (name) name.textContent = cityName;
+    if (sub)  sub.textContent  = poiCount + ' Cultural Sites';
+  });
+}
+
+function applyCityHero(src, city) {
+  applyCityHeroText(city);
+  ['', 'AllSites'].forEach(suffix => {
+    const img = document.getElementById('cityHeroImg' + suffix);
+    if (img) { img.src = src; img.onload = () => img.classList.add('loaded'); }
   });
 }
 
@@ -1766,18 +1856,6 @@ function triggerGroupAlert(count, message, pois) {
 // ══════════════════════════════════════════════
 //  RENDER NEARBY
 // ══════════════════════════════════════════════
-function poiImg(url, poi) {
-  var color = (poi && POI_COLORS[poi.emoji]) ? POI_COLORS[poi.emoji] : '#c97b5c';
-  var icon = poi ? getIcon(poi.emoji, 40) : '';
-  var placeholder = '<div class="poi-card-placeholder" style="background:linear-gradient(135deg,'
-    + color + '22,' + color + '44);"><div style="opacity:0.6;">' + icon + '</div></div>';
-  var imgStyle = url ? '' : ' style="display:none"';
-  return '<div class="poi-card-img-wrap">'
-    + placeholder
-    + '<img class="poi-card-img" src="' + (url||'') + '" loading="lazy"' + imgStyle + ' onerror="this.style.display=\'none\'">'
-    + '</div>';
-}
-
 function renderNearby(nearby) {
   const el = document.getElementById('nearbyList');
   if (nearby.length === 0) {
@@ -1796,7 +1874,7 @@ function renderNearby(nearby) {
          style="cursor:pointer;"
          data-poi-id="${poi.id}"
          onclick="openDetail('${poi.id}')">
-      ${poiImg(poi.image, poi)}
+      ${getIcon(poi.emoji, 28)}
       <div class="poi-distance">${formatDist(poi.dist).toUpperCase()}</div>
       <div class="poi-name">${poi.name}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -1984,16 +2062,8 @@ function openDetail(id) {
   const detailSheet = document.getElementById('detailSheet');
   detailSheet.dataset.poiId = id;
 
-  const detailImg = document.getElementById('detailImg');
-  if (poi.image) {
-    detailImg.src = poi.image;
-    detailImg.alt = poi.name;
-    detailImg.style.display = 'block';
-  } else {
-    detailImg.style.display = 'none';
-    // Fetch now and update when ready
-    fetchWikiImage(poi);
-  }
+
+
 
   // Update visit button state
   const visitBtn = document.getElementById('detailVisitBtn');
@@ -2040,6 +2110,21 @@ function closeDetail(e) {
 function saveSettings() {
   settings.radius = parseInt(document.getElementById('radiusSelect').value);
   localStorage.setItem('bh_settings', JSON.stringify(settings));
+}
+
+function setRadiusQuick(r) {
+  settings.radius = r;
+  localStorage.setItem('bh_settings', JSON.stringify(settings));
+  // Sync both dropdowns
+  const sel = document.getElementById('radiusSelect');
+  if (sel) sel.value = r;
+  const quick = document.getElementById('radiusQuick');
+  if (quick) quick.value = r;
+  // Update empty nearby text
+  const emptyText = document.getElementById('emptyNearbyText');
+  if (emptyText) emptyText.innerHTML = `No sites within ${r >= 1000 ? (r/1000)+'km' : r+'m'}.<br/>Keep walking — ${CITY_DATA[currentCity].name} reveals itself slowly.`;
+  // Re-scan with new radius if we have a position
+  if (currentPos) checkNearby(currentPos.lat, currentPos.lng);
 }
 
 function toggleNotif() {
@@ -2145,6 +2230,9 @@ async function simulateLocation(lat, lng, label) {
 function init() {
   // Apply saved settings to UI
   document.getElementById('radiusSelect').value = settings.radius;
+  // Sync home screen radius dropdown
+  const quickSel = document.getElementById('radiusQuick');
+  if (quickSel) quickSel.value = settings.radius;
   document.getElementById('notifToggle').classList.toggle('on', settings.notif);
   document.getElementById('toastToggle').classList.toggle('on', settings.toast);
 
@@ -2163,8 +2251,14 @@ function init() {
   renderTestButtons();
   updateStats();
 
-  // Prefetch Wikipedia images in background
-  prefetchAllImages();
+  // Auto-detect city from GPS on first ever visit
+  if (!localStorage.getItem('bh_city')) {
+    autoDetectCity();
+  }
+
+  // Load city hero image
+  applyCityHeroText(currentCity);
+  fetchCityHero(currentCity);
 }
 
 init();

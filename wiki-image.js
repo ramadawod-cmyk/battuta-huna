@@ -97,7 +97,9 @@ exports.handler = async function(event) {
 
     if (data.thumbnail && data.thumbnail.source) {
       const src = data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
-      const proxied = '/.netlify/functions/wiki-image?img=' + encodeURIComponent(src);
+      // Decode first in case Wikipedia URL already has encoded chars, then encode once cleanly
+      const cleanSrc = encodeURIComponent(decodeURIComponent(src));
+      const proxied = '/.netlify/functions/wiki-image?img=' + cleanSrc;
       return {
         statusCode: 200,
         headers: {
