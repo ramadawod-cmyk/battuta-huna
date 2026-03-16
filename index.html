@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="Battuta Huna" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Raleway:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap" rel="stylesheet" />
 
   <style>
     :root {
@@ -58,29 +58,30 @@
     /* ── HEADER ── */
     header {
       padding: 20px 24px 16px;
-      border-bottom: 1px solid rgba(201,123,92,0.3);
+      border-bottom: 1px solid rgba(111,139,109,0.2);
       display: flex; align-items: center; justify-content: space-between;
-      background: #6f8b6d;
+      background: #f5f0e8;
+      position: relative;
     }
 
     .logo {
-      display: flex; flex-direction: column; gap: 1px;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
     }
 
-    .logo-name {
-      font-family: 'Raleway', sans-serif;
-      font-size: 22px; font-weight: 600;
-      letter-spacing: 0.12em;
-      color: var(--ink-deep);
-      line-height: 1;
+    .logo svg {
+      display: block;
     }
 
     .logo-sub {
+      position: absolute;
+      left: 50%; transform: translateX(-50%);
       font-family: 'Merriweather', serif;
       font-style: italic;
+      font-weight: 400;
       font-size: 11px;
-      color: #f5ead8;
+      color: #6f8b6d;
       letter-spacing: 0.08em;
+      white-space: nowrap;
     }
 
     .status-pill {
@@ -91,7 +92,7 @@
       background: #f5ead8;
       font-size: 11px;
       letter-spacing: 0.06em;
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       color: var(--stone);
       transition: all 0.4s ease;
       cursor: pointer;
@@ -154,7 +155,7 @@
     }
 
     .splash-title {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 13px; font-weight: 400;
       letter-spacing: 0.28em;
       color: var(--moss);
@@ -178,7 +179,7 @@
       color: var(--terracotta);
       margin-top: 8px;
       font-style: normal;
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
     }
 
     .start-btn {
@@ -188,7 +189,7 @@
       border: none;
       border-radius: 2px;
       color: #fff;
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 13px;
       letter-spacing: 0.2em;
       cursor: pointer;
@@ -213,13 +214,13 @@
     #explorer { display: none; padding: 20px 0 80px; background: #ffffff; position: relative; z-index: 2; }
 
     .section-label {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 10px;
       letter-spacing: 0.3em;
-      color: var(--ink);
+      color: #3d2e26;
       text-transform: uppercase;
       padding: 0 24px 10px;
-      border-bottom: 1px solid rgba(201,123,92,0.2);
+      border-bottom: 1px solid rgba(61,46,38,0.2);
       margin-bottom: 16px;
     }
 
@@ -230,8 +231,8 @@
       margin: 0 16px 16px;
       padding: 18px 20px;
       background: #ffffff;
-      border: 2px solid rgba(201,123,92,0.25);
-      border-left: 4px solid var(--terracotta);
+      border: 2px solid rgba(111,139,109,0.35);
+      border-left: 4px solid #6f8b6d;
       border-radius: 16px;
       cursor: pointer;
       transition: all 0.25s ease;
@@ -247,7 +248,7 @@
       transition: opacity 0.3s;
     }
 
-    .poi-card:hover { border-color: var(--terracotta); transform: translateX(2px); }
+    .poi-card:hover { border-color: #6f8b6d; transform: translateX(2px); }
     .poi-card:hover::before { opacity: 1; }
 
     .poi-card.pulse-in {
@@ -260,10 +261,10 @@
     }
 
     .poi-distance {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 10px;
       letter-spacing: 0.15em;
-      color: var(--ink);
+      color: #3d2e26;
       margin-bottom: 5px;
     }
 
@@ -279,12 +280,12 @@
       display: inline-block;
       font-size: 10px;
       letter-spacing: 0.15em;
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       color: var(--ink);
       background: rgba(201,123,92,0.1);
       border: 1px solid rgba(201,123,92,0.2);
       padding: 2px 8px;
-      border-radius: 2px;
+      border-radius: 20px;
       margin-bottom: 10px;
     }
 
@@ -304,7 +305,7 @@
 
     .map-link {
       display: flex; align-items: center; gap: 6px;
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 10px;
       letter-spacing: 0.12em;
       color: var(--indigo);
@@ -324,7 +325,7 @@
       margin: 0 16px 20px;
       padding: 12px 16px;
       background: #ffffff;
-      border: 2px solid rgba(201,123,92,0.25);
+      border: 2px solid rgba(61,46,38,0.2);
       border-radius: 16px;
       display: flex; align-items: center; gap: 10px;
     }
@@ -341,7 +342,7 @@
       display: block;
       font-weight: 400;
       color: var(--ink);
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 10px;
       letter-spacing: 0.12em;
       margin-bottom: 2px;
@@ -377,7 +378,7 @@
     }
 
     .toast-header {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 9px;
       letter-spacing: 0.3em;
       color: var(--ink);
@@ -401,8 +402,8 @@
     nav {
       position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
       width: 100%; max-width: 480px;
-      border-top: 1px solid rgba(201,123,92,0.2);
-      background: #6f8b6d;
+      border-top: 1px solid rgba(61,46,38,0.1);
+      background: #f5f0e8;
       display: flex;
       z-index: 50;
     }
@@ -411,13 +412,13 @@
       flex: 1; padding: 12px 8px;
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       border: none; background: none; cursor: pointer;
-      color: #f5ead8;
-      font-family: 'Raleway', sans-serif;
+      color: #6f8b6d;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 11px; letter-spacing: 0.1em;
       transition: color 0.2s;
     }
 
-    .nav-btn.active, .nav-btn:hover { color: #f5ead8; }
+    .nav-btn.active, .nav-btn:hover { color: #6f8b6d; }
     .nav-btn svg { width: 26px; height: 26px; stroke-width: 1.5; }
 
     /* ── ALL SITES VIEW ── */
@@ -432,7 +433,7 @@
       width: 100%;
       padding: 12px 16px 12px 40px;
       background: #ffffff;
-      border: 2px solid rgba(201,123,92,0.25);
+      border: 2px solid rgba(61,46,38,0.2);
       border-radius: 16px;
       color: var(--text);
       font-family: 'Merriweather', serif;
@@ -442,7 +443,7 @@
     }
 
     .search-bar input::placeholder { color: var(--stone); }
-    .search-bar input:focus { border-color: var(--terracotta); }
+    .search-bar input:focus { border-color: rgba(61,46,38,0.5); }
 
     .tag-filter-bar {
       display: flex; gap: 8px;
@@ -457,19 +458,19 @@
       flex-shrink: 0;
       padding: 6px 14px;
       border-radius: 20px;
-      border: 1.5px solid rgba(201,123,92,0.3);
+      border: 1.5px solid rgba(111,139,109,0.4);
       background: #ffffff;
       color: var(--stone);
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 11px; font-weight: 500;
       letter-spacing: 0.04em;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .tag-filter-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+    .tag-filter-btn:hover { border-color: #6f8b6d; color: #6f8b6d; }
     .tag-filter-btn.active-tag {
-      background: var(--terracotta);
-      border-color: var(--terracotta);
+      background: #6f8b6d;
+      border-color: #6f8b6d;
       color: #ffffff;
     }
 
@@ -477,14 +478,183 @@
       display: inline-block;
       padding: 3px 10px;
       border-radius: 20px;
-      border: 1px solid rgba(201,123,92,0.25);
-      background: var(--surface);
-      color: var(--stone);
-      font-family: 'Raleway', sans-serif;
+      border: 1px solid rgba(111,139,109,0.4);
+      background: rgba(111,139,109,0.08);
+      color: #6f8b6d;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 10px; font-weight: 500;
       letter-spacing: 0.04em;
       margin-right: 4px;
     }
+
+    .tag-filter-btn.tag-sightseeing {
+      border-color: rgba(111,139,109,0.4);
+      background: rgba(111,139,109,0.12);
+      color: #6f8b6d;
+    }
+    .tag-filter-btn.tag-sightseeing:hover {
+      border-color: #6f8b6d;
+      color: #6f8b6d;
+      background: rgba(111,139,109,0.12);
+    }
+    .tag-filter-btn.tag-sightseeing.active-tag {
+      background: #6f8b6d;
+      border-color: #6f8b6d;
+      color: #ffffff;
+    }
+    .poi-tag.tag-sightseeing {
+      border-color: rgba(111,139,109,0.4);
+      background: rgba(111,139,109,0.12);
+      color: #6f8b6d;
+    }
+
+    .tag-filter-btn.tag-history {
+      border-color: rgba(201,123,92,0.4);
+      background: rgba(201,123,92,0.12);
+      color: #c97b5c;
+    }
+    .tag-filter-btn.tag-history:hover {
+      border-color: #c97b5c;
+      color: #c97b5c;
+      background: rgba(201,123,92,0.12);
+    }
+    .tag-filter-btn.tag-history.active-tag {
+      background: #c97b5c;
+      border-color: #c97b5c;
+      color: #ffffff;
+    }
+    .poi-tag.tag-history {
+      border-color: rgba(201,123,92,0.4);
+      background: rgba(201,123,92,0.12);
+      color: #c97b5c;
+    }
+
+    .tag-filter-btn.tag-art-culture {
+      border-color: rgba(227,185,108,0.5);
+      background: rgba(227,185,108,0.15);
+      color: #b08830;
+    }
+    .tag-filter-btn.tag-art-culture:hover {
+      border-color: #e3b96c;
+      color: #e3b96c;
+      background: rgba(227,185,108,0.15);
+    }
+    .tag-filter-btn.tag-art-culture.active-tag {
+      background: #e3b96c;
+      border-color: #e3b96c;
+      color: #ffffff;
+    }
+    .poi-tag.tag-art-culture {
+      border-color: rgba(227,185,108,0.5);
+      background: rgba(227,185,108,0.15);
+      color: #b08830;
+    }
+
+    .tag-filter-btn.tag-spiritual {
+      border-color: rgba(142,160,129,0.4);
+      background: rgba(142,160,129,0.12);
+      color: #8ea081;
+    }
+    .tag-filter-btn.tag-spiritual:hover {
+      border-color: #8ea081;
+      color: #8ea081;
+      background: rgba(142,160,129,0.12);
+    }
+    .tag-filter-btn.tag-spiritual.active-tag {
+      background: #8ea081;
+      border-color: #8ea081;
+      color: #ffffff;
+    }
+    .poi-tag.tag-spiritual {
+      border-color: rgba(142,160,129,0.4);
+      background: rgba(142,160,129,0.12);
+      color: #8ea081;
+    }
+
+    .tag-filter-btn.tag-food-market {
+      border-color: rgba(143,183,193,0.5);
+      background: rgba(143,183,193,0.15);
+      color: #5a96a3;
+    }
+    .tag-filter-btn.tag-food-market:hover {
+      border-color: #8fb7c1;
+      color: #8fb7c1;
+      background: rgba(143,183,193,0.15);
+    }
+    .tag-filter-btn.tag-food-market.active-tag {
+      background: #8fb7c1;
+      border-color: #8fb7c1;
+      color: #ffffff;
+    }
+    .poi-tag.tag-food-market {
+      border-color: rgba(143,183,193,0.5);
+      background: rgba(143,183,193,0.15);
+      color: #5a96a3;
+    }
+
+    .tag-filter-btn.tag-nature {
+      border-color: rgba(111,127,150,0.4);
+      background: rgba(111,127,150,0.12);
+      color: #6f7f96;
+    }
+    .tag-filter-btn.tag-nature:hover {
+      border-color: #6f7f96;
+      color: #6f7f96;
+      background: rgba(111,127,150,0.12);
+    }
+    .tag-filter-btn.tag-nature.active-tag {
+      background: #6f7f96;
+      border-color: #6f7f96;
+      color: #ffffff;
+    }
+    .poi-tag.tag-nature {
+      border-color: rgba(111,127,150,0.4);
+      background: rgba(111,127,150,0.12);
+      color: #6f7f96;
+    }
+
+    .tag-filter-btn.tag-neighbourhood {
+      border-color: rgba(61,46,38,0.25);
+      background: rgba(61,46,38,0.08);
+      color: #3d2e26;
+    }
+    .tag-filter-btn.tag-neighbourhood:hover {
+      border-color: #3d2e26;
+      color: #3d2e26;
+      background: rgba(61,46,38,0.08);
+    }
+    .tag-filter-btn.tag-neighbourhood.active-tag {
+      background: #3d2e26;
+      border-color: #3d2e26;
+      color: #ffffff;
+    }
+    .poi-tag.tag-neighbourhood {
+      border-color: rgba(61,46,38,0.25);
+      background: rgba(61,46,38,0.08);
+      color: #3d2e26;
+    }
+
+    .tag-filter-btn.tag-architecture {
+      border-color: rgba(155,143,130,0.4);
+      background: rgba(155,143,130,0.12);
+      color: #9b8f82;
+    }
+    .tag-filter-btn.tag-architecture:hover {
+      border-color: #9b8f82;
+      color: #9b8f82;
+      background: rgba(155,143,130,0.12);
+    }
+    .tag-filter-btn.tag-architecture.active-tag {
+      background: #9b8f82;
+      border-color: #9b8f82;
+      color: #ffffff;
+    }
+    .poi-tag.tag-architecture {
+      border-color: rgba(155,143,130,0.4);
+      background: rgba(155,143,130,0.12);
+      color: #9b8f82;
+    }
+
 
     .search-icon {
       position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
@@ -495,7 +665,7 @@
       margin: 0 16px 16px;
       padding: 14px 18px;
       background: #ffffff;
-      border: 2px solid rgba(201,123,92,0.25);
+      border: 2px solid rgba(111,139,109,0.35);
       border-radius: 16px;
       display: flex; align-items: flex-start; gap: 14px;
       cursor: pointer;
@@ -504,7 +674,7 @@
 
     .all-poi-card:hover {
       background: var(--surface);
-      border-color: var(--terracotta);
+      border-color: #6f8b6d;
     }
 
     .poi-emoji {
@@ -520,7 +690,7 @@
     }
 
     .all-poi-cat {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 9px; letter-spacing: 0.15em;
       color: var(--ink); margin-bottom: 5px;
     }
@@ -568,7 +738,7 @@
     .detail-emoji { margin-bottom: 12px; line-height: 1; }
 
     .detail-category {
-      font-family: 'Raleway', sans-serif; font-size: 10px;
+      font-family: 'Bricolage Grotesque', sans-serif; font-size: 10px;
       letter-spacing: 0.3em; color: var(--ink); margin-bottom: 8px;
     }
 
@@ -596,8 +766,8 @@
       flex: 1; padding: 13px;
       background: var(--terracotta);
       border: none; border-radius: 2px;
-      color: #f5ead8;
-      font-family: 'Raleway', sans-serif;
+      color: #ffffff;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 11px; letter-spacing: 0.18em;
       cursor: pointer; text-decoration: none;
       display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -612,7 +782,7 @@
       border: 1px solid rgba(201,123,92,0.2);
       border-radius: 2px;
       color: var(--stone);
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 11px; letter-spacing: 0.18em;
       cursor: pointer;
     }
@@ -623,7 +793,7 @@
     .settings-section { margin-bottom: 28px; }
 
     .settings-title {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 10px; letter-spacing: 0.3em;
       color: var(--ink); margin-bottom: 14px;
       padding-bottom: 8px;
@@ -662,7 +832,7 @@
 
     .radius-select {
       background: #ffffff;
-      border: 2px solid rgba(201,123,92,0.25);
+      border: 2px solid rgba(61,46,38,0.2);
       color: var(--text);
       font-family: 'Merriweather', serif;
       font-size: 13px; padding: 6px 12px;
@@ -683,7 +853,7 @@
     }
 
     .stat-num {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 28px; font-weight: 600;
       color: var(--ink-deep);
     }
@@ -721,14 +891,14 @@
       padding: 16px;
     }
     .city-hero-name {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 22px; font-weight: 700;
       color: #fff;
       letter-spacing: 0.04em;
       line-height: 1.2;
     }
     .city-hero-sub {
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 11px; font-weight: 500;
       color: rgba(255,255,255,0.72);
       letter-spacing: 0.14em;
@@ -753,7 +923,7 @@
       border: 1px solid rgba(201,123,92,0.3);
       background: transparent;
       color: var(--stone);
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 9px; letter-spacing: 0.12em;
       cursor: pointer;
       transition: all 0.2s;
@@ -778,7 +948,7 @@
 
     .visited-badge {
       display: inline-flex; align-items: center; gap: 4px;
-      font-family: 'Raleway', sans-serif;
+      font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 9px; letter-spacing: 0.1em;
       color: var(--moss);
       background: rgba(111,139,109,0.12);
@@ -847,9 +1017,25 @@
 <div id="app">
   <header>
     <div class="logo">
-      <span class="logo-name">Battuta Huna</span>
-      <span class="logo-sub" id="logoSubCity">Cultural Discovery · Rome</span>
+      <svg width="44" height="44" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M249 211C282.137 211 309 184.137 309 151C309 117.863 282.137 91 249 91C215.863 91 189 117.863 189 151C189 184.137 215.863 211 249 211Z" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M189 151C162.333 157.667 162.333 164.333 189 171" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M189 151C162.333 151 162.333 147.667 189 141" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M264 151C266.761 151 269 148.761 269 146C269 143.239 266.761 141 264 141C261.239 141 259 143.239 259 146C259 148.761 261.239 151 264 151Z" fill="#6f8b6d"/>
+        <path d="M249 211C249 244.333 245.667 267.667 239 281" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M259 391C308.706 391 349 355.183 349 311C349 266.817 308.706 231 259 231C209.294 231 169 266.817 169 311C169 355.183 209.294 391 259 391Z" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M259 301C279 294.333 292.333 301 299 321C279 334.333 262.333 334.333 249 321" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M329 291C342.333 297.667 345.667 306 339 316" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M229 381V421" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M269 381V421" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M209 421H249" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M249 421H289" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M399 331H329C323.477 331 319 335.477 319 341V401C319 406.523 323.477 411 329 411H399C404.523 411 409 406.523 409 401V341C409 335.477 404.523 331 399 331Z" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M349 331V301H379V331" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M369 361H359V371H369V361Z" stroke="#6f8b6d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
+    <span class="logo-sub" id="logoSubCity">Cultural Discovery · Rome</span>
     <div class="status-pill" id="statusPill" onclick="toggleExploration()">
       <div class="status-dot"></div>
       <span id="statusText">Idle</span>
@@ -923,14 +1109,14 @@
         </div>
         <div class="tag-filter-bar" id="tagFilterBarExplore">
           <button class="tag-filter-btn active-tag" onclick="toggleTagExplore(null, this)">All</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('Sightseeing', this)">Sightseeing</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('History', this)">History</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('Art & Culture', this)">Art & Culture</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('Spiritual', this)">Spiritual</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('Food & Market', this)">Food & Market</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('Nature', this)">Nature</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('Neighbourhood', this)">Neighbourhood</button>
-          <button class="tag-filter-btn" onclick="toggleTagExplore('Architecture', this)">Architecture</button>
+          <button class="tag-filter-btn tag-sightseeing" onclick="toggleTagExplore('Sightseeing', this)">Sightseeing</button>
+          <button class="tag-filter-btn tag-history" onclick="toggleTagExplore('History', this)">History</button>
+          <button class="tag-filter-btn tag-art-culture" onclick="toggleTagExplore('Art & Culture', this)">Art & Culture</button>
+          <button class="tag-filter-btn tag-spiritual" onclick="toggleTagExplore('Spiritual', this)">Spiritual</button>
+          <button class="tag-filter-btn tag-food-market" onclick="toggleTagExplore('Food & Market', this)">Food & Market</button>
+          <button class="tag-filter-btn tag-nature" onclick="toggleTagExplore('Nature', this)">Nature</button>
+          <button class="tag-filter-btn tag-neighbourhood" onclick="toggleTagExplore('Neighbourhood', this)">Neighbourhood</button>
+          <button class="tag-filter-btn tag-architecture" onclick="toggleTagExplore('Architecture', this)">Architecture</button>
         </div>
         <div id="nearbyList">
           <div class="empty-state">
@@ -961,14 +1147,14 @@
       </div>
       <div class="tag-filter-bar" id="tagFilterBarSites">
         <button class="tag-filter-btn active-tag" onclick="toggleTagSites(null, this)">All</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('Sightseeing', this)">Sightseeing</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('History', this)">History</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('Art & Culture', this)">Art & Culture</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('Spiritual', this)">Spiritual</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('Food & Market', this)">Food & Market</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('Nature', this)">Nature</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('Neighbourhood', this)">Neighbourhood</button>
-        <button class="tag-filter-btn" onclick="toggleTagSites('Architecture', this)">Architecture</button>
+        <button class="tag-filter-btn tag-sightseeing" onclick="toggleTagSites('Sightseeing', this)">Sightseeing</button>
+        <button class="tag-filter-btn tag-history" onclick="toggleTagSites('History', this)">History</button>
+        <button class="tag-filter-btn tag-art-culture" onclick="toggleTagSites('Art & Culture', this)">Art & Culture</button>
+        <button class="tag-filter-btn tag-spiritual" onclick="toggleTagSites('Spiritual', this)">Spiritual</button>
+        <button class="tag-filter-btn tag-food-market" onclick="toggleTagSites('Food & Market', this)">Food & Market</button>
+        <button class="tag-filter-btn tag-nature" onclick="toggleTagSites('Nature', this)">Nature</button>
+        <button class="tag-filter-btn tag-neighbourhood" onclick="toggleTagSites('Neighbourhood', this)">Neighbourhood</button>
+        <button class="tag-filter-btn tag-architecture" onclick="toggleTagSites('Architecture', this)">Architecture</button>
       </div>
       <div id="allSitesList"></div>
     </div>
@@ -1013,12 +1199,12 @@
       <div class="settings-section">
         <div class="settings-title">City</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="test-loc-btn active-loc" id="cityBtn-rome" onclick="switchCity('rome')">🏛️ Rome</button>
-          <button class="test-loc-btn" id="cityBtn-amman" onclick="switchCity('amman')">🕌 Amman</button>
-          <button class="test-loc-btn" id="cityBtn-malaga" onclick="switchCity('malaga')">🌊 Málaga</button>
-          <button class="test-loc-btn" id="cityBtn-tunis" onclick="switchCity('tunis')">🫒 Tunis</button>
-          <button class="test-loc-btn" id="cityBtn-montreal" onclick="switchCity('montreal')">🍁 Montréal</button>
-          <button class="test-loc-btn" id="cityBtn-dubai" onclick="switchCity('dubai')">🏙️ Dubai</button>
+          <button class="test-loc-btn active-loc" id="cityBtn-rome" onclick="switchCity('rome')">Rome</button>
+          <button class="test-loc-btn" id="cityBtn-amman" onclick="switchCity('amman')">Amman</button>
+          <button class="test-loc-btn" id="cityBtn-malaga" onclick="switchCity('malaga')">Málaga</button>
+          <button class="test-loc-btn" id="cityBtn-tunis" onclick="switchCity('tunis')">Tunis</button>
+          <button class="test-loc-btn" id="cityBtn-montreal" onclick="switchCity('montreal')">Montréal</button>
+          <button class="test-loc-btn" id="cityBtn-dubai" onclick="switchCity('dubai')">Dubai</button>
         </div>
       </div>
 
@@ -1051,7 +1237,7 @@
             <div class="settings-label">Reset Discovery History</div>
             <div class="settings-sub">Re-enable all notifications</div>
           </div>
-          <button onclick="resetHistory()" style="background:rgba(201,123,92,0.15);border:1px solid rgba(201,123,92,0.4);color:var(--terracotta);padding:6px 14px;border-radius:2px;font-family:'Raleway',sans-serif;font-size:10px;letter-spacing:0.1em;cursor:pointer;">RESET</button>
+          <button onclick="resetHistory()" style="background:rgba(201,123,92,0.15);border:1px solid rgba(201,123,92,0.4);color:var(--terracotta);padding:6px 14px;border-radius:2px;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;letter-spacing:0.1em;cursor:pointer;">RESET</button>
         </div>
       </div>
     </div>
@@ -1069,16 +1255,17 @@
     </button>
     <button class="nav-btn" id="navSites" onclick="showView('all-sites')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9.7605 10.7106C9.7605 12.0906 10.8795 13.2096 12.2595 13.2096C13.6415 13.2096 14.7605 12.0906 14.7605 10.7106C14.7605 9.32859 13.6415 8.20959 12.2595 8.20959"/>
-        <path d="M19.326 13.482C18.122 17.636 14.618 21 12.25 21C9.352 21 4.75 15.959 4.75 10.599C4.75 6.403 8.107 3 12.25 3C16.392 3 19.75 6.403 19.75 10.599"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M14.5103 10.7105C14.5103 9.3292 13.391 8.20996 12.0097 8.20996C10.6295 8.20996 9.51025 9.3292 9.51025 10.7105C9.51025 12.0907 10.6295 13.21 12.0097 13.21C13.391 13.21 14.5103 12.0907 14.5103 10.7105Z"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M11.9995 21C9.10148 21 4.5 15.9587 4.5 10.5986C4.5 6.40246 7.8571 3 11.9995 3C16.1419 3 19.5 6.40246 19.5 10.5986C19.5 15.9587 14.8985 21 11.9995 21Z"/>
       </svg>
       Sites
     </button>
     <button class="nav-btn" id="navSettings" onclick="showView('settings-view')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12.2495 9.5C13.6305 9.5 14.7495 10.619 14.7495 12C14.7495 13.381 13.6305 14.5 12.2495 14.5C10.8685 14.5 9.74951 13.381 9.74951 12"/>
-        <path d="M7.46183 6.339C6.27783 5.65 4.76483 6.058 4.08183 7.25C3.39883 8.443 3.80383 9.967 4.98783 10.654C6.01483 11.253 6.01483 12.747 4.98783 13.346C3.80383 14.034 3.39883 15.559 4.08183 16.75C4.76483 17.942 6.27783 18.35 7.46083 17.663H7.46183C8.48983 17.064 9.77483 17.812 9.77483 19.008C9.77483 20.384 10.8838 21.5 12.2498 21.5C13.6158 21.5 14.7238 20.384 14.7238 19.008C14.7238 17.812 16.0098 17.064 17.0388 17.663"/>
-        <path d="M20.4177 16.75C21.1017 15.559 20.6957 14.034 19.5127 13.346H19.5117C18.4837 12.747 18.4837 11.253 19.5127 10.654C20.6957 9.967 21.1017 8.443 20.4177 7.25C19.7337 6.058 18.2207 5.65 17.0387 6.339C16.0097 6.936 14.7237 6.189 14.7237 4.992C14.7237 3.616 13.6157 2.5 12.2497 2.5C10.8837 2.5 9.77466 3.616 9.77466 4.992"/>
+        <g transform="translate(2.5, 1.5)">
+          <path d="M18.3066362,6.12356982 L17.6842106,5.04347829 C17.1576365,4.12955711 15.9906873,3.8142761 15.0755149,4.33867279 C14.6398815,4.59529992 14.1200613,4.66810845 13.6306859,4.54104256 C13.1413105,4.41397667 12.7225749,4.09747295 12.4668193,3.66132725 C12.3022855,3.38410472 12.2138742,3.06835005 12.2105264,2.74599544 C12.2253694,2.22917739 12.030389,1.72835784 11.6700024,1.3576252 C11.3096158,0.986892553 10.814514,0.777818938 10.2974829,0.778031878 L9.04347831,0.778031878 C8.53694532,0.778031878 8.05129106,0.97987004 7.69397811,1.33890085 C7.33666515,1.69793166 7.13715288,2.18454839 7.13958814,2.69107553 C7.12457503,3.73688099 6.27245786,4.57676682 5.22654465,4.57665906 C4.90419003,4.57331126 4.58843537,4.48489995 4.31121284,4.32036615 C3.39604054,3.79596946 2.22909131,4.11125048 1.70251717,5.02517165 L1.03432495,6.12356982 C0.508388616,7.03634945 0.819378585,8.20256183 1.72997713,8.73226549 C2.32188101,9.07399614 2.68650982,9.70554694 2.68650982,10.3890161 C2.68650982,11.0724852 2.32188101,11.704036 1.72997713,12.0457667 C0.820534984,12.5718952 0.509205679,13.7352837 1.03432495,14.645309 L1.6659039,15.7345539 C1.9126252,16.1797378 2.3265816,16.5082503 2.81617164,16.6473969 C3.30576167,16.7865435 3.83061824,16.7248517 4.27459956,16.4759726 C4.71105863,16.2212969 5.23116727,16.1515203 5.71931837,16.2821523 C6.20746948,16.4127843 6.62321383,16.7330005 6.87414191,17.1716248 C7.03867571,17.4488473 7.12708702,17.764602 7.13043482,18.0869566 C7.13043482,19.1435014 7.98693356,20.0000001 9.04347831,20.0000001 L10.2974829,20.0000001 C11.3504633,20.0000001 12.2054882,19.1490783 12.2105264,18.0961099 C12.2080776,17.5879925 12.4088433,17.0999783 12.7681408,16.7406809 C13.1274382,16.3813834 13.6154524,16.1806176 14.1235699,16.1830664 C14.4451523,16.1916732 14.7596081,16.2797208 15.0389017,16.4393593 C15.9516813,16.9652957 17.1178937,16.6543057 17.6475973,15.7437072 L18.3066362,14.645309 C18.5617324,14.2074528 18.6317479,13.6859659 18.5011783,13.1963297 C18.3706086,12.7066935 18.0502282,12.2893121 17.6109841,12.0366133 C17.17174,11.7839145 16.8513595,11.3665332 16.7207899,10.876897 C16.5902202,10.3872608 16.6602358,9.86577384 16.9153319,9.42791767 C17.0812195,9.13829096 17.3213574,8.89815312 17.6109841,8.73226549 C18.5161253,8.20284891 18.8263873,7.04344892 18.3066362,6.13272314 Z"/>
+          <circle cx="9.67505726" cy="10.3890161" r="2.63615562"/>
+        </g>
       </svg>
       Settings
     </button>
@@ -1568,46 +1755,46 @@ const DUBAI_POIS = [
 // ══════════════════════════════════════════════
 const CITY_DATA = {
   rome:   { pois: null, name: 'Rome',     flag: '🏛️', wiki: 'Rome', testLocs: [
-    { lat: 41.8986, lng: 12.4769, label: '🏛️ Pantheon area' },
-    { lat: 41.8902, lng: 12.4922, label: '🏟️ Colosseum area' },
-    { lat: 41.9022, lng: 12.4539, label: '⛪ Vatican area' },
-    { lat: 41.8992, lng: 12.4731, label: '🗺️ Piazza Navona area' },
-    { lat: 41.8898, lng: 12.4697, label: '✨ Trastevere area' },
+    { lat: 41.8986, lng: 12.4769, label: '️ Pantheon area' },
+    { lat: 41.8902, lng: 12.4922, label: '️ Colosseum area' },
+    { lat: 41.9022, lng: 12.4539, label: 'Vatican area' },
+    { lat: 41.8992, lng: 12.4731, label: '️ Piazza Navona area' },
+    { lat: 41.8898, lng: 12.4697, label: 'Trastevere area' },
   ]},
   amman:  { pois: null, name: 'Amman',   flag: '🕌', wiki: 'Amman', testLocs: [
-    { lat: 31.9552, lng: 35.9337, label: '🏰 Citadel area' },
-    { lat: 31.9520, lng: 35.9366, label: '🎭 Roman Theatre area' },
-    { lat: 31.9590, lng: 35.9170, label: '🎨 Luweibdeh / Rainbow St' },
-    { lat: 31.9637, lng: 35.9196, label: '🕌 King Abdullah Mosque' },
-    { lat: 31.9434, lng: 35.9380, label: '🕌 Abu Darwish Mosque' },
+    { lat: 31.9552, lng: 35.9337, label: 'Citadel area' },
+    { lat: 31.9520, lng: 35.9366, label: 'Roman Theatre area' },
+    { lat: 31.9590, lng: 35.9170, label: 'Luweibdeh / Rainbow St' },
+    { lat: 31.9637, lng: 35.9196, label: 'King Abdullah Mosque' },
+    { lat: 31.9434, lng: 35.9380, label: 'Abu Darwish Mosque' },
   ]},
   malaga: { pois: null, name: 'Málaga',  flag: '🌊', wiki: 'Málaga', testLocs: [
-    { lat: 36.7211, lng: -4.4178, label: '🏰 Alcazaba area' },
-    { lat: 36.7200, lng: -4.4196, label: '⛪ Cathedral area' },
-    { lat: 36.7232, lng: -4.4200, label: '🎨 Plaza de la Merced' },
-    { lat: 36.7162, lng: -4.4236, label: '🎭 Port / Pompidou' },
-    { lat: 36.7170, lng: -4.4050, label: '🏖️ La Malagueta beach' },
+    { lat: 36.7211, lng: -4.4178, label: 'Alcazaba area' },
+    { lat: 36.7200, lng: -4.4196, label: 'Cathedral area' },
+    { lat: 36.7232, lng: -4.4200, label: 'Plaza de la Merced' },
+    { lat: 36.7162, lng: -4.4236, label: 'Port / Pompidou' },
+    { lat: 36.7170, lng: -4.4050, label: '️ La Malagueta beach' },
   ]},
   tunis:  { pois: null, name: 'Tunis',   flag: '🫒', wiki: 'Tunis', testLocs: [
-    { lat: 36.7992, lng: 10.1699, label: '🕌 Medina centre' },
-    { lat: 36.7990, lng: 10.1710, label: '🕌 Ez-Zitouna Mosque' },
-    { lat: 36.8093, lng: 10.1340, label: '🏛️ Bardo Museum' },
-    { lat: 36.8528, lng: 10.3233, label: '🏺 Carthage ruins' },
-    { lat: 36.8702, lng: 10.3418, label: '🌊 Sidi Bou Said' },
+    { lat: 36.7992, lng: 10.1699, label: 'Medina centre' },
+    { lat: 36.7990, lng: 10.1710, label: 'Ez-Zitouna Mosque' },
+    { lat: 36.8093, lng: 10.1340, label: '️ Bardo Museum' },
+    { lat: 36.8528, lng: 10.3233, label: 'Carthage ruins' },
+    { lat: 36.8702, lng: 10.3418, label: 'Sidi Bou Said' },
   ]},
   montreal: { pois: null, name: 'Montréal', flag: '🍁', wiki: 'Montreal', testLocs: [
-    { lat: 45.5075, lng: -73.5540, label: '🏙️ Old Montréal' },
-    { lat: 45.5046, lng: -73.5566, label: '⛪ Notre-Dame Basilica' },
-    { lat: 45.5088, lng: -73.5878, label: '🌲 Mount Royal' },
-    { lat: 45.5221, lng: -73.5757, label: '🎨 Plateau-Mont-Royal' },
-    { lat: 45.5360, lng: -73.6148, label: '🛒 Marché Jean-Talon' },
+    { lat: 45.5075, lng: -73.5540, label: '️ Old Montréal' },
+    { lat: 45.5046, lng: -73.5566, label: 'Notre-Dame Basilica' },
+    { lat: 45.5088, lng: -73.5878, label: 'Mount Royal' },
+    { lat: 45.5221, lng: -73.5757, label: 'Plateau-Mont-Royal' },
+    { lat: 45.5360, lng: -73.6148, label: 'Marché Jean-Talon' },
   ]},
   dubai:  { pois: null, name: 'Dubai',   flag: '🏙️', wiki: 'Dubai', testLocs: [
-    { lat: 25.1972, lng: 55.2744, label: '🏙️ Burj Khalifa' },
-    { lat: 25.2633, lng: 55.2975, label: '🏰 Al Fahidi district' },
-    { lat: 25.2697, lng: 55.3045, label: '✨ Gold Souk / Creek' },
-    { lat: 25.2290, lng: 55.2519, label: '🕌 Jumeirah Mosque' },
-    { lat: 25.1472, lng: 55.2289, label: '🎨 Alserkal Avenue' },
+    { lat: 25.1972, lng: 55.2744, label: '️ Burj Khalifa' },
+    { lat: 25.2633, lng: 55.2975, label: 'Al Fahidi district' },
+    { lat: 25.2697, lng: 55.3045, label: 'Gold Souk / Creek' },
+    { lat: 25.2290, lng: 55.2519, label: 'Jumeirah Mosque' },
+    { lat: 25.1472, lng: 55.2289, label: 'Alserkal Avenue' },
   ]}
 };
 CITY_DATA.rome.pois    = ROME_POIS;
@@ -1855,7 +2042,7 @@ function onPositionUpdate(pos) {
 
   const label = document.getElementById('locationLabel');
   const display = document.getElementById('locationDisplay');
-  if (label) label.textContent = 'YOU ARE HERE';
+  if (label) { label.textContent = 'YOU ARE HERE'; label.style.color = ''; }
   if (display) display.textContent = `On a journey through ${CITY_DATA[currentCity].name} · ${currentPos.lat.toFixed(4)}° N, ${currentPos.lng.toFixed(4)}° E`;
 
   checkNearby();
@@ -1864,7 +2051,7 @@ function onPositionUpdate(pos) {
 function onPositionError(err) {
   const label = document.getElementById('locationLabel');
   const display = document.getElementById('locationDisplay');
-  if (label) label.textContent = 'SIGNAL LOST';
+  if (label) { label.textContent = 'SIGNAL LOST'; label.style.color = ''; }
   if (display) display.textContent = 'Check location permissions to begin your journey';
 }
 
@@ -1971,19 +2158,27 @@ function renderNearby(nearby) {
          style="cursor:pointer;"
          data-poi-id="${poi.id}"
          onclick="openDetail('${poi.id}')">
-      <div class="poi-distance">${formatDist(poi.dist).toUpperCase()}</div>
-      <div class="poi-name">${poi.name}</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <div class="poi-category">${poi.category}</div>
-        ${visitedSites.has(poi.id) ? '<span class="visited-badge"><svg fill="none" stroke="#6f8b6d" viewBox="0 0 24 24" width="9" height="9" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> VISITED</span>' : ''}
-      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;">
+          <div class="poi-distance">${formatDist(poi.dist).toUpperCase()}</div>
+          <div class="poi-category" style="flex-shrink:0;">${poi.category}</div>
+        </div>
+        <div style="flex:1;">
+          <div class="poi-name">${poi.name}</div>
+          <div style="display:flex;align-items:center;gap:4px;margin:6px 0 10px;flex-wrap:wrap;">
+            ${(poi.tags || []).map(t => {
+              const cls = t.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+              return `<span class="poi-tag tag-${cls}">${t}</span>`;
+            }).join('')}
+            ${visitedSites.has(poi.id) ? '<span class="visited-badge"><svg fill="none" stroke="#6f8b6d" viewBox="0 0 24 24" width="9" height="9" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> VISITED</span>' : ''}
+          </div>
+        </div>
       <div class="poi-desc">${poi.description.substring(0, 110)}…</div>
       <div class="poi-footer">
         <a class="map-link" href="${poi.mapUrl}" target="_blank" onclick="event.stopPropagation()">
-          <svg fill="none" stroke="#e3b96c" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           VIEW ON MAP
         </a>
-        <span style="font-size:10px;color:var(--stone);font-family:'Raleway',sans-serif;letter-spacing:0.1em;">TAP FOR MORE</span>
+        <span style="font-size:10px;color:var(--stone);font-family:'Bricolage Grotesque',sans-serif;letter-spacing:0.1em;">TAP FOR MORE</span>
       </div>
     </div>
   `).join('');
@@ -2157,7 +2352,10 @@ function renderAllSites(query) {
           ${visitedSites.has(poi.id) ? '<span class="visited-badge"><svg fill="none" stroke="#6f8b6d" viewBox="0 0 24 24" width="9" height="9" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> VISITED</span>' : ''}
         </div>
         <div style="margin:4px 0 8px;">
-          ${(poi.tags || []).map(t => `<span class="poi-tag">${t}</span>`).join('')}
+          ${(poi.tags || []).map(t => {
+          const cls = t.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+          return `<span class="poi-tag tag-${cls}">${t}</span>`;
+        }).join('')}
         </div>
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
           <div class="all-poi-desc">${poi.description}</div>
@@ -2356,7 +2554,7 @@ async function simulateLocation(lat, lng, label) {
   // Update location display
   const locDisplay = document.getElementById('locationDisplay');
   const locLabel = document.getElementById('locationLabel');
-  if (locLabel) locLabel.textContent = 'NOW EXPLORING';
+  if (locLabel) { locLabel.textContent = 'NOW EXPLORING'; locLabel.style.color = '#6f8b6d'; }
   if (locDisplay) locDisplay.textContent = `Wandering near ${label}, ${CITY_DATA[currentCity].name}`;
 
   // Highlight active button
