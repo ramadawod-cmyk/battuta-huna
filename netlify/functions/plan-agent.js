@@ -9,25 +9,44 @@ exports.handler = async function(event) {
     };
   }
 
+  let parsed;
   try {
-    const { messages, system } = JSON.parse(event.body);
+    parsed = JSON.parse(event.body);
+  } catch(e) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Invalid JSON body: ' + e.message })
+    };
+  }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'API key not configured' })
-      };
-    }
+  const { messages, system } = parsed;
 
-    const payload = JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      system,
-      messages
-    });
+  if (!messages || !Array.isArray(messages)) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Missing or invalid messages array' })
+    };
+  }
 
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not set in environment' })
+    };
+  }
+
+  const payload = JSON.stringify({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2000,
+    system: system || '',
+    messages
+  });
+
+  try {
     const result = await new Promise((resolve, reject) => {
       const req = https.request({
         hostname: 'api.anthropic.com',
@@ -46,19 +65,20 @@ exports.handler = async function(event) {
         res.on('data', chunk => data += chunk);
         res.on('end', () => {
           try {
-            resolve({ status: res.statusCode, body: JSON.parse(data) });
+            resolve({ status: res.statusCode, body: JSON.parse(data), raw: data });
           } catch(e) {
-            reject(new Error('Parse error: ' + data.slice(0, 200)));
+            resolve({ status: res.statusCode, body: { error: 'Parse error', raw: data.slice(0, 500) }, raw: data });
           }
         });
       });
 
       req.on('error', reject);
-      req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+      req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout after 30s')); });
       req.write(payload);
       req.end();
     });
 
+    // Always return the full response so client can see errors clearly
     return {
       statusCode: result.status,
       headers: {
