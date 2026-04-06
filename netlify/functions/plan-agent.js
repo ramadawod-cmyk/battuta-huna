@@ -1,41 +1,5 @@
 const https = require('https');
 
-function httpsPost(url, headers, body) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify(body);
-    const options = {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data)
-      },
-      timeout: 30000
-    };
-
-    const urlObj = new URL(url);
-    options.hostname = urlObj.hostname;
-    options.path = urlObj.pathname;
-
-    const req = https.request(options, (res) => {
-      let responseData = '';
-      res.on('data', chunk => responseData += chunk);
-      res.on('end', () => {
-        try {
-          resolve({ status: res.statusCode, body: JSON.parse(responseData) });
-        } catch(e) {
-          reject(new Error('JSON parse error: ' + responseData.slice(0, 200)));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
-    req.write(data);
-    req.end();
-  });
-}
-
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return {
@@ -57,19 +21,43 @@ exports.handler = async function(event) {
       };
     }
 
-    const result = await httpsPost(
-      'https://api.anthropic.com/v1/messages',
-      {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        system,
-        messages
-      }
-    );
+    const payload = JSON.stringify({
+      model: 'claude-opus-4-6',
+      max_tokens: 2000,
+      system,
+      messages
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.anthropic.com',
+        port: 443,
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        timeout: 30000
+      }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve({ status: res.statusCode, body: JSON.parse(data) });
+          } catch(e) {
+            reject(new Error('Parse error: ' + data.slice(0, 200)));
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+      req.write(payload);
+      req.end();
+    });
 
     return {
       statusCode: result.status,
