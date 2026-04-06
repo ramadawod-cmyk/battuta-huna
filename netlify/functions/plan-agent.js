@@ -22,7 +22,7 @@ exports.handler = async function(event) {
     }
 
     const payload = JSON.stringify({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2000,
       system,
       messages
