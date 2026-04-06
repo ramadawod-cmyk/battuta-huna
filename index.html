@@ -3002,6 +3002,12 @@ IMPORTANT: Only output the <ITINERARY> JSON when you have ALL required informati
     const data = await response.json();
     removeTyping();
 
+    if (!response.ok || data.error) {
+      console.error('[plan-agent] Error:', JSON.stringify(data));
+      agentSay('Something went wrong: ' + (data.error?.message || data.error || 'Unknown error. Check the console.'));
+      return;
+    }
+
     const agentText = data.content?.[0]?.text || 'Sorry, something went wrong. Please try again.';
     planConversation.push({ role: 'assistant', content: agentText });
 
