@@ -2966,13 +2966,24 @@ Once you have all info, output a complete itinerary wrapped in <ITINERARY> tags 
 
 Use exact times (9:00 AM) for strict pace, or Morning/Afternoon/Evening/Night for relaxed. Suggest real cultural sites anywhere in the world. Keep responses concise and warm. No em dashes.`;
 
+  // When all info is gathered, send a compact summary instead of full history
+  // to avoid long context timeouts
+  let messagesToSend = planConversation;
+  if (planConversation.length > 6) {
+    const summary = planConversation
+      .filter(m => m.role === 'user')
+      .map(m => m.content)
+      .join(' | ');
+    messagesToSend = [{ role: 'user', content: `Based on this conversation summary, generate the itinerary: ${summary}` }];
+  }
+
   try {
     const response = await fetch('/.netlify/functions/plan-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system: systemPrompt,
-        messages: planConversation
+        messages: messagesToSend
       })
     });
 
@@ -2995,16 +3006,30 @@ Use exact times (9:00 AM) for strict pace, or Morning/Afternoon/Evening/Night fo
         const itinerary = JSON.parse(itinMatch[1].trim());
         planState.itinerary = itinerary;
         planState.stage = 'review';
+
+        // Save silently
+        saveTrip(itinerary);
+
+        // Show clean confirmation + CTA
         const cleanText = agentText.replace(/<ITINERARY>[\s\S]*?<\/ITINERARY>/, '').trim();
         if (cleanText) agentSay(cleanText);
-        renderItinerarySuggestion(itinerary);
+
+        const cta = document.createElement('div');
+        cta.style.cssText = 'margin-top:12px;';
+        cta.innerHTML = `
+          <div style="background:#f5f0e8;border:1.5px solid rgba(111,139,109,0.4);border-radius:14px;padding:14px 16px;">
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;color:#3d2e26;margin-bottom:6px;">Trip saved to My Trips</div>
+            <div style="font-family:'Merriweather',serif;font-size:12px;color:#9b8f82;margin-bottom:12px;line-height:1.5;">Your ${itinerary.duration}-day ${itinerary.city} itinerary is ready. You can view it, make changes, or keep chatting here.</div>
+            <button onclick="showView('trips-view')" style="display:block;width:100%;padding:10px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">VIEW IN MY TRIPS</button>
+          </div>`;
+        document.getElementById('planMessages').appendChild(cta);
+        document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
+
       } catch(e) {
-        // JSON parse failed — ask agent to retry
         planConversation.pop();
         agentSay("I had trouble formatting the itinerary. Let me try again — could you confirm your trip details one more time?");
       }
     } else if (agentText.includes('<ITINERARY>')) {
-      // Tag opened but never closed — response was cut off
       planConversation.pop();
       agentSay("My response was cut off. Let me try again with a shorter itinerary — how many days is your trip?");
     } else {
