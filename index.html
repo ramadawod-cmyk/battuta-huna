@@ -2950,44 +2950,21 @@ async function sendPlanMessage() {
 async function processAgentStep(userText) {
   agentTyping();
 
-  const systemPrompt = `You are a warm, knowledgeable travel planning assistant for Battuta Huna, a cultural discovery app. Your job is to help users plan a day-by-day trip itinerary.
+  const systemPrompt = `You are a warm travel planning assistant for Battuta Huna, a cultural discovery app. Help users plan a day-by-day trip itinerary through natural conversation.
 
-Current plan state: ${JSON.stringify(planState)}
+Gather these details one or two at a time (not all at once):
+- City (supported: Rome, Amman, Málaga, Tunis, Montréal, Dubai — or any city)
+- Travel dates and duration (days)
+- Group size and type (solo, couple, family, friends)
+- Interests (Sightseeing, History, Art & Culture, Spiritual, Food & Market, Nature, Neighbourhood, Architecture)
+- Pace: "strict" (exact times: 9am, 2pm etc.) or "relaxed" (Morning, Afternoon, Evening, Night)
 
-You must gather the following information in a natural conversation (not all at once):
-1. Which city they are visiting (from our supported cities: Rome, Amman, Málaga, Tunis, Montréal, Dubai — or any other city)
-2. Travel dates and trip duration (in days)
-3. Group size and type (solo, couple, family with kids, friends)
-4. What they enjoy — cultural interests from: Sightseeing, History, Art & Culture, Spiritual, Food & Market, Nature, Neighbourhood, Architecture
-5. Pace preference: "strict" (specific times like 9am, 2pm) or "relaxed" (morning, afternoon, evening, night)
-
-Once you have all info, generate a complete day-by-day itinerary in valid JSON format wrapped in <ITINERARY> tags, like this:
+Once you have all info, output a complete itinerary wrapped in <ITINERARY> tags as valid JSON:
 <ITINERARY>
-{
-  "city": "Rome",
-  "dates": "15–18 June 2025",
-  "duration": 3,
-  "groupType": "couple",
-  "pace": "relaxed",
-  "days": [
-    {
-      "day": 1,
-      "label": "Day 1 — Arrival & Ancient Rome",
-      "slots": [
-        { "time": "Morning", "name": "Colosseum", "description": "Start at Rome's most iconic monument.", "category": "Ancient Ruins", "tags": ["Sightseeing", "History"], "lat": 41.8902, "lng": 12.4922, "mapUrl": "https://maps.google.com/?q=Colosseum+Rome" },
-        { "time": "Afternoon", "name": "Roman Forum", "description": "Walk the heart of ancient Rome.", "category": "Ancient Ruins", "tags": ["History"], "lat": 41.8925, "lng": 12.4853, "mapUrl": "https://maps.google.com/?q=Roman+Forum+Rome" }
-      ]
-    }
-  ]
-}
+{"city":"Rome","dates":"15-18 June","duration":3,"groupType":"couple","pace":"relaxed","days":[{"day":1,"label":"Day 1 — Ancient Rome","slots":[{"time":"Morning","name":"Colosseum","description":"Rome's most iconic monument.","category":"Ancient Ruins","tags":["Sightseeing","History"],"lat":41.8902,"lng":12.4922,"mapUrl":"https://maps.google.com/?q=Colosseum+Rome"}]}]}
 </ITINERARY>
 
-For "strict" pace, use times like "9:00 AM", "11:30 AM", "2:00 PM", "4:30 PM", "7:00 PM".
-For "relaxed" pace, use "Morning", "Afternoon", "Evening", "Night".
-
-You can suggest any real cultural sites worldwide, not just ones in our database. Be specific and thoughtful. After generating the itinerary, present it day-by-day to the user and ask if they want to adjust anything. Keep responses concise and warm. Do not use em dashes.
-
-IMPORTANT: Only output the <ITINERARY> JSON when you have ALL required information. Before that, ask questions naturally.`;
+Use exact times (9:00 AM) for strict pace, or Morning/Afternoon/Evening/Night for relaxed. Suggest real cultural sites anywhere in the world. Keep responses concise and warm. No em dashes.`;
 
   try {
     const response = await fetch('/.netlify/functions/plan-agent', {
