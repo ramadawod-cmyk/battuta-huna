@@ -2188,6 +2188,8 @@ async function fetchCityHero(city) {
     if (data.url) {
       cityHeroCache[city] = data.url;
       applyCityHero(data.url, city);
+      // Cache in Supabase so we don't call Wikipedia again
+      db('updateCityHero', { cityId: city, heroImageUrl: data.url });
     }
   } catch(e) { console.warn(`[hero] ${city}:`, e); }
 }
@@ -2841,10 +2843,44 @@ async function simulateLocation(lat, lng, label) {
 // ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
-function init() {
+async function loadSitesFromSupabase() {
+  try {
+    const sites = await db('getSites', { cityId: currentCity });
+    if (!sites || !Array.isArray(sites) || sites.length === 0) return;
+
+    // Merge Supabase sites into CITY_DATA, adding any not already present
+    const existing = CITY_DATA[currentCity].pois || [];
+    const existingIds = new Set(existing.map(p => p.id));
+
+    sites.forEach(s => {
+      const localId = s.id.replace(currentCity + '-', '');
+      if (!existingIds.has(localId) && !existingIds.has(s.id)) {
+        existing.push({
+          id: localId,
+          name: s.name,
+          category: s.category,
+          tags: s.tags || [],
+          description: s.description,
+          lat: s.lat,
+          lng: s.lng,
+          mapUrl: s.map_url,
+          wiki: s.wiki,
+          image: s.image_url || '',
+          emoji: 'map'
+        });
+      }
+    });
+
+    CITY_DATA[currentCity].pois = existing;
+    updateStats();
+  } catch(e) {
+    console.warn('[supabase] loadSites:', e.message);
+  }
+}
+
+async function init() {
   // Apply saved settings to UI
   document.getElementById('radiusSelect').value = settings.radius;
-  // Sync home screen radius dropdown
   const quickSel = document.getElementById('radiusQuick');
   if (quickSel) quickSel.value = settings.radius;
   document.getElementById('notifToggle').classList.toggle('on', settings.notif);
@@ -2873,6 +2909,9 @@ function init() {
   // Load city hero image
   applyCityHeroText(currentCity);
   fetchCityHero(currentCity);
+
+  // Load sites from Supabase in background and merge into CITY_DATA
+  loadSitesFromSupabase();
 }
 
 // ══════════════════════════════════════════════
@@ -2885,7 +2924,28 @@ let planState = {
   groupType: null, interests: [], pace: null, stage: 'start',
   itinerary: null, suggestedPlaces: [], selectedPlaces: new Set(), selectedPlacesData: []
 };
-let savedTrips = JSON.parse(localStorage.getItem('bh_trips') || '[]');
+let savedTrips = [];
+
+// ── SUPABASE HELPER ──────────────────────────────────────
+const deviceId = localStorage.getItem('bh_device_id') || (() => {
+  const id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  localStorage.setItem('bh_device_id', id);
+  return id;
+})();
+
+async function db(action, data = {}) {
+  try {
+    const res = await fetch('/.netlify/functions/supabase-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
+      body: JSON.stringify({ action, data })
+    });
+    return await res.json();
+  } catch(e) {
+    console.warn('[db]', action, e.message);
+    return null;
+  }
+}
 let planInitialised = false;
 
 function initPlanView() {
@@ -3362,13 +3422,43 @@ function saveTrip(itinerary) {
             mapUrl: slot.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(slot.name)}`
           };
           CITY_DATA[cityKey].pois.push(newPoi);
+          // Save new AI-generated site to Supabase
+          db('upsertSite', { site: {
+            id: newPoi.id,
+            city_id: cityKey,
+            name: newPoi.name,
+            category: newPoi.category,
+            tags: newPoi.tags,
+            description: newPoi.description,
+            lat: newPoi.lat,
+            lng: newPoi.lng,
+            map_url: newPoi.mapUrl,
+            wiki: newPoi.wiki,
+            source: 'ai_generated'
+          }});
         }
       });
     });
   }
 
+  // Save trip to Supabase
+  db('saveTrip', { trip: {
+    city: cleaned.city,
+    dates: cleaned.dates || null,
+    duration: cleaned.duration || null,
+    group_type: cleaned.groupType || null,
+    pace: cleaned.pace || null,
+    days: cleaned.days
+  }}).then(result => {
+    // Also store in memory with the Supabase-generated id if available
+    const saved = Array.isArray(result) ? result[0] : result;
+    cleaned.id = saved?.id || cleaned.id;
+    savedTrips.unshift(cleaned);
+  });
+
+  // Fallback: keep in localStorage too
   savedTrips.unshift(cleaned);
-  localStorage.setItem('bh_trips', JSON.stringify(savedTrips));
+  localStorage.setItem('bh_trips', JSON.stringify(savedTrips.slice(0, 20)));
 
   agentSay('Your trip has been saved! You can find it in My Trips.');
   const saveBtn = document.querySelector('.plan-save-btn');
@@ -3383,8 +3473,28 @@ function saveTrip(itinerary) {
 //  MY TRIPS
 // ══════════════════════════════════════════════
 
-function renderTrips() {
+async function renderTrips() {
   const el = document.getElementById('tripsList');
+  el.innerHTML = '<div class="trips-empty">Loading trips...</div>';
+
+  // Try Supabase first, fall back to localStorage
+  const result = await db('getTrips');
+  if (result && Array.isArray(result) && result.length > 0) {
+    savedTrips = result.map(t => ({
+      id: t.id,
+      city: t.city,
+      dates: t.dates,
+      duration: t.duration,
+      groupType: t.group_type,
+      pace: t.pace,
+      days: t.days,
+      savedAt: t.created_at
+    }));
+  } else {
+    // Fall back to localStorage
+    savedTrips = JSON.parse(localStorage.getItem('bh_trips') || '[]');
+  }
+
   if (!savedTrips.length) {
     el.innerHTML = `<div class="trips-empty">No trips planned yet.<br>Head to Plan to start your first one.</div>`;
     return;
@@ -3473,6 +3583,8 @@ function editTrip(index) {
 
 function deleteTrip(index) {
   if (!confirm('Delete this trip?')) return;
+  const trip = savedTrips[index];
+  if (trip.id) db('deleteTrip', { tripId: trip.id });
   savedTrips.splice(index, 1);
   localStorage.setItem('bh_trips', JSON.stringify(savedTrips));
   document.getElementById('tripDetailOverlay').classList.remove('open');
