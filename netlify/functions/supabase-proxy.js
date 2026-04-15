@@ -78,6 +78,13 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
+    // ── UPSERT SITES BATCH ───────────────────────────
+    if (action === 'upsertSites') {
+      const sites = data.sites;
+      const res = await request('POST', '/rest/v1/sites', sites, 'resolution=merge-duplicates');
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
     // ── GET TRIPS ────────────────────────────────────
     if (action === 'getTrips') {
       const res = await request('GET', `/rest/v1/trips?user_id=eq.${deviceId}&select=*&order=created_at.desc`);
