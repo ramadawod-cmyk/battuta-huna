@@ -3133,10 +3133,10 @@ async function processAgentStep(userText) {
 
 If the user gives a country (e.g. "Switzerland", "Jordan", "Japan"), respond with:
 "Are there specific cities you want to visit, or would you like me to suggest the best ones for your trip length?"
-Wait for their answer before outputting <PARTIAL>.
+Wait for their answer before outputting [PARTIAL].
 
 Once you have specific cities AND dates/duration, output:
-<PARTIAL>{"city":"Zurich, Interlaken, Lucerne","dates":"June 2026","duration":5}</PARTIAL>
+[PARTIAL]{"city":"Zurich, Interlaken, Lucerne","dates":"June 2026","duration":5}[/PARTIAL]
 
 No markdown, no bold, no emojis, no em dashes. One question at a time. Very short responses.`;
 
@@ -3163,7 +3163,7 @@ No markdown, no bold, no emojis, no em dashes. One question at a time. Very shor
     const agentText = data.content?.[0]?.text || 'Sorry, something went wrong.';
     planConversation.push({ role: 'assistant', content: agentText });
 
-    const partialMatch = agentText.match(/<PARTIAL>([\s\S]*?)<\/PARTIAL>/);
+    const partialMatch = agentText.match(/\[PARTIAL\]([\s\S]*?)\[\/PARTIAL\]/);
     if (partialMatch) {
       try {
         const partial = JSON.parse(partialMatch[1].trim());
@@ -3171,12 +3171,12 @@ No markdown, no bold, no emojis, no em dashes. One question at a time. Very shor
         planState.dates = partial.dates;
         planState.duration = partial.duration;
         planState.stage = 'sheet';
-        const cleanText = agentText.replace(/<PARTIAL>[\s\S]*?<\/PARTIAL>/, '').trim();
+        const cleanText = agentText.replace(/\[PARTIAL\][\s\S]*?\[\/PARTIAL\]/, '').trim();
         if (cleanText) agentSay(cleanText);
         else agentSay(`Got it. Let me get a few more details about your ${partial.city} trip.`);
         setTimeout(() => showDetailsSheet(partial), 400);
       } catch(e) {
-        agentSay(agentText.replace(/<PARTIAL>[\s\S]*?<\/PARTIAL>/, '').trim() || agentText);
+        agentSay(agentText.replace(/\[PARTIAL\][\s\S]*?\[\/PARTIAL\]/, '').trim() || agentText);
       }
     } else {
       agentSay(agentText);
@@ -3443,8 +3443,8 @@ Rules:
 
 Places: ${placesJson}
 
-Output ONLY valid JSON in <ITINERARY> tags:
-<ITINERARY>{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Place Name","description":"Short description.","category":"Category","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Place"}]}]}</ITINERARY>`;
+Output ONLY valid JSON in [ITINERARY] tags:
+[ITINERARY]{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Place Name","description":"Short description.","category":"Category","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Place"}]}]}[/ITINERARY]`;
 
   try {
     const response = await fetch('/.netlify/functions/plan-agent', {
@@ -3463,7 +3463,7 @@ Output ONLY valid JSON in <ITINERARY> tags:
     }
 
     const agentText = data.content?.[0]?.text || '';
-    const itinMatch = agentText.match(/<ITINERARY>([\s\S]*?)<\/ITINERARY>/);
+    const itinMatch = agentText.match(/\[ITINERARY\]([\s\S]*?)\[\/ITINERARY\]/);
 
     if (itinMatch) {
       try {
@@ -3801,7 +3801,7 @@ function deleteTrip(index) {
   renderTrips();
 }
 
-init();
+(async () => { await init(); })();
 </script>
 </body>
 </html>
