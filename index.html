@@ -2976,15 +2976,22 @@ Collect these 5 things, one or two at a time:
 4. Interests from: Sightseeing, History, Art & Culture, Spiritual, Food & Market, Nature, Neighbourhood, Architecture
 5. Pace: strict (exact times) or relaxed (morning/afternoon/evening/night)
 
-CRITICAL: Once you have all 5, you MUST immediately output a <TRIPINFO> tag with the data as JSON. Do not summarise. Do not ask for confirmation. Just output the tag.
+CRITICAL RULES:
+- Never ask for clarification on an answer already received — accept it and move on
+- Never forget a detail the user already gave you — keep track of everything
+- Once you have all 5, IMMEDIATELY output the <TRIPINFO> tag — no summary, no confirmation
+- Accept "strict" as strict pace, "relaxed" as relaxed pace — never ask to clarify obvious answers
+- Never ask the same question twice
+
 <TRIPINFO>{"city":"Cairo","dates":"May 2026","duration":3,"groupType":"friends","interests":["History","Food & Market"],"pace":"strict"}</TRIPINFO>
 
-Rules: No markdown, no bold, no bullet points, no emojis, no em dashes. Ask one question at a time. No encouraging comments.`;
+No markdown, no bold, no bullets, no emojis, no em dashes. One question at a time.`;
 
   let messagesToSend = planConversation;
-  if (planConversation.length > 8) {
-    const summary = planConversation.filter(m => m.role === 'user').map(m => m.content).join(' | ');
-    messagesToSend = [{ role: 'user', content: summary }];
+  if (planConversation.length > 10) {
+    // Compress to a clear summary preserving all gathered info
+    const userMsgs = planConversation.filter(m => m.role === 'user').map(m => m.content).join(', ');
+    messagesToSend = [{ role: 'user', content: `Here is the full conversation summary. User said: ${userMsgs}. Now output the <TRIPINFO> tag immediately.` }];
   }
 
   try {
