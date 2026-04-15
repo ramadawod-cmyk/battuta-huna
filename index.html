@@ -3405,47 +3405,12 @@ function saveTrip(itinerary) {
     }))
   };
 
-  // Add any new POIs to the city database
   const cityKey = Object.keys(CITY_DATA).find(k =>
     CITY_DATA[k].name.toLowerCase() === cleaned.city.toLowerCase()
   );
-  if (cityKey && CITY_DATA[cityKey].pois) {
-    cleaned.days.forEach(day => {
-      day.slots.forEach(slot => {
-        const exists = CITY_DATA[cityKey].pois.find(p => p.name === slot.name);
-        if (!exists && slot.lat && slot.lng) {
-          const newPoi = {
-            id: slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now(),
-            image: '', wiki: slot.name.replace(/ /g, '_'),
-            name: slot.name, category: slot.category || 'Cultural Site',
-            tags: slot.tags || ['Sightseeing'],
-            emoji: 'map', lat: slot.lat, lng: slot.lng,
-            description: slot.description,
-            mapUrl: slot.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(slot.name)}`
-          };
-          CITY_DATA[cityKey].pois.push(newPoi);
-          // Save new AI-generated site to Supabase
-          const siteCityId = cityKey || cleaned.city.toLowerCase().replace(/[^a-z0-9]/g, '-');
-          db('upsertSite', { site: {
-            id: newPoi.id,
-            city_id: siteCityId,
-            name: newPoi.name,
-            category: newPoi.category,
-            tags: newPoi.tags,
-            description: newPoi.description,
-            lat: newPoi.lat,
-            lng: newPoi.lng,
-            map_url: newPoi.mapUrl,
-            wiki: newPoi.wiki,
-            source: 'ai_generated'
-          }});
-        }
-      });
-    });
-  }
-
-  // Upsert city in Supabase (handles new cities like Tokyo)
   const cityId = cleaned.city.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+  // Upsert city first
   db('upsertCity', { city: {
     id: cityId,
     name: cleaned.city,
@@ -3454,6 +3419,43 @@ function saveTrip(itinerary) {
     lng: null,
     wiki: cleaned.city
   }});
+
+  // Save all slots to Supabase as ai_generated sites
+  cleaned.days.forEach(day => {
+    day.slots.forEach(slot => {
+      const siteId = slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + cityId;
+      db('upsertSite', { site: {
+        id: siteId,
+        city_id: cityId,
+        name: slot.name,
+        category: slot.category || 'Cultural Site',
+        tags: slot.tags || ['Sightseeing'],
+        description: slot.description || '',
+        lat: slot.lat || null,
+        lng: slot.lng || null,
+        map_url: slot.mapUrl || null,
+        wiki: slot.name.replace(/ /g, '_'),
+        best_time: slot.time || null,
+        source: 'ai_generated'
+      }});
+
+      // Also add to local CITY_DATA if it's a known city
+      if (cityKey && CITY_DATA[cityKey].pois) {
+        const exists = CITY_DATA[cityKey].pois.find(p => p.name === slot.name);
+        if (!exists) {
+          CITY_DATA[cityKey].pois.push({
+            id: siteId,
+            name: slot.name, category: slot.category || 'Cultural Site',
+            tags: slot.tags || ['Sightseeing'],
+            description: slot.description || '',
+            lat: slot.lat, lng: slot.lng,
+            mapUrl: slot.mapUrl, wiki: slot.name.replace(/ /g, '_'),
+            image: '', emoji: 'map'
+          });
+        }
+      }
+    });
+  });
 
   // Save trip to Supabase
   db('saveTrip', { trip: {
