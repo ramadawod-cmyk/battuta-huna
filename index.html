@@ -1487,7 +1487,7 @@
             <div class="settings-label">Reset Discovery History</div>
             <div class="settings-sub">Re-enable all notifications</div>
           </div>
-          <button onclick="resetHistory()" style="background:rgba(201,123,92,0.15);border:1px solid rgba(201,123,92,0.4);color:var(--terracotta);padding:6px 14px;border-radius:2px;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;letter-spacing:0.1em;cursor:pointer;">RESET</button>
+          <button onclick="resetHistory()" style="background:rgba(201,123,92,0.15);border:1px solid rgba(201,123,92,0.4);color:var(--terracotta);padding:6px 14px;border-radius:2px;font-family:Bricolage Grotesque,sans-serif;font-size:10px;letter-spacing:0.1em;cursor:pointer;">RESET</button>
         </div>
       </div>
     </div>
@@ -2029,7 +2029,7 @@ const CITY_DATA = {
     { lat: 31.9637, lng: 35.9196, label: 'King Abdullah Mosque' },
     { lat: 31.9434, lng: 35.9380, label: 'Abu Darwish Mosque' },
   ]},
-  malaga: { pois: null, name: 'Málaga',  flag: '🌊', wiki: 'Málaga', testLocs: [
+  malaga: { pois: null, name: 'Málaga',  flag: '🌊', wiki: 'Malaga', testLocs: [
     { lat: 36.7211, lng: -4.4178, label: 'Alcazaba area' },
     { lat: 36.7200, lng: -4.4196, label: 'Cathedral area' },
     { lat: 36.7232, lng: -4.4200, label: 'Plaza de la Merced' },
@@ -2050,7 +2050,7 @@ const CITY_DATA = {
     { lat: 45.5221, lng: -73.5757, label: 'Plateau-Mont-Royal' },
     { lat: 45.5360, lng: -73.6148, label: 'Marché Jean-Talon' },
   ]},
-  dubai:  { pois: null, name: 'Dubai',   flag: '🏙️', wiki: 'Dubai', testLocs: [
+  dubai:  { pois: null, name: 'Dubai',   flag: '🏙️', wiki: 'Dubai_Creek', testLocs: [
     { lat: 25.1972, lng: 55.2744, label: '️ Burj Khalifa' },
     { lat: 25.2633, lng: 55.2975, label: 'Al Fahidi district' },
     { lat: 25.2697, lng: 55.3045, label: 'Gold Souk / Creek' },
@@ -2182,7 +2182,9 @@ async function fetchCityHero(city) {
     const wiki = CITY_DATA[city].wiki;
     const url = `/.netlify/functions/wiki-image?title=${encodeURIComponent(wiki)}`;
     const res = await fetch(url);
-    const data = await res.json();
+    const text = await res.text();
+    if (!text || text.trimStart()[0] !== '{') return;
+    const data = JSON.parse(text);
     if (data.url) {
       cityHeroCache[city] = data.url;
       applyCityHero(data.url, city);
@@ -2439,7 +2441,7 @@ function renderNearby(nearby) {
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           VIEW ON MAP
         </a>
-        <span style="font-size:10px;color:var(--stone);font-family:'Bricolage Grotesque',sans-serif;letter-spacing:0.1em;">TAP FOR MORE</span>
+        <span style="font-size:10px;color:var(--stone);font-family:Bricolage Grotesque,sans-serif;letter-spacing:0.1em;">TAP FOR MORE</span>
       </div>
     </div>
   `).join('');
@@ -2881,7 +2883,7 @@ let planConversation = [];
 let planState = {
   city: null, dates: null, duration: null, groupSize: null,
   groupType: null, interests: [], pace: null, stage: 'start',
-  itinerary: null, pendingDayIndex: null, pendingSlotIndex: null
+  itinerary: null, suggestedPlaces: [], selectedPlaces: new Set(), selectedPlacesData: []
 };
 let savedTrips = JSON.parse(localStorage.getItem('bh_trips') || '[]');
 let planInitialised = false;
@@ -2897,7 +2899,7 @@ function startNewPlan() {
   planState = {
     city: null, dates: null, duration: null, groupSize: null,
     groupType: null, interests: [], pace: null, stage: 'start',
-    itinerary: null, pendingDayIndex: null, pendingSlotIndex: null
+    itinerary: null, suggestedPlaces: [], selectedPlaces: new Set(), selectedPlacesData: []
   };
   document.getElementById('planMessages').innerHTML = '';
   planInitialised = true;
@@ -2951,100 +2953,286 @@ async function sendPlanMessage() {
 async function processAgentStep(userText) {
   agentTyping();
 
-  const systemPrompt = `You are a warm travel planning assistant for Battuta Huna, a cultural discovery app. Help users plan a day-by-day trip itinerary through natural conversation.
+  if (planState.stage === 'building') {
+    await buildItineraryFromPlaces();
+    return;
+  }
 
-Gather these details one or two at a time (not all at once):
-- City (supported: Rome, Amman, Málaga, Tunis, Montréal, Dubai — or any city)
+  const gatherPrompt = `You are a warm travel planning assistant for Battuta Huna, a cultural discovery app. Help users plan a trip through natural conversation.
+
+Gather these details one or two at a time (never all at once):
+- City (any city worldwide)
 - Travel dates and duration (days)
 - Group size and type (solo, couple, family, friends)
 - Interests (Sightseeing, History, Art & Culture, Spiritual, Food & Market, Nature, Neighbourhood, Architecture)
-- Pace: "strict" (exact times: 9am, 2pm etc.) or "relaxed" (Morning, Afternoon, Evening, Night)
+- Pace: "strict" (exact times) or "relaxed" (Morning/Afternoon/Evening/Night)
 
-Once you have all info, output a complete itinerary wrapped in <ITINERARY> tags as valid JSON. Rules:
-- Plan from morning until late evening (last slot no earlier than 8:00 PM for strict, or Night for relaxed)
-- Factor in time-of-day: markets, bazaars and food spots are better at night; mosques and ruins are better in the morning; rooftop bars, night walks and souks belong in the evening/night
-- Max 4 slots per day, descriptions under 15 words each
-- For strict pace use times like 9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM
-- For relaxed pace use Morning, Afternoon, Evening, Night
+Once you have ALL five details confirmed, output them in a <TRIPINFO> tag:
+<TRIPINFO>{"city":"Cairo","dates":"May 2026","duration":3,"groupType":"couple","interests":["Sightseeing","Food & Market"],"pace":"strict"}</TRIPINFO>
 
-<ITINERARY>
-{"city":"Rome","dates":"15-18 June","duration":2,"groupType":"couple","pace":"strict","days":[{"day":1,"label":"Day 1 — Ancient Rome","slots":[{"time":"9:00 AM","name":"Colosseum","description":"Rome's most iconic ancient amphitheatre.","category":"Ancient Ruins","tags":["Sightseeing","History"],"lat":41.8902,"lng":12.4922,"mapUrl":"https://maps.google.com/?q=Colosseum+Rome"},{"time":"8:00 PM","name":"Trastevere","description":"Rome's most atmospheric neighbourhood after dark.","category":"Neighbourhood","tags":["Neighbourhood","Food & Market"],"lat":41.8896,"lng":12.4700,"mapUrl":"https://maps.google.com/?q=Trastevere+Rome"}]}]}
-</ITINERARY>
+Keep responses concise and warm. No em dashes. Only output <TRIPINFO> when you have all five details.`;
 
-Suggest real cultural sites anywhere in the world. Keep responses concise and warm. No em dashes.`;
-
-  // When all info is gathered, send a compact summary instead of full history
-  // to avoid long context timeouts
   let messagesToSend = planConversation;
-  if (planConversation.length > 6) {
-    const summary = planConversation
-      .filter(m => m.role === 'user')
-      .map(m => m.content)
-      .join(' | ');
-    messagesToSend = [{ role: 'user', content: `Based on this conversation summary, generate the itinerary: ${summary}` }];
+  if (planConversation.length > 8) {
+    const summary = planConversation.filter(m => m.role === 'user').map(m => m.content).join(' | ');
+    messagesToSend = [{ role: 'user', content: summary }];
   }
 
   try {
     const response = await fetch('/.netlify/functions/plan-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system: systemPrompt,
-        messages: messagesToSend
-      })
+      body: JSON.stringify({ system: gatherPrompt, messages: messagesToSend })
     });
 
     const data = await response.json();
     removeTyping();
 
     if (!response.ok || data.error) {
-      console.error('[plan-agent] Error:', JSON.stringify(data));
-      agentSay('Something went wrong: ' + (data.error?.message || data.error || 'Unknown error. Check the console.'));
+      if (data.error?.type === 'overloaded_error') {
+        agentSay('The service is busy right now. Retrying in a moment...');
+        setTimeout(() => processAgentStep(userText), 3000);
+        return;
+      }
+      agentSay('Something went wrong: ' + (data.error?.message || 'Please try again.'));
       return;
     }
 
-    const agentText = data.content?.[0]?.text || 'Sorry, something went wrong. Please try again.';
+    const agentText = data.content?.[0]?.text || 'Sorry, something went wrong.';
     planConversation.push({ role: 'assistant', content: agentText });
 
-    // Check if itinerary JSON is in the response
+    const tripInfoMatch = agentText.match(/<TRIPINFO>([\s\S]*?)<\/TRIPINFO>/);
+    if (tripInfoMatch) {
+      try {
+        const tripInfo = JSON.parse(tripInfoMatch[1].trim());
+        planState = { ...planState, ...tripInfo, stage: 'selecting' };
+        const cleanText = agentText.replace(/<TRIPINFO>[\s\S]*?<\/TRIPINFO>/, '').trim();
+        if (cleanText) agentSay(cleanText);
+        await showPlaceSelection(tripInfo);
+      } catch(e) {
+        agentSay(agentText.replace(/<TRIPINFO>[\s\S]*?<\/TRIPINFO>/, '').trim() || agentText);
+      }
+    } else {
+      agentSay(agentText);
+    }
+
+  } catch(e) {
+    removeTyping();
+    agentSay('Something went wrong connecting to the planning service. Please try again.');
+  }
+}
+
+async function showPlaceSelection(tripInfo) {
+  const el = document.getElementById('planMessages');
+
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'placesLoading';
+  loadingDiv.className = 'plan-msg agent';
+  loadingDiv.textContent = 'Finding the best places for your trip...';
+  el.appendChild(loadingDiv);
+  el.scrollTop = el.scrollHeight;
+
+  const cityKey = Object.keys(CITY_DATA).find(k =>
+    CITY_DATA[k].name.toLowerCase() === tripInfo.city.toLowerCase()
+  );
+  const existingPois = cityKey ? CITY_DATA[cityKey].pois : [];
+
+  const suggestPrompt = `You are a travel expert. Suggest 12 diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
+
+${existingPois.length > 0 ? 'Our database already has: ' + existingPois.map(p => p.name).join(', ') + '. Include the most relevant ones and add others not in this list.' : ''}
+
+Return ONLY a JSON array, no other text:
+[{"name":"Place Name","category":"Museum","description":"One sentence under 12 words.","tags":["History"],"bestTime":"Morning","lat":30.0444,"lng":31.2357,"mapUrl":"https://maps.google.com/?q=Place+Name+${tripInfo.city}"}]
+
+bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly 12 items.`;
+
+  try {
+    const response = await fetch('/.netlify/functions/plan-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: suggestPrompt,
+        messages: [{ role: 'user', content: 'Suggest 12 places for ' + tripInfo.city }]
+      })
+    });
+
+    const data = await response.json();
+    document.getElementById('placesLoading')?.remove();
+
+    const rawText = data.content?.[0]?.text || '[]';
+    const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+    const places = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+
+    if (!places.length) {
+      agentSay('I had trouble finding places. Please try again.');
+      return;
+    }
+
+    planState.suggestedPlaces = places;
+    planState.selectedPlaces = new Set(places.map((_, i) => i));
+    renderPlaceSelection(places, tripInfo);
+
+  } catch(e) {
+    document.getElementById('placesLoading')?.remove();
+    agentSay('I had trouble finding places. Please try again.');
+  }
+}
+
+function renderPlaceSelection(places, tripInfo) {
+  const el = document.getElementById('planMessages');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'placeSelectionWrapper';
+  wrapper.style.cssText = 'width:100%;';
+
+  const header = document.createElement('div');
+  header.className = 'plan-msg agent';
+  header.innerHTML = 'Here are some great places for your ' + tripInfo.city + ' trip. Tap to select or deselect, then add any of your own and hit Build when ready.';
+  wrapper.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.id = 'placeSelectionGrid';
+  grid.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:8px;';
+
+  places.forEach((place, i) => {
+    grid.appendChild(buildPlaceCard(place, i, true));
+  });
+  wrapper.appendChild(grid);
+
+  const addRow = document.createElement('div');
+  addRow.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+  addRow.innerHTML = '<input id="customPlaceInput" type="text" placeholder="Add your own place..." style="flex:1;padding:10px 14px;background:#f5f0e8;border:1.5px solid rgba(61,46,38,0.15);border-radius:20px;font-family:Merriweather,serif;font-size:13px;color:#3d2e26;outline:none;" onkeydown="if(event.key===\'Enter\')addCustomPlace()"/><button onclick="addCustomPlace()" style="padding:10px 14px;background:#f5f0e8;border:1.5px solid rgba(61,46,38,0.2);border-radius:20px;font-family:Merriweather,sans-serif;font-size:12px;color:#3d2e26;cursor:pointer;">Add</button>';
+  wrapper.appendChild(addRow);
+
+  const buildBtn = document.createElement('button');
+  buildBtn.id = 'buildItineraryBtn';
+  buildBtn.onclick = triggerBuildItinerary;
+  buildBtn.style.cssText = 'display:block;width:100%;margin-top:12px;padding:14px;background:#6f8b6d;color:#fff;font-family:"Bricolage Grotesque",sans-serif;font-size:13px;font-weight:600;letter-spacing:0.12em;border:none;border-radius:12px;cursor:pointer;';
+  buildBtn.textContent = 'BUILD MY ITINERARY';
+  wrapper.appendChild(buildBtn);
+
+  el.appendChild(wrapper);
+  el.scrollTop = el.scrollHeight;
+}
+
+function buildPlaceCard(place, i, selected) {
+  const card = document.createElement('div');
+  card.id = 'place-card-' + i;
+  card.onclick = () => togglePlaceCard(i);
+  card.style.cssText = getPlaceCardStyle(selected);
+  const tagCls = (place.tags?.[0] || '').toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+  card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1;"><div style="font-family:Bricolage Grotesque,sans-serif;font-size:14px;font-weight:600;color:#3d2e26;margin-bottom:3px;">' + place.name + '</div><div style="font-family:Merriweather,serif;font-size:12px;color:#9b8f82;line-height:1.5;margin-bottom:6px;">' + place.description + '</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span class="poi-tag tag-' + tagCls + '" style="font-size:10px;">' + (place.tags?.[0] || place.category) + '</span><span style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#9b8f82;letter-spacing:0.06em;">' + place.bestTime + '</span></div></div><div id="place-check-' + i + '" style="width:22px;height:22px;border-radius:50%;background:' + (selected ? '#6f8b6d' : 'rgba(61,46,38,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div></div>';
+  return card;
+}
+
+function getPlaceCardStyle(selected) {
+  return 'background:#fff;border:2px solid ' + (selected ? '#6f8b6d' : 'rgba(61,46,38,0.12)') + ';border-radius:14px;padding:14px;cursor:pointer;transition:all 0.2s;opacity:' + (selected ? '1' : '0.5') + ';';
+}
+
+function togglePlaceCard(i) {
+  if (planState.selectedPlaces.has(i)) {
+    planState.selectedPlaces.delete(i);
+  } else {
+    planState.selectedPlaces.add(i);
+  }
+  const card = document.getElementById('place-card-' + i);
+  const check = document.getElementById('place-check-' + i);
+  const selected = planState.selectedPlaces.has(i);
+  card.style.cssText = getPlaceCardStyle(selected);
+  check.style.background = selected ? '#6f8b6d' : 'rgba(61,46,38,0.15)';
+}
+
+function addCustomPlace() {
+  const input = document.getElementById('customPlaceInput');
+  const name = input.value.trim();
+  if (!name) return;
+  const newPlace = { name, category: 'Custom', description: 'Added by you.', tags: ['Sightseeing'], bestTime: 'Afternoon', lat: null, lng: null, mapUrl: 'https://maps.google.com/?q=' + encodeURIComponent(name + ' ' + planState.city) };
+  planState.suggestedPlaces.push(newPlace);
+  const newIndex = planState.suggestedPlaces.length - 1;
+  planState.selectedPlaces.add(newIndex);
+  const grid = document.getElementById('placeSelectionGrid');
+  if (grid) grid.appendChild(buildPlaceCard(newPlace, newIndex, true));
+  input.value = '';
+  document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
+}
+
+function triggerBuildItinerary() {
+  const selected = [...planState.selectedPlaces].map(i => planState.suggestedPlaces[i]);
+  if (!selected.length) { agentSay('Please select at least one place first.'); return; }
+  planState.selectedPlacesData = selected;
+  planState.stage = 'building';
+  document.getElementById('placeSelectionWrapper')?.remove();
+  userSay('I have selected ' + selected.length + ' places. Build my itinerary.');
+  buildItineraryFromPlaces();
+}
+
+async function buildItineraryFromPlaces() {
+  agentTyping();
+  const { city, dates, duration, groupType, pace, selectedPlacesData } = planState;
+  const placesJson = JSON.stringify(selectedPlacesData.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
+
+  const buildPrompt = `You are a travel planning assistant. Build a day-by-day itinerary using ONLY the places provided.
+
+Rules:
+- Use ONLY the places from the list, no extras
+- Distribute across ${duration} days logically by location and time-of-day
+- Respect bestTime: Morning places in the morning, Night places at night
+- Pace: ${pace === 'strict' ? 'use exact times like 9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM' : 'use Morning, Afternoon, Evening, Night'}
+- Last slot no earlier than 8:00 PM (strict) or Night (relaxed)
+- Descriptions under 15 words
+
+Places: ${placesJson}
+
+Output ONLY valid JSON in <ITINERARY> tags:
+<ITINERARY>{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Place Name","description":"Short description.","category":"Category","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Place"}]}]}</ITINERARY>`;
+
+  try {
+    const response = await fetch('/.netlify/functions/plan-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: buildPrompt, messages: [{ role: 'user', content: 'Build the itinerary now.' }] })
+    });
+
+    const data = await response.json();
+    removeTyping();
+
+    if (!response.ok || data.error) {
+      if (data.error?.type === 'overloaded_error') { agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
+      agentSay('Something went wrong building the itinerary. Please try again.');
+      return;
+    }
+
+    const agentText = data.content?.[0]?.text || '';
     const itinMatch = agentText.match(/<ITINERARY>([\s\S]*?)<\/ITINERARY>/);
+
     if (itinMatch) {
       try {
         const itinerary = JSON.parse(itinMatch[1].trim());
+        itinerary.days.forEach(day => {
+          day.slots.forEach(slot => {
+            const original = selectedPlacesData.find(p => p.name === slot.name);
+            if (original) { slot.lat = original.lat || slot.lat; slot.lng = original.lng || slot.lng; slot.mapUrl = original.mapUrl || slot.mapUrl; }
+          });
+        });
         planState.itinerary = itinerary;
-        planState.stage = 'review';
-
-        // Save silently
+        planState.stage = 'done';
         saveTrip(itinerary);
-
-        // Show clean confirmation + CTA
-        const cleanText = agentText.replace(/<ITINERARY>[\s\S]*?<\/ITINERARY>/, '').trim();
-        if (cleanText) agentSay(cleanText);
 
         const cta = document.createElement('div');
         cta.style.cssText = 'margin-top:12px;';
-        cta.innerHTML = `
-          <div style="background:#f5f0e8;border:1.5px solid rgba(111,139,109,0.4);border-radius:14px;padding:14px 16px;">
-            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;color:#3d2e26;margin-bottom:6px;">Trip saved to My Trips</div>
-            <div style="font-family:'Merriweather',serif;font-size:12px;color:#9b8f82;margin-bottom:12px;line-height:1.5;">Your ${itinerary.duration}-day ${itinerary.city} itinerary is ready. You can view it, make changes, or keep chatting here.</div>
-            <button onclick="showView('trips-view')" style="display:block;width:100%;padding:10px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">VIEW IN MY TRIPS</button>
-          </div>`;
+        cta.innerHTML = `<div style="background:#f5f0e8;border:1.5px solid rgba(111,139,109,0.4);border-radius:14px;padding:14px 16px;"><div style="font-family:Bricolage Grotesque,sans-serif;font-size:13px;font-weight:600;color:#3d2e26;margin-bottom:6px;">Trip saved to My Trips</div><div style="font-family:Merriweather,serif;font-size:12px;color:#9b8f82;margin-bottom:12px;line-height:1.5;">Your ${itinerary.duration}-day ${itinerary.city} itinerary is ready.</div><button onclick="showView('trips-view')" style="display:block;width:100%;padding:10px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">VIEW IN MY TRIPS</button></div>`;
         document.getElementById('planMessages').appendChild(cta);
         document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
 
       } catch(e) {
-        planConversation.pop();
-        agentSay("I had trouble formatting the itinerary. Let me try again — could you confirm your trip details one more time?");
+        agentSay("I had trouble formatting the itinerary. Please tap 'New Plan' and try again.");
       }
-    } else if (agentText.includes('<ITINERARY>')) {
-      planConversation.pop();
-      agentSay("My response was cut off. Let me try again with a shorter itinerary — how many days is your trip?");
     } else {
-      agentSay(agentText);
+      agentSay("My response was cut off. Please tap 'New Plan' and try with fewer days.");
     }
+
   } catch(e) {
     removeTyping();
-    agentSay('Something went wrong connecting to the planning service. Please try again.');
+    agentSay('Something went wrong. Please try again.');
   }
 }
 
@@ -3214,8 +3402,8 @@ function openTripDetail(index) {
     <div class="trip-detail-meta">${trip.dates || ''} &nbsp;·&nbsp; ${trip.duration} day${trip.duration > 1 ? 's' : ''} &nbsp;·&nbsp; ${trip.groupType || ''}</div>
 
     <div style="display:flex;gap:8px;margin-bottom:20px;">
-      <button onclick="editTrip(${index})" style="flex:1;padding:10px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">EDIT TRIP</button>
-      <button onclick="deleteTrip(${index})" style="padding:10px 16px;background:none;color:#c97b5c;font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;border:1.5px solid rgba(201,123,92,0.4);border-radius:10px;cursor:pointer;">DELETE</button>
+      <button onclick="editTrip(${index})" style="flex:1;padding:10px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">EDIT TRIP</button>
+      <button onclick="deleteTrip(${index})" style="padding:10px 16px;background:none;color:#c97b5c;font-family:Bricolage Grotesque,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;border:1.5px solid rgba(201,123,92,0.4);border-radius:10px;cursor:pointer;">DELETE</button>
     </div>
 
     ${trip.days.map(day => `
@@ -3226,7 +3414,7 @@ function openTripDetail(index) {
           <div style="flex:1;">
             <div class="trip-slot-name">${slot.name}</div>
             <div class="trip-slot-desc">${slot.description}</div>
-            ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" style="font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
+            ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
           </div>
         </div>
       `).join('')}
@@ -3237,13 +3425,19 @@ function openTripDetail(index) {
 
   // Fetch city hero image
   fetch(`/.netlify/functions/wiki-image?title=${encodeURIComponent(trip.city)}`)
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(data => {
       const heroEl = document.getElementById('tripHeroImg');
       if (heroEl && data.url) {
-        heroEl.style.cssText = 'width:100%;height:180px;border-radius:12px;margin-bottom:16px;overflow:hidden;flex-shrink:0;background:url(\'' + data.url + '\') center/cover no-repeat;';
+        heroEl.innerHTML = `<img src="${data.url}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'"/>`;
       }
-    }).catch(() => {});
+    }).catch(() => {
+      const heroEl = document.getElementById('tripHeroImg');
+      if (heroEl) heroEl.style.display = 'none';
+    });
 }
 
 function editTrip(index) {
