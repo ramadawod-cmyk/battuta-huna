@@ -1,6 +1,6 @@
 const https = require('https');
 
-function request(method, path, body) {
+function request(method, path, body, prefer) {
   return new Promise((resolve, reject) => {
     const url = new URL(process.env.SUPABASE_URL + path);
     const payload = body ? JSON.stringify(body) : null;
@@ -13,7 +13,7 @@ function request(method, path, body) {
         'apikey': process.env.SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + process.env.SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
+        'Prefer': prefer ? `return=representation,${prefer}` : 'return=representation'
       }
     };
     if (payload) options.headers['Content-Length'] = Buffer.byteLength(payload);
@@ -64,10 +64,17 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
+    // ── UPSERT CITY (AI generated) ───────────────────
+    if (action === 'upsertCity') {
+      const city = data.city;
+      const res = await request('POST', '/rest/v1/cities', city, 'resolution=merge-duplicates');
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
     // ── UPSERT SITE (AI generated) ───────────────────
     if (action === 'upsertSite') {
       const site = data.site;
-      const res = await request('POST', '/rest/v1/sites', site);
+      const res = await request('POST', '/rest/v1/sites', site, 'resolution=merge-duplicates');
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
