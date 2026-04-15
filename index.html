@@ -2972,6 +2972,8 @@ function stripMarkdown(text) {
     .replace(/\*(.+?)\*/g, '$1')
     .replace(/^[-•]\s+/gm, '')
     .replace(/#{1,3}\s+/g, '')
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{1F300}-\u{1F9FF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}]/gu, '')
+    .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
@@ -3423,9 +3425,10 @@ function saveTrip(itinerary) {
           };
           CITY_DATA[cityKey].pois.push(newPoi);
           // Save new AI-generated site to Supabase
+          const siteCityId = cityKey || cleaned.city.toLowerCase().replace(/[^a-z0-9]/g, '-');
           db('upsertSite', { site: {
             id: newPoi.id,
-            city_id: cityKey,
+            city_id: siteCityId,
             name: newPoi.name,
             category: newPoi.category,
             tags: newPoi.tags,
@@ -3441,6 +3444,17 @@ function saveTrip(itinerary) {
     });
   }
 
+  // Upsert city in Supabase (handles new cities like Tokyo)
+  const cityId = cleaned.city.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  db('upsertCity', { city: {
+    id: cityId,
+    name: cleaned.city,
+    country: null,
+    lat: null,
+    lng: null,
+    wiki: cleaned.city
+  }});
+
   // Save trip to Supabase
   db('saveTrip', { trip: {
     city: cleaned.city,
@@ -3450,7 +3464,6 @@ function saveTrip(itinerary) {
     pace: cleaned.pace || null,
     days: cleaned.days
   }}).then(result => {
-    // Also store in memory with the Supabase-generated id if available
     const saved = Array.isArray(result) ? result[0] : result;
     cleaned.id = saved?.id || cleaned.id;
     savedTrips.unshift(cleaned);
