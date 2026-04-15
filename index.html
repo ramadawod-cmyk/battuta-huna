@@ -1081,6 +1081,65 @@
       letter-spacing: 0.06em; margin-bottom: 12px;
     }
     .trip-card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    /* ── TRIP DETAILS SHEET ── */
+    .details-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(61,46,38,0.5);
+      z-index: 200; align-items: flex-end; justify-content: center;
+    }
+    .details-overlay.open { display: flex; }
+    .details-sheet {
+      width: 100%; max-width: 480px;
+      background: #ffffff;
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px 48px;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    .details-sheet-handle {
+      width: 36px; height: 4px;
+      background: rgba(61,46,38,0.15);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .details-section-label {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: #9b8f82; margin-bottom: 10px; margin-top: 20px;
+    }
+    .details-pills {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;
+    }
+    .details-pill {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(61,46,38,0.15);
+      background: #ffffff;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 13px; color: #3d2e26;
+      cursor: pointer; transition: all 0.15s;
+      user-select: none;
+    }
+    .details-pill.selected {
+      background: #6f8b6d;
+      border-color: #6f8b6d;
+      color: #ffffff;
+    }
+    .details-pill.loading {
+      opacity: 0.5; pointer-events: none;
+    }
+    .details-find-btn {
+      display: block; width: 100%; margin-top: 24px;
+      padding: 14px;
+      background: #6f8b6d; color: #ffffff;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+      border: none; border-radius: 12px; cursor: pointer;
+    }
+    .details-find-btn:disabled { background: #9b8f82; cursor: not-allowed; }
+
     .trip-detail-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(61,46,38,0.5);
@@ -1526,6 +1585,46 @@
       Settings
     </button>
   </nav>
+</div>
+
+<!-- TRIP DETAILS SHEET -->
+<div class="details-overlay" id="detailsOverlay">
+  <div class="details-sheet" id="detailsSheet">
+    <div class="details-sheet-handle"></div>
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:600;color:#3d2e26;margin-bottom:4px;" id="detailsSheetTitle">Customise your trip</div>
+    <div style="font-family:'Merriweather',serif;font-size:12px;color:#9b8f82;" id="detailsSheetSub"></div>
+
+    <div class="details-section-label" id="areasLabel" style="display:none;">Areas to visit</div>
+    <div class="details-pills" id="areasPills"></div>
+
+    <div class="details-section-label">Group type</div>
+    <div class="details-pills" id="groupPills">
+      <div class="details-pill" data-value="solo" onclick="toggleSinglePill(this,'groupPills')">Solo</div>
+      <div class="details-pill selected" data-value="couple" onclick="toggleSinglePill(this,'groupPills')">Couple</div>
+      <div class="details-pill" data-value="family" onclick="toggleSinglePill(this,'groupPills')">Family</div>
+      <div class="details-pill" data-value="friends" onclick="toggleSinglePill(this,'groupPills')">Friends</div>
+    </div>
+
+    <div class="details-section-label">Interests</div>
+    <div class="details-pills" id="interestsPills">
+      <div class="details-pill selected" data-value="Sightseeing" onclick="toggleMultiPill(this)">Sightseeing</div>
+      <div class="details-pill selected" data-value="History" onclick="toggleMultiPill(this)">History</div>
+      <div class="details-pill" data-value="Art & Culture" onclick="toggleMultiPill(this)">Art & Culture</div>
+      <div class="details-pill" data-value="Spiritual" onclick="toggleMultiPill(this)">Spiritual</div>
+      <div class="details-pill selected" data-value="Food & Market" onclick="toggleMultiPill(this)">Food & Market</div>
+      <div class="details-pill" data-value="Nature" onclick="toggleMultiPill(this)">Nature</div>
+      <div class="details-pill" data-value="Neighbourhood" onclick="toggleMultiPill(this)">Neighbourhood</div>
+      <div class="details-pill" data-value="Architecture" onclick="toggleMultiPill(this)">Architecture</div>
+    </div>
+
+    <div class="details-section-label">Pace</div>
+    <div class="details-pills" id="pacePills">
+      <div class="details-pill selected" data-value="relaxed" onclick="toggleSinglePill(this,'pacePills')">Relaxed</div>
+      <div class="details-pill" data-value="strict" onclick="toggleSinglePill(this,'pacePills')">Strict schedule</div>
+    </div>
+
+    <button class="details-find-btn" id="detailsFindBtn" onclick="submitDetailsSheet()">FIND PLACES</button>
+  </div>
 </div>
 
 <!-- TRIP DETAIL OVERLAY -->
@@ -2961,6 +3060,7 @@ function startNewPlan() {
     groupType: null, interests: [], pace: null, stage: 'start',
     itinerary: null, suggestedPlaces: [], selectedPlaces: new Set(), selectedPlacesData: []
   };
+  document.getElementById('detailsOverlay')?.classList.remove('open');
   document.getElementById('planMessages').innerHTML = '';
   planInitialised = true;
   agentSay(`Hello! I'm your Battuta travel planner. Let's build your perfect trip together.\n\nWhich city are you heading to?`);
@@ -3029,38 +3129,21 @@ async function processAgentStep(userText) {
     return;
   }
 
-  const gatherPrompt = `You are a travel planning assistant for Battuta Huna. Collect trip details through a short conversation then output a structured tag.
+  const gatherPrompt = `You are a travel planning assistant for Battuta Huna. Collect only TWO things:
+1. Destination (city or country)
+2. Dates and duration in days
 
-Collect these 5 things, one or two at a time:
-1. City or cities to visit
-2. Travel dates and duration in days
-3. Group type (solo, couple, family, friends)
-4. Interests from: Sightseeing, History, Art & Culture, Spiritual, Food & Market, Nature, Neighbourhood, Architecture
-5. Pace: strict (exact times) or relaxed (morning/afternoon/evening/night)
+Ask destination first. Once you have it, ask for dates and duration together.
+Once you have BOTH, output a <PARTIAL> tag and nothing else:
+<PARTIAL>{"city":"Tokyo","dates":"May 2026","duration":5}</PARTIAL>
 
-CRITICAL RULES:
-- Never ask for clarification on an answer already received — accept it and move on
-- Never forget a detail the user already gave you — keep track of everything
-- Once you have all 5, IMMEDIATELY output the <TRIPINFO> tag — no summary, no confirmation
-- Accept "strict" as strict pace, "relaxed" as relaxed pace — never ask to clarify obvious answers
-- Never ask the same question twice
-
-<TRIPINFO>{"city":"Cairo","dates":"May 2026","duration":3,"groupType":"friends","interests":["History","Food & Market"],"pace":"strict"}</TRIPINFO>
-
-No markdown, no bold, no bullets, no emojis, no em dashes. One question at a time.`;
-
-  let messagesToSend = planConversation;
-  if (planConversation.length > 10) {
-    // Compress to a clear summary preserving all gathered info
-    const userMsgs = planConversation.filter(m => m.role === 'user').map(m => m.content).join(', ');
-    messagesToSend = [{ role: 'user', content: `Here is the full conversation summary. User said: ${userMsgs}. Now output the <TRIPINFO> tag immediately.` }];
-  }
+No markdown, no bold, no emojis, no em dashes. One question at a time. Very short responses.`;
 
   try {
     const response = await fetch('/.netlify/functions/plan-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: gatherPrompt, messages: messagesToSend })
+      body: JSON.stringify({ system: gatherPrompt, messages: planConversation })
     });
 
     const data = await response.json();
@@ -3079,25 +3162,131 @@ No markdown, no bold, no bullets, no emojis, no em dashes. One question at a tim
     const agentText = data.content?.[0]?.text || 'Sorry, something went wrong.';
     planConversation.push({ role: 'assistant', content: agentText });
 
-    const tripInfoMatch = agentText.match(/<TRIPINFO>([\s\S]*?)<\/TRIPINFO>/);
-    if (tripInfoMatch) {
+    const partialMatch = agentText.match(/<PARTIAL>([\s\S]*?)<\/PARTIAL>/);
+    if (partialMatch) {
       try {
-        const tripInfo = JSON.parse(tripInfoMatch[1].trim());
-        planState = { ...planState, ...tripInfo, stage: 'selecting' };
-        const cleanText = agentText.replace(/<TRIPINFO>[\s\S]*?<\/TRIPINFO>/, '').trim();
+        const partial = JSON.parse(partialMatch[1].trim());
+        planState.city = partial.city;
+        planState.dates = partial.dates;
+        planState.duration = partial.duration;
+        planState.stage = 'sheet';
+        const cleanText = agentText.replace(/<PARTIAL>[\s\S]*?<\/PARTIAL>/, '').trim();
         if (cleanText) agentSay(cleanText);
-        await showPlaceSelection(tripInfo);
+        else agentSay(`Got it. Let me get a few more details about your ${partial.city} trip.`);
+        setTimeout(() => showDetailsSheet(partial), 400);
       } catch(e) {
-        agentSay(agentText.replace(/<TRIPINFO>[\s\S]*?<\/TRIPINFO>/, '').trim() || agentText);
+        agentSay(agentText.replace(/<PARTIAL>[\s\S]*?<\/PARTIAL>/, '').trim() || agentText);
       }
     } else {
       agentSay(agentText);
     }
-
   } catch(e) {
     removeTyping();
-    agentSay('Something went wrong connecting to the planning service. Please try again.');
+    agentSay('Something went wrong. Please try again.');
   }
+}
+
+
+// ── DETAILS SHEET ────────────────────────────────────────
+
+function toggleSinglePill(el, groupId) {
+  document.querySelectorAll(`#${groupId} .details-pill`).forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function toggleMultiPill(el) {
+  el.classList.toggle('selected');
+}
+
+async function showDetailsSheet(partial) {
+  const sheet = document.getElementById('detailsSheet');
+  document.getElementById('detailsSheetTitle').textContent = `Your ${partial.city} trip`;
+  document.getElementById('detailsSheetSub').textContent = `${partial.dates} · ${partial.duration} day${partial.duration > 1 ? 's' : ''}`;
+
+  // Load AI-suggested areas
+  const areasLabel = document.getElementById('areasLabel');
+  const areasPills = document.getElementById('areasPills');
+  areasLabel.style.display = 'block';
+  areasPills.innerHTML = '<span class="details-pill loading">Loading areas...</span>';
+
+  // Ask AI for areas/neighbourhoods for this destination
+  try {
+    const res = await fetch('/.netlify/functions/plan-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: `Return ONLY a JSON array of 4-6 key areas/cities/neighbourhoods to visit in ${partial.city}. Short names only. Example: ["Amman","Petra","Wadi Rum","Dead Sea"] or ["Shibuya","Shinjuku","Asakusa","Harajuku"]. No other text.`,
+        messages: [{ role: 'user', content: `Areas for ${partial.city}` }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '[]';
+    const match = raw.match(/\[[\s\S]*\]/);
+    const areas = match ? JSON.parse(match[0]) : [];
+
+    areasPills.innerHTML = '';
+    areas.forEach(area => {
+      const pill = document.createElement('div');
+      pill.className = 'details-pill selected';
+      pill.dataset.value = area;
+      pill.textContent = area;
+      pill.onclick = () => pill.classList.toggle('selected');
+      areasPills.appendChild(pill);
+    });
+    if (!areas.length) areasLabel.style.display = 'none';
+  } catch(e) {
+    areasLabel.style.display = 'none';
+    areasPills.innerHTML = '';
+  }
+
+  document.getElementById('detailsOverlay').classList.add('open');
+}
+
+function submitDetailsSheet() {
+  const groupEl = document.querySelector('#groupPills .details-pill.selected');
+  const groupType = groupEl ? groupEl.dataset.value : 'couple';
+
+  const interests = [...document.querySelectorAll('#interestsPills .details-pill.selected')]
+    .map(p => p.dataset.value);
+
+  const paceEl = document.querySelector('#pacePills .details-pill.selected');
+  const pace = paceEl ? paceEl.dataset.value : 'relaxed';
+
+  const areas = [...document.querySelectorAll('#areasPills .details-pill.selected')]
+    .map(p => p.dataset.value);
+
+  if (!interests.length) {
+    alert('Please select at least one interest.');
+    return;
+  }
+
+  document.getElementById('detailsOverlay').classList.remove('open');
+
+  // Merge into planState
+  const cityFull = areas.length > 1
+    ? `${planState.city} (${areas.join(', ')})`
+    : planState.city;
+
+  planState = {
+    ...planState,
+    city: cityFull,
+    groupType,
+    interests,
+    pace,
+    stage: 'selecting'
+  };
+
+  const tripInfo = {
+    city: cityFull,
+    dates: planState.dates,
+    duration: planState.duration,
+    groupType,
+    interests,
+    pace
+  };
+
+  userSay(`${areas.length ? areas.join(', ') + ' · ' : ''}${groupType} · ${interests.join(', ')} · ${pace}`);
+  showPlaceSelection(tripInfo);
 }
 
 async function showPlaceSelection(tripInfo) {
