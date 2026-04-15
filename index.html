@@ -3420,11 +3420,12 @@ function saveTrip(itinerary) {
     wiki: cleaned.city
   }});
 
-  // Save all slots to Supabase as ai_generated sites
+  // Save all slots to Supabase as ai_generated sites in one batch call
+  const sitesToSave = [];
   cleaned.days.forEach(day => {
     day.slots.forEach(slot => {
-      const siteId = slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + cityId;
-      db('upsertSite', { site: {
+      const siteId = slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 60) + '-' + cityId;
+      sitesToSave.push({
         id: siteId,
         city_id: cityId,
         name: slot.name,
@@ -3437,7 +3438,7 @@ function saveTrip(itinerary) {
         wiki: slot.name.replace(/ /g, '_'),
         best_time: slot.time || null,
         source: 'ai_generated'
-      }});
+      });
 
       // Also add to local CITY_DATA if it's a known city
       if (cityKey && CITY_DATA[cityKey].pois) {
@@ -3456,6 +3457,10 @@ function saveTrip(itinerary) {
       }
     });
   });
+
+  if (sitesToSave.length > 0) {
+    db('upsertSites', { sites: sitesToSave });
+  }
 
   // Save trip to Supabase
   db('saveTrip', { trip: {
