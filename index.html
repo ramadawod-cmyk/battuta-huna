@@ -1594,8 +1594,6 @@
     <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:600;color:#3d2e26;margin-bottom:4px;" id="detailsSheetTitle">Customise your trip</div>
     <div style="font-family:'Merriweather',serif;font-size:12px;color:#9b8f82;" id="detailsSheetSub"></div>
 
-    <div class="details-section-label" id="areasLabel" style="display:none;">Areas to visit</div>
-    <div class="details-pills" id="areasPills"></div>
 
     <div class="details-section-label">Group type</div>
     <div class="details-pills" id="groupPills">
@@ -3130,12 +3128,15 @@ async function processAgentStep(userText) {
   }
 
   const gatherPrompt = `You are a travel planning assistant for Battuta Huna. Collect only TWO things:
-1. Destination (city or country)
+1. Specific city or cities to visit (NOT a country — if the user says a country, ask which cities they want to visit or offer to suggest the best cities for their trip length)
 2. Dates and duration in days
 
-Ask destination first. Once you have it, ask for dates and duration together.
-Once you have BOTH, output a <PARTIAL> tag and nothing else:
-<PARTIAL>{"city":"Tokyo","dates":"May 2026","duration":5}</PARTIAL>
+If the user gives a country (e.g. "Switzerland", "Jordan", "Japan"), respond with:
+"Are there specific cities you want to visit, or would you like me to suggest the best ones for your trip length?"
+Wait for their answer before outputting <PARTIAL>.
+
+Once you have specific cities AND dates/duration, output:
+<PARTIAL>{"city":"Zurich, Interlaken, Lucerne","dates":"June 2026","duration":5}</PARTIAL>
 
 No markdown, no bold, no emojis, no em dashes. One question at a time. Very short responses.`;
 
@@ -3198,7 +3199,7 @@ function toggleMultiPill(el) {
   el.classList.toggle('selected');
 }
 
-async function showDetailsSheet(partial) {
+function showDetailsSheet(partial) {
   const sheet = document.getElementById('detailsSheet');
   document.getElementById('detailsSheetTitle').textContent = `Your ${partial.city} trip`;
   document.getElementById('detailsSheetSub').textContent = `${partial.dates} · ${partial.duration} day${partial.duration > 1 ? 's' : ''}`;
@@ -3252,9 +3253,6 @@ function submitDetailsSheet() {
   const paceEl = document.querySelector('#pacePills .details-pill.selected');
   const pace = paceEl ? paceEl.dataset.value : 'relaxed';
 
-  const areas = [...document.querySelectorAll('#areasPills .details-pill.selected')]
-    .map(p => p.dataset.value);
-
   if (!interests.length) {
     alert('Please select at least one interest.');
     return;
@@ -3263,13 +3261,9 @@ function submitDetailsSheet() {
   document.getElementById('detailsOverlay').classList.remove('open');
 
   // Merge into planState
-  const cityFull = areas.length > 1
-    ? `${planState.city} (${areas.join(', ')})`
-    : planState.city;
-
   planState = {
     ...planState,
-    city: cityFull,
+    city: planState.city,
     groupType,
     interests,
     pace,
@@ -3277,7 +3271,7 @@ function submitDetailsSheet() {
   };
 
   const tripInfo = {
-    city: cityFull,
+    city: planState.city,
     dates: planState.dates,
     duration: planState.duration,
     groupType,
@@ -3285,7 +3279,7 @@ function submitDetailsSheet() {
     pace
   };
 
-  userSay(`${areas.length ? areas.join(', ') + ' · ' : ''}${groupType} · ${interests.join(', ')} · ${pace}`);
+  userSay(`${groupType} · ${interests.join(', ')} · ${pace}`);
   showPlaceSelection(tripInfo);
 }
 
@@ -3597,26 +3591,33 @@ function saveTrip(itinerary) {
   const cityKey = Object.keys(CITY_DATA).find(k =>
     CITY_DATA[k].name.toLowerCase() === cleaned.city.toLowerCase()
   );
-  const cityId = cleaned.city.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  // Extract individual cities — city field may be "Zurich, Interlaken, Lucerne (Switzerland)"
+  // Always use the first city as the primary city_id, never a country name
+  const rawCity = cleaned.city.replace(/\s*\(.*?\)\s*/g, '').trim(); // remove parenthetical country
+  const firstCity = rawCity.split(/[,/]+/)[0].trim();
+  const cityId = firstCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
 
-  // Upsert city first
-  db('upsertCity', { city: {
-    id: cityId,
-    name: cleaned.city,
-    country: null,
-    lat: null,
-    lng: null,
-    wiki: cleaned.city
-  }});
+  // Upsert each city — split multi-city trips into individual city rows
+  const allCities = rawCity.split(/[,/]+/).map(c => c.trim()).filter(Boolean);
+  allCities.forEach(cityName => {
+    const cId = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+    db('upsertCity', { city: { id: cId, name: cityName, country: null, lat: null, lng: null, wiki: cityName } });
+  });
 
   // Save all slots to Supabase as ai_generated sites in one batch call
   const sitesToSave = [];
   cleaned.days.forEach(day => {
+    // Try to detect which city this day is in from the day label
+    let dayCityId = cityId;
+    if (allCities.length > 1) {
+      const matched = allCities.find(c => day.label && day.label.toLowerCase().includes(c.toLowerCase()));
+      if (matched) dayCityId = matched.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+    }
     day.slots.forEach(slot => {
-      const siteId = slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 60) + '-' + cityId;
+      const siteId = slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 60) + '-' + dayCityId;
       sitesToSave.push({
         id: siteId,
-        city_id: cityId,
+        city_id: dayCityId,
         name: slot.name,
         category: slot.category || 'Cultural Site',
         tags: slot.tags || ['Sightseeing'],
