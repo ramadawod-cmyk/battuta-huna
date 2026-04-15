@@ -2970,7 +2970,7 @@ Gather these details one or two at a time (never all at once):
 Once you have ALL five details confirmed, output them in a <TRIPINFO> tag:
 <TRIPINFO>{"city":"Cairo","dates":"May 2026","duration":3,"groupType":"couple","interests":["Sightseeing","Food & Market"],"pace":"strict"}</TRIPINFO>
 
-Keep responses concise and warm. No em dashes. Only output <TRIPINFO> when you have all five details.`;
+Keep responses concise. No em dashes, no emojis, no markdown formatting (no **bold**, no bullet points). Do not react with encouraging comments to each answer — just ask the next question directly. Only output <TRIPINFO> when you have all five details.`;
 
   let messagesToSend = planConversation;
   if (planConversation.length > 8) {
