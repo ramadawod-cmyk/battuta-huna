@@ -3200,46 +3200,8 @@ function toggleMultiPill(el) {
 }
 
 function showDetailsSheet(partial) {
-  const sheet = document.getElementById('detailsSheet');
   document.getElementById('detailsSheetTitle').textContent = `Your ${partial.city} trip`;
   document.getElementById('detailsSheetSub').textContent = `${partial.dates} · ${partial.duration} day${partial.duration > 1 ? 's' : ''}`;
-
-  // Load AI-suggested areas
-  const areasLabel = document.getElementById('areasLabel');
-  const areasPills = document.getElementById('areasPills');
-  areasLabel.style.display = 'block';
-  areasPills.innerHTML = '<span class="details-pill loading">Loading areas...</span>';
-
-  // Ask AI for areas/neighbourhoods for this destination
-  try {
-    const res = await fetch('/.netlify/functions/plan-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system: `Return ONLY a JSON array of 4-6 key areas/cities/neighbourhoods to visit in ${partial.city}. Short names only. Example: ["Amman","Petra","Wadi Rum","Dead Sea"] or ["Shibuya","Shinjuku","Asakusa","Harajuku"]. No other text.`,
-        messages: [{ role: 'user', content: `Areas for ${partial.city}` }]
-      })
-    });
-    const data = await res.json();
-    const raw = data.content?.[0]?.text || '[]';
-    const match = raw.match(/\[[\s\S]*\]/);
-    const areas = match ? JSON.parse(match[0]) : [];
-
-    areasPills.innerHTML = '';
-    areas.forEach(area => {
-      const pill = document.createElement('div');
-      pill.className = 'details-pill selected';
-      pill.dataset.value = area;
-      pill.textContent = area;
-      pill.onclick = () => pill.classList.toggle('selected');
-      areasPills.appendChild(pill);
-    });
-    if (!areas.length) areasLabel.style.display = 'none';
-  } catch(e) {
-    areasLabel.style.display = 'none';
-    areasPills.innerHTML = '';
-  }
-
   document.getElementById('detailsOverlay').classList.add('open');
 }
 
