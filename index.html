@@ -3260,14 +3260,15 @@ async function showPlaceSelection(tripInfo) {
   );
   const existingPois = cityKey ? CITY_DATA[cityKey].pois : [];
 
-  const suggestPrompt = `You are a travel expert. Suggest 12 diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
+  const targetCount = Math.max(12, tripInfo.duration * 4);
+  const suggestPrompt = `You are a travel expert. Suggest ${targetCount} diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
 
 ${existingPois.length > 0 ? 'Our database already has: ' + existingPois.map(p => p.name).join(', ') + '. Include the most relevant ones and add others not in this list.' : ''}
 
 Return ONLY a JSON array, no other text:
 [{"name":"Place Name","category":"Museum","description":"One sentence under 12 words.","tags":["History"],"bestTime":"Morning","lat":30.0444,"lng":31.2357,"mapUrl":"https://maps.google.com/?q=Place+Name+${tripInfo.city}"}]
 
-bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly 12 items.`;
+bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${targetCount} items.`;
 
   try {
     const response = await fetch('/.netlify/functions/plan-agent', {
@@ -3275,7 +3276,7 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly 12 i
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system: suggestPrompt,
-        messages: [{ role: 'user', content: 'Suggest 12 places for ' + tripInfo.city }]
+        messages: [{ role: 'user', content: 'Suggest ' + targetCount + ' places for ' + tripInfo.city }]
       })
     });
 
