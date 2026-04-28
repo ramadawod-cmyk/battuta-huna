@@ -3614,22 +3614,8 @@ function renderItinerarySuggestion(itinerary) {
 }
 
 async function generateAndSaveTips(trip, cityId) {
-  // Check if city already has tips
-  const existing = await db('getCityTips', { cityId });
-  if (existing && existing['getting_around']) return;
-
-  // Generate city tips via AI
-  const tipsPrompt = `You are a travel expert. Generate practical travel tips for ${trip.city} as a JSON object. Return ONLY valid JSON, no other text:
-{
-  "getting_around": "2-3 sentences on transport, apps to download, metro/taxi/walking advice.",
-  "local_culture": "2-3 sentences on customs, etiquette, religious site behaviour, photography rules.",
-  "language_basics": "5 key phrases as: Phrase (pronunciation) - meaning. One per line.",
-  "money_payments": "2-3 sentences on cash vs card, tipping norms, ATM reliability.",
-  "what_to_have": "Bullet list of 5-6 practical items: documents, adapters, medications etc.",
-  "safety": "2-3 sentences on safe areas, common scams, emergency number.",
-  "best_time_of_day": "2-3 sentences on when to visit key sites, avoid crowds.",
-  "where_to_eat": "2-3 sentences on local dishes to try, types of restaurants, food culture."
-}`;
+  const tipsPrompt = `You are a travel expert. Generate practical travel tips for ${trip.city}. Return ONLY a valid JSON object, no markdown, no explanation:
+{"getting_around":"Transport advice, apps to download, metro/taxi/walking.","local_culture":"Customs, etiquette, religious site rules, photography.","language_basics":"Thank you: Shukran. Hello: Marhaba. How much: Addaysh. Excuse me: Afwan. Yes/No: Aywa/La.","money_payments":"Cash vs card culture, tipping norms, ATM reliability.","what_to_have":"Passport, travel adapter, sunscreen, comfortable shoes, cash, health insurance card.","safety":"Safe areas, common scams to avoid, local emergency number.","best_time_of_day":"When to visit key sites, how to avoid crowds.","where_to_eat":"Local dishes to try, types of restaurants, food culture tips."}`;
 
   try {
     const res = await fetch('/.netlify/functions/plan-agent', {
@@ -3637,18 +3623,22 @@ async function generateAndSaveTips(trip, cityId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system: tipsPrompt,
-        messages: [{ role: 'user', content: `Travel tips for ${trip.city}` }]
+        messages: [{ role: 'user', content: 'Generate travel tips for ' + trip.city }]
       })
     });
     const data = await res.json();
+    console.log('[tips] raw response:', data.content?.[0]?.text?.slice(0, 100));
     const raw = data.content?.[0]?.text || '';
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) {
       const tips = JSON.parse(match[0]);
-      db('saveCityTips', { cityId, tips });
+      await db('saveCityTips', { cityId, tips });
+      console.log('[tips] saved for', cityId);
+    } else {
+      console.warn('[tips] No JSON found in response:', raw.slice(0, 200));
     }
   } catch(e) {
-    console.warn('[tips] City tips generation failed:', e.message);
+    console.warn('[tips] Generation failed:', e.message);
   }
 }
 
