@@ -3260,7 +3260,7 @@ async function showPlaceSelection(tripInfo) {
   );
   const existingPois = cityKey ? CITY_DATA[cityKey].pois : [];
 
-  const targetCount = Math.max(12, tripInfo.duration * 4);
+  const targetCount = Math.min(16, Math.max(12, tripInfo.duration * 3));
   const suggestPrompt = `You are a travel expert. Suggest ${targetCount} diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
 
 ${existingPois.length > 0 ? 'Our database already has: ' + existingPois.map(p => p.name).join(', ') + '. Include the most relevant ones and add others not in this list.' : ''}
@@ -3283,9 +3283,20 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${ta
     const data = await response.json();
     document.getElementById('placesLoading')?.remove();
 
+    if (!response.ok || data.error) {
+      console.error('[places] API error:', JSON.stringify(data));
+      agentSay('Something went wrong fetching places: ' + (data.error?.message || response.status));
+      return;
+    }
+
     const rawText = data.content?.[0]?.text || '[]';
     const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-    const places = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+    let places = [];
+    try {
+      places = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+    } catch(e) {
+      console.error('[places] JSON parse error:', e.message, rawText.slice(0, 200));
+    }
 
     if (!places.length) {
       agentSay('I had trouble finding places. Please try again.');
@@ -3298,7 +3309,8 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${ta
 
   } catch(e) {
     document.getElementById('placesLoading')?.remove();
-    agentSay('I had trouble finding places. Please try again.');
+    console.error('[places] Exception:', e.message);
+    agentSay('Something went wrong: ' + e.message + '. Please try again.');
   }
 }
 
