@@ -3893,13 +3893,21 @@ async function loadTripTips(trip) {
   const container = document.getElementById('tripTipsContainer');
   if (!container) return;
 
-  const cityId = trip.city.split(/[,(]/)[0].trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const rawCity = trip.city.replace(/\s*\(.*?\)\s*/g, '').trim().split(/[,/]+/)[0].trim();
+  const cityId = rawCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
 
   // Fetch city tips from Supabase
-  const tips = await db('getCityTips', { cityId });
+  let tips = await db('getCityTips', { cityId });
 
   if (!tips) {
-    container.innerHTML = '<div class="tip-loading">Tips not yet generated. Plan a trip to this city to generate them.</div>';
+    // Generate on the fly if missing
+    container.innerHTML = '<div class="tip-loading">Generating travel tips for ' + trip.city + '...</div>';
+    await generateAndSaveTips(trip, cityId);
+    tips = await db('getCityTips', { cityId });
+  }
+
+  if (!tips) {
+    container.innerHTML = '<div class="tip-loading">Could not load tips. Please try again later.</div>';
     return;
   }
 
