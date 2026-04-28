@@ -1140,6 +1140,65 @@
     }
     .details-find-btn:disabled { background: #9b8f82; cursor: not-allowed; }
 
+    /* ── TRIP TIPS ── */
+    .tips-section {
+      border-top: 1px solid rgba(61,46,38,0.08);
+      margin-top: 24px;
+      padding-top: 16px;
+    }
+    .tips-section-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: #6f8b6d; margin-bottom: 16px;
+    }
+    .tip-item {
+      border: 1px solid rgba(61,46,38,0.1);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .tip-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      background: #ffffff;
+      transition: background 0.15s;
+    }
+    .tip-header:hover { background: #f5f0e8; }
+    .tip-header-left { display: flex; align-items: center; gap: 10px; }
+    .tip-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(111,139,109,0.1);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tip-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 13px; font-weight: 600;
+      color: #3d2e26;
+    }
+    .tip-chevron {
+      transition: transform 0.2s;
+      color: #9b8f82;
+    }
+    .tip-chevron.open { transform: rotate(180deg); }
+    .tip-body {
+      display: none;
+      padding: 0 16px 14px;
+      font-family: 'Merriweather', serif;
+      font-size: 13px; line-height: 1.7;
+      color: #3d2e26;
+      background: #ffffff;
+    }
+    .tip-body.open { display: block; }
+    .tip-loading {
+      padding: 12px 16px;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 12px; color: #9b8f82;
+      font-style: italic;
+    }
+
     .trip-detail-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(61,46,38,0.5);
@@ -3551,6 +3610,67 @@ function renderItinerarySuggestion(itinerary) {
   el.scrollTop = el.scrollHeight;
 }
 
+async function generateAndSaveTips(trip, cityId) {
+  // Check if city already has tips
+  const existing = await db('getCityTips', { cityId });
+  if (existing && existing['getting_around']) return;
+
+  // Generate city tips via AI
+  const tipsPrompt = `You are a travel expert. Generate practical travel tips for ${trip.city} as a JSON object. Return ONLY valid JSON, no other text:
+{
+  "getting_around": "2-3 sentences on transport, apps to download, metro/taxi/walking advice.",
+  "local_culture": "2-3 sentences on customs, etiquette, religious site behaviour, photography rules.",
+  "language_basics": "5 key phrases as: Phrase (pronunciation) - meaning. One per line.",
+  "money_payments": "2-3 sentences on cash vs card, tipping norms, ATM reliability.",
+  "what_to_have": "Bullet list of 5-6 practical items: documents, adapters, medications etc.",
+  "safety": "2-3 sentences on safe areas, common scams, emergency number.",
+  "best_time_of_day": "2-3 sentences on when to visit key sites, avoid crowds.",
+  "where_to_eat": "2-3 sentences on local dishes to try, types of restaurants, food culture."
+}`;
+
+  try {
+    const res = await fetch('/.netlify/functions/plan-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: tipsPrompt,
+        messages: [{ role: 'user', content: `Travel tips for ${trip.city}` }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      const tips = JSON.parse(match[0]);
+      db('saveCityTips', { cityId, tips });
+    }
+  } catch(e) {
+    console.warn('[tips] City tips generation failed:', e.message);
+  }
+}
+
+async function generateWeatherTip(trip, cityId) {
+  const weatherPrompt = `In 2-3 sentences, advise what to wear for a trip to ${trip.city} in ${trip.dates}. Consider the typical weather/season. Be specific and practical. No markdown.`;
+  try {
+    const res = await fetch('/.netlify/functions/plan-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: weatherPrompt,
+        messages: [{ role: 'user', content: `What to wear in ${trip.city} in ${trip.dates}` }]
+      })
+    });
+    const data = await res.json();
+    const weatherTip = data.content?.[0]?.text || '';
+    if (weatherTip && trip.id) {
+      db('saveWeatherTip', { tripId: trip.id, weatherTip });
+      trip.weatherTip = weatherTip;
+    }
+  } catch(e) {
+    console.warn('[tips] Weather tip generation failed:', e.message);
+  }
+}
+
 function saveTrip(itinerary) {
   // Filter removed slots
   const cleaned = {
@@ -3639,6 +3759,8 @@ function saveTrip(itinerary) {
     const saved = Array.isArray(result) ? result[0] : result;
     cleaned.id = saved?.id || cleaned.id;
     savedTrips.unshift(cleaned);
+    // Now we have the ID, generate weather tip
+    if (trip.dates && cleaned.id) generateWeatherTip(cleaned, cityId);
   });
 
   // Fallback: keep in localStorage too
@@ -3646,6 +3768,9 @@ function saveTrip(itinerary) {
   localStorage.setItem('bh_trips', JSON.stringify(savedTrips.slice(0, 20)));
 
   agentSay('Your trip has been saved! You can find it in My Trips.');
+
+  // Generate tips in background (city tips + weather tip)
+  generateAndSaveTips(cleaned, cityId);
   const saveBtn = document.querySelector('.plan-save-btn');
   if (saveBtn) {
     saveBtn.textContent = 'SAVED';
@@ -3730,6 +3855,13 @@ function openTripDetail(index) {
         </div>
       `).join('')}
     `).join('')}
+
+  <div class="tips-section">
+    <div class="tips-section-title">Travel guide</div>
+    <div id="tripTipsContainer">
+      <div class="tip-loading">Loading travel tips...</div>
+    </div>
+  </div>
   `;
 
   overlay.classList.add('open');
@@ -3749,6 +3881,60 @@ function openTripDetail(index) {
       const heroEl = document.getElementById('tripHeroImg');
       if (heroEl) heroEl.style.display = 'none';
     });
+
+  // Load tips
+  loadTripTips(trip);
+}
+
+async function loadTripTips(trip) {
+  const container = document.getElementById('tripTipsContainer');
+  if (!container) return;
+
+  const cityId = trip.city.split(/[,(]/)[0].trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  // Fetch city tips from Supabase
+  const tips = await db('getCityTips', { cityId });
+
+  if (!tips) {
+    container.innerHTML = '<div class="tip-loading">Tips not yet generated. Plan a trip to this city to generate them.</div>';
+    return;
+  }
+
+  const tipSections = [
+    { key: 'getting_around',  title: 'Getting around',       icon: '🚇' },
+    { key: 'weather',         title: 'What to wear',         icon: '👕', isWeather: true },
+    { key: 'local_culture',   title: 'Respecting local culture', icon: '🤝' },
+    { key: 'language_basics', title: 'Language basics',      icon: '💬' },
+    { key: 'money_payments',  title: 'Money & payments',     icon: '💳' },
+    { key: 'what_to_have',    title: 'Make sure you have',   icon: '🎒' },
+    { key: 'safety',          title: 'Safety & awareness',   icon: '🛡️' },
+    { key: 'best_time_of_day',title: 'Best time of day',     icon: '🕐' },
+    { key: 'where_to_eat',    title: 'Where to eat',         icon: '🍽️' },
+  ];
+
+  container.innerHTML = tipSections.map((s, i) => {
+    const content = s.isWeather
+      ? (trip.weather_tip || trip.weatherTip || 'Weather tip not yet available.')
+      : (tips[s.key] || 'Coming soon.');
+    return `
+      <div class="tip-item">
+        <div class="tip-header" onclick="toggleTip(${i})">
+          <div class="tip-header-left">
+            <div class="tip-icon">${s.icon}</div>
+            <div class="tip-title">${s.title}</div>
+          </div>
+          <svg class="tip-chevron" id="tip-chevron-${i}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tip-body" id="tip-body-${i}">${content.replace(/\n/g, '<br>')}</div>
+      </div>`;
+  }).join('');
+}
+
+function toggleTip(i) {
+  const body = document.getElementById('tip-body-' + i);
+  const chevron = document.getElementById('tip-chevron-' + i);
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
 }
 
 function editTrip(index) {
