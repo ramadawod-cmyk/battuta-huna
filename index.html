@@ -3453,7 +3453,9 @@ function addCustomPlace() {
 function triggerBuildItinerary() {
   const selected = [...planState.selectedPlaces].map(i => planState.suggestedPlaces[i]);
   if (!selected.length) { agentSay('Please select at least one place first.'); return; }
-  planState.selectedPlacesData = selected;
+  // Cap at 12 to avoid token overflow in the build step
+  const capped = selected.slice(0, 12);
+  planState.selectedPlacesData = capped;
   planState.stage = 'building';
   document.getElementById('placeSelectionWrapper')?.remove();
   userSay('I have selected ' + selected.length + ' places. Build my itinerary.');
@@ -3522,7 +3524,8 @@ Output ONLY valid JSON in [ITINERARY] tags:
         agentSay("I had trouble formatting the itinerary. Please tap 'New Plan' and try again.");
       }
     } else {
-      agentSay("My response was cut off. Please tap 'New Plan' and try with fewer days.");
+      planState.stage = 'building';
+      agentSay("My response was cut off. Type 'retry' to try again or 'New Plan' to start over.");
     }
 
   } catch(e) {
