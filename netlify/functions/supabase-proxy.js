@@ -51,6 +51,28 @@ exports.handler = async function(event) {
     const { action, data } = JSON.parse(event.body || '{}');
     const deviceId = event.headers['x-device-id'] || 'anonymous';
 
+    // ── GET CITY TIPS ────────────────────────────────
+    if (action === 'getCityTips') {
+      const { cityId } = data;
+      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=tips`);
+      const rows = res.body;
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0]?.tips || null) };
+    }
+
+    // ── SAVE CITY TIPS ───────────────────────────────
+    if (action === 'saveCityTips') {
+      const { cityId, tips } = data;
+      const res = await request('PATCH', `/rest/v1/cities?id=eq.${cityId}`, { tips });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
+    // ── SAVE WEATHER TIP ─────────────────────────────
+    if (action === 'saveWeatherTip') {
+      const { tripId, weatherTip } = data;
+      const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}`, { weather_tip: weatherTip });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
     // ── GET CITIES ───────────────────────────────────
     if (action === 'getCities') {
       const res = await request('GET', '/rest/v1/cities?select=*&order=name');
