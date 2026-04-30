@@ -51,6 +51,14 @@ exports.handler = async function(event) {
     const { action, data } = JSON.parse(event.body || '{}');
     const deviceId = event.headers['x-device-id'] || 'anonymous';
 
+    // ── GET CITY HERO ────────────────────────────────
+    if (action === 'getCityHero') {
+      const { cityId } = data;
+      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=hero_image_url`);
+      const rows = res.body;
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
+    }
+
     // ── GET CITY TIPS ────────────────────────────────
     if (action === 'getCityTips') {
       const { cityId } = data;
