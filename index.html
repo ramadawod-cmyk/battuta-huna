@@ -3187,12 +3187,12 @@ async function processAgentStep(userText) {
   }
 
   const gatherPrompt = `You are a travel planning assistant for Battuta Huna. Collect only TWO things:
-1. Specific city or cities to visit (NOT a country — if the user says a country, ask which cities they want to visit or offer to suggest the best cities for their trip length)
+1. Specific city or cities to visit (NEVER a country name)
 2. Dates and duration in days
 
-If the user gives a country (e.g. "Switzerland", "Jordan", "Japan"), respond with:
-"Are there specific cities you want to visit, or would you like me to suggest the best ones for your trip length?"
-Wait for their answer before outputting [PARTIAL].
+CRITICAL: If the user gives a country name (e.g. "Switzerland", "Jordan", "Japan", "Italy", "France", "Egypt", "Indonesia" or any other country), you MUST ask which specific cities they want to visit. Never output [PARTIAL] with a country name. Only output [PARTIAL] when you have actual city names.
+
+If user says a country: "Which cities in [country] are you planning to visit? Or I can suggest the best ones if you tell me how many days you have."
 
 Once you have specific cities AND dates/duration, output:
 [PARTIAL]{"city":"Zurich, Interlaken, Lucerne","dates":"June 2026","duration":5}[/PARTIAL]
@@ -3632,10 +3632,10 @@ async function generateAndSaveTips(trip, cityId) {
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) {
       const tips = JSON.parse(match[0]);
-      await db('saveCityTips', { cityId, tips });
-      console.log('[tips] saved for', cityId);
+      const saveResult = await db('saveCityTips', { cityId, tips });
+      console.log('[tips] save result:', JSON.stringify(saveResult));
     } else {
-      console.warn('[tips] No JSON found in response:', raw.slice(0, 200));
+      console.warn('[tips] No JSON found in response:', raw.slice(0, 300));
     }
   } catch(e) {
     console.warn('[tips] Generation failed:', e.message);
@@ -3664,7 +3664,7 @@ async function generateWeatherTip(trip, cityId) {
   }
 }
 
-function saveTrip(itinerary) {
+async function saveTrip(itinerary) {
   // Filter removed slots
   const cleaned = {
     ...itinerary,
@@ -3681,16 +3681,20 @@ function saveTrip(itinerary) {
   );
   // Extract individual cities — city field may be "Zurich, Interlaken, Lucerne (Switzerland)"
   // Always use the first city as the primary city_id, never a country name
-  const rawCity = cleaned.city.replace(/\s*\(.*?\)\s*/g, '').trim(); // remove parenthetical country
+  // Clean city name — remove any parenthetical areas, take first city only
+  const rawCity = cleaned.city
+    .replace(/\s*\(.*?\)\s*/g, '')  // remove (areas)
+    .replace(/\s*\[.*?\]\s*/g, '')  // remove [brackets]
+    .trim();
   const firstCity = rawCity.split(/[,/]+/)[0].trim();
-  const cityId = firstCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  const cityId = firstCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '').replace(/^-+/, '');
 
   // Upsert each city — split multi-city trips into individual city rows
   const allCities = rawCity.split(/[,/]+/).map(c => c.trim()).filter(Boolean);
-  allCities.forEach(cityName => {
+  await Promise.all(allCities.map(cityName => {
     const cId = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-    db('upsertCity', { city: { id: cId, name: cityName, country: null, lat: null, lng: null, wiki: cityName } });
-  });
+    return db('upsertCity', { city: { id: cId, name: cityName, country: null, lat: null, lng: null, wiki: cityName } });
+  }));
 
   // Save all slots to Supabase as ai_generated sites in one batch call
   const sitesToSave = [];
