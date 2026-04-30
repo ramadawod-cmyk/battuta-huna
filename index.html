@@ -1657,18 +1657,18 @@
     <div class="details-section-label">Group type</div>
     <div class="details-pills" id="groupPills">
       <div class="details-pill" data-value="solo" onclick="toggleSinglePill(this,'groupPills')">Solo</div>
-      <div class="details-pill selected" data-value="couple" onclick="toggleSinglePill(this,'groupPills')">Couple</div>
+      <div class="details-pill" data-value="couple" onclick="toggleSinglePill(this,'groupPills')">Couple</div>
       <div class="details-pill" data-value="family" onclick="toggleSinglePill(this,'groupPills')">Family</div>
       <div class="details-pill" data-value="friends" onclick="toggleSinglePill(this,'groupPills')">Friends</div>
     </div>
 
     <div class="details-section-label">Interests</div>
     <div class="details-pills" id="interestsPills">
-      <div class="details-pill selected" data-value="Sightseeing" onclick="toggleMultiPill(this)">Sightseeing</div>
-      <div class="details-pill selected" data-value="History" onclick="toggleMultiPill(this)">History</div>
+      <div class="details-pill" data-value="Sightseeing" onclick="toggleMultiPill(this)">Sightseeing</div>
+      <div class="details-pill" data-value="History" onclick="toggleMultiPill(this)">History</div>
       <div class="details-pill" data-value="Art & Culture" onclick="toggleMultiPill(this)">Art & Culture</div>
       <div class="details-pill" data-value="Spiritual" onclick="toggleMultiPill(this)">Spiritual</div>
-      <div class="details-pill selected" data-value="Food & Market" onclick="toggleMultiPill(this)">Food & Market</div>
+      <div class="details-pill" data-value="Food & Market" onclick="toggleMultiPill(this)">Food & Market</div>
       <div class="details-pill" data-value="Nature" onclick="toggleMultiPill(this)">Nature</div>
       <div class="details-pill" data-value="Neighbourhood" onclick="toggleMultiPill(this)">Neighbourhood</div>
       <div class="details-pill" data-value="Architecture" onclick="toggleMultiPill(this)">Architecture</div>
@@ -1676,7 +1676,7 @@
 
     <div class="details-section-label">Pace</div>
     <div class="details-pills" id="pacePills">
-      <div class="details-pill selected" data-value="relaxed" onclick="toggleSinglePill(this,'pacePills')">Relaxed</div>
+      <div class="details-pill" data-value="relaxed" onclick="toggleSinglePill(this,'pacePills')">Relaxed</div>
       <div class="details-pill" data-value="strict" onclick="toggleSinglePill(this,'pacePills')">Strict schedule</div>
     </div>
 
@@ -2327,6 +2327,16 @@ function renderTestButtons() {
 // City hero Wikipedia images
 
 // City hero image — one per city, cached
+async function fetchWikiImageUrl(title) {
+  try {
+    const res = await fetch(`/.netlify/functions/wiki-image?title=${encodeURIComponent(title)}`);
+    const text = await res.text();
+    if (!text || text.trimStart()[0] !== '{') return null;
+    const data = JSON.parse(text);
+    return data.url || null;
+  } catch(e) { return null; }
+}
+
 const cityHeroCache = {};
 
 async function fetchCityHero(city) {
@@ -2335,7 +2345,8 @@ async function fetchCityHero(city) {
     return;
   }
   try {
-    const wiki = CITY_DATA[city].wiki;
+    // Use wiki title from CITY_DATA if available, otherwise use city name directly
+    const wiki = CITY_DATA[city]?.wiki || city;
     const url = `/.netlify/functions/wiki-image?title=${encodeURIComponent(wiki)}`;
     const res = await fetch(url);
     const text = await res.text();
@@ -3266,18 +3277,17 @@ function showDetailsSheet(partial) {
 
 function submitDetailsSheet() {
   const groupEl = document.querySelector('#groupPills .details-pill.selected');
-  const groupType = groupEl ? groupEl.dataset.value : 'couple';
+  const groupType = groupEl ? groupEl.dataset.value : null;
 
   const interests = [...document.querySelectorAll('#interestsPills .details-pill.selected')]
     .map(p => p.dataset.value);
 
   const paceEl = document.querySelector('#pacePills .details-pill.selected');
-  const pace = paceEl ? paceEl.dataset.value : 'relaxed';
+  const pace = paceEl ? paceEl.dataset.value : null;
 
-  if (!interests.length) {
-    alert('Please select at least one interest.');
-    return;
-  }
+  if (!groupType) { alert('Please select a group type.'); return; }
+  if (!interests.length) { alert('Please select at least one interest.'); return; }
+  if (!pace) { alert('Please select a pace.'); return; }
 
   document.getElementById('detailsOverlay').classList.remove('open');
 
@@ -3741,7 +3751,10 @@ async function saveTrip(itinerary) {
   });
 
   if (sitesToSave.length > 0) {
-    db('upsertSites', { sites: sitesToSave });
+    console.log('[saveTrip] Saving', sitesToSave.length, 'sites for', cityId, sitesToSave[0]);
+    db('upsertSites', { sites: sitesToSave }).then(r => console.log('[saveTrip] upsertSites result:', JSON.stringify(r)?.slice(0,100)));
+  } else {
+    console.warn('[saveTrip] No sites to save — cleaned.days:', JSON.stringify(cleaned.days)?.slice(0,200));
   }
 
   // Save trip to Supabase
@@ -3757,12 +3770,11 @@ async function saveTrip(itinerary) {
     cleaned.id = saved?.id || cleaned.id;
     savedTrips.unshift(cleaned);
     // Now we have the ID, generate weather tip
-    if (trip.dates && cleaned.id) generateWeatherTip(cleaned, cityId);
+    if (cleaned.dates && cleaned.id) generateWeatherTip(cleaned, cityId);
   });
 
-  // Fallback: keep in localStorage too
+  // Fallback: keep in memory
   savedTrips.unshift(cleaned);
-  localStorage.setItem('bh_trips', JSON.stringify(savedTrips.slice(0, 20)));
 
   agentSay('Your trip has been saved! You can find it in My Trips.');
 
@@ -3795,11 +3807,11 @@ async function renderTrips() {
       groupType: t.group_type,
       pace: t.pace,
       days: t.days,
+      weatherTip: t.weather_tip,
       savedAt: t.created_at
     }));
   } else {
-    // Fall back to localStorage
-    savedTrips = JSON.parse(localStorage.getItem('bh_trips') || '[]');
+    savedTrips = [];
   }
 
   if (!savedTrips.length) {
@@ -3863,21 +3875,26 @@ function openTripDetail(index) {
 
   overlay.classList.add('open');
 
-  // Fetch city hero image
-  fetch(`/.netlify/functions/wiki-image?title=${encodeURIComponent(trip.city)}`)
-    .then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(data => {
-      const heroEl = document.getElementById('tripHeroImg');
-      if (heroEl && data.url) {
-        heroEl.innerHTML = `<img src="${data.url}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'"/>`;
-      }
-    }).catch(() => {
-      const heroEl = document.getElementById('tripHeroImg');
-      if (heroEl) heroEl.style.display = 'none';
-    });
+  // Fetch city hero image — use cached URL if available
+  const rawTripCity = trip.city.replace(/\s*\(.*?\)\s*/g, '').trim().split(/[,/]+/)[0].trim();
+  const tripCityId = rawTripCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+
+  async function loadHero() {
+    // Check Supabase cache first
+    const cityData = await db('getCityHero', { cityId: tripCityId });
+    const cachedUrl = cityData?.hero_image_url;
+    const wikiTitle = rawTripCity;
+    const imgUrl = cachedUrl || await fetchWikiImageUrl(wikiTitle);
+    const heroEl = document.getElementById('tripHeroImg');
+    if (heroEl && imgUrl) {
+      heroEl.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'"/>`;
+      // Save to Supabase if not cached
+      if (!cachedUrl) db('updateCityHero', { cityId: tripCityId, heroImageUrl: imgUrl });
+    } else if (heroEl) {
+      heroEl.style.display = 'none';
+    }
+  }
+  loadHero();
 
   // Load tips
   loadTripTips(trip);
@@ -3962,7 +3979,6 @@ function deleteTrip(index) {
   const trip = savedTrips[index];
   if (trip.id) db('deleteTrip', { tripId: trip.id });
   savedTrips.splice(index, 1);
-  localStorage.setItem('bh_trips', JSON.stringify(savedTrips));
   document.getElementById('tripDetailOverlay').classList.remove('open');
   renderTrips();
 }
