@@ -3914,6 +3914,12 @@ async function generateWeatherTip(trip, cityId) {
 }
 
 async function saveTrip(itinerary) {
+  console.log('[saveTrip] called with city:', itinerary?.city, 'days:', itinerary?.days?.length);
+  if (!itinerary || !itinerary.days) {
+    console.error('[saveTrip] invalid itinerary');
+    return;
+  }
+  try {
   // Filter removed slots
   const cleaned = {
     ...itinerary,
@@ -4030,6 +4036,10 @@ async function saveTrip(itinerary) {
     saveBtn.textContent = 'SAVED';
     saveBtn.style.background = '#8ea081';
     saveBtn.disabled = true;
+  }
+  } catch(e) {
+    console.error('[saveTrip] ERROR:', e.message, e.stack?.slice(0,200));
+    agentSay('Trip save failed: ' + e.message);
   }
 }
 
