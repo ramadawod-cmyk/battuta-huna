@@ -1062,14 +1062,21 @@
     #trips-view { background: #ffffff; position: relative; z-index: 2; }
     .trip-card {
       margin: 0 16px 16px;
-      padding: 18px 20px;
       background: #ffffff;
       border: 2px solid rgba(111,139,109,0.35);
       border-radius: 16px;
       cursor: pointer;
       transition: all 0.2s;
+      overflow: hidden;
     }
     .trip-card:hover { border-color: #6f8b6d; }
+    .trip-card-hero {
+      width: 100%; height: 140px;
+      background: #f5f0e8;
+      overflow: hidden;
+    }
+    .trip-card-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .trip-card-body { padding: 14px 16px 16px; }
     .trip-card-city {
       font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 16px; font-weight: 600;
@@ -1332,21 +1339,6 @@
       font-style: italic;
     }
 
-    .trip-detail-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(61,46,38,0.5);
-      z-index: 200; align-items: flex-end;
-    }
-    .trip-detail-overlay.open { display: flex; }
-    .trip-detail-sheet {
-      width: 100%; max-width: 480px; margin: 0 auto;
-      background: #ffffff;
-      border-radius: 20px 20px 0 0;
-      padding: 24px 20px 48px;
-      max-height: 85vh;
-      overflow-y: auto;
-      position: relative;
-    }
     .trip-detail-city {
       font-family: 'Bricolage Grotesque', sans-serif;
       font-size: 22px; font-weight: 700;
@@ -1872,9 +1864,21 @@
   </div>
 </div>
 
-<!-- TRIP DETAIL OVERLAY -->
-<div class="trip-detail-overlay" id="tripDetailOverlay" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="trip-detail-sheet" id="tripDetailSheet"></div>
+<!-- TRIP DETAIL PAGE -->
+<div id="trip-detail-page" style="display:none;flex-direction:column;position:fixed;inset:0;background:#ffffff;z-index:100;overflow:hidden;">
+  <div class="tp-header">
+    <button class="tp-back-btn" onclick="closeTripDetail()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="tp-header-info">
+      <div class="tp-header-city" id="tdHeaderCity"></div>
+      <div class="tp-header-meta" id="tdHeaderMeta"></div>
+    </div>
+    <button id="tdDeleteBtn" style="background:none;border:none;cursor:pointer;color:#c97b5c;padding:4px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>
+  </div>
+  <div style="flex:1;overflow-y:auto;" id="tripDetailContent"></div>
 </div>
 
 <!-- DETAIL SHEET -->
@@ -4064,88 +4068,112 @@ async function renderTrips() {
     return;
   }
 
-  el.innerHTML = savedTrips.map((trip, i) => `
+  el.innerHTML = savedTrips.map((trip, i) => {
+    const rawCity = trip.city.replace(/\s*\(.*?\)\s*/g, '').trim().split(/[,/]+/)[0].trim();
+    const cityId = rawCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+    return `
     <div class="trip-card" onclick="openTripDetail(${i})">
-      <div class="trip-card-city">${trip.city}</div>
-      <div class="trip-card-meta">${trip.dates || ''} &nbsp;·&nbsp; ${trip.duration} day${trip.duration > 1 ? 's' : ''} &nbsp;·&nbsp; ${trip.groupType || ''}</div>
-      <div class="trip-card-tags">
-        ${trip.status === 'planning'
-          ? '<span style="font-family:Bricolage Grotesque,sans-serif;font-size:11px;color:#c97b5c;background:rgba(201,123,92,0.1);border:1px solid rgba(201,123,92,0.3);padding:3px 10px;border-radius:20px;">Planning in progress</span>'
-          : '<span style="font-family:Bricolage Grotesque,sans-serif;font-size:11px;color:#6f8b6d;background:rgba(111,139,109,0.1);border:1px solid rgba(111,139,109,0.3);padding:3px 10px;border-radius:20px;">Itinerary ready</span>'
-        }
+      <div class="trip-card-hero" id="tc-hero-${i}">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#f5f0e8 0%,#e8e0d0 100%);display:flex;align-items:center;justify-content:center;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9b8f82" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
       </div>
-    </div>
-  `).join('');
+      <div class="trip-card-body">
+        <div class="trip-card-city">${trip.city}</div>
+        <div class="trip-card-meta">${trip.dates || ''} &nbsp;·&nbsp; ${trip.duration} day${trip.duration > 1 ? 's' : ''} &nbsp;·&nbsp; ${trip.groupType || ''}</div>
+        <div class="trip-card-tags">
+          ${trip.status === 'planning'
+            ? '<span style="font-family:Bricolage Grotesque,sans-serif;font-size:11px;color:#c97b5c;background:rgba(201,123,92,0.1);border:1px solid rgba(201,123,92,0.3);padding:3px 10px;border-radius:20px;">Planning in progress</span>'
+            : '<span style="font-family:Bricolage Grotesque,sans-serif;font-size:11px;color:#6f8b6d;background:rgba(111,139,109,0.1);border:1px solid rgba(111,139,109,0.3);padding:3px 10px;border-radius:20px;">Itinerary ready</span>'
+          }
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Load hero images for each card asynchronously
+  savedTrips.forEach(async (trip, i) => {
+    const rawCity = trip.city.replace(/\s*\(.*?\)\s*/g, '').trim().split(/[,/]+/)[0].trim();
+    const cityId = rawCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+    const heroEl = document.getElementById('tc-hero-' + i);
+    if (!heroEl) return;
+    const cityData = await db('getCityHero', { cityId });
+    const imgUrl = cityData?.hero_image_url || await fetchWikiImageUrl(rawCity);
+    if (imgUrl) {
+      heroEl.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML=''"/>`;
+      if (!cityData?.hero_image_url) db('updateCityHero', { cityId, heroImageUrl: imgUrl });
+    }
+  });
 }
+
+let currentTripIndex = null;
 
 function openTripDetail(index) {
   const trip = savedTrips[index];
-  const overlay = document.getElementById('tripDetailOverlay');
-  const sheet = document.getElementById('tripDetailSheet');
+  currentTripIndex = index;
 
-  // Fetch city image from wiki proxy
-  const imgDiv = document.createElement('div');
-  imgDiv.style.cssText = 'width:100%;height:180px;background:#f5f0e8;border-radius:12px;margin-bottom:16px;overflow:hidden;position:relative;flex-shrink:0;';
-  imgDiv.innerHTML = `<div style="width:100%;height:100%;background:#f5f0e8;"></div>`;
+  // Set header
+  document.getElementById('tdHeaderCity').textContent = trip.city;
+  document.getElementById('tdHeaderMeta').textContent =
+    [trip.dates, trip.duration ? trip.duration + ' days' : null, trip.groupType].filter(Boolean).join(' · ');
 
-  sheet.innerHTML = `
-    <button onclick="document.getElementById('tripDetailOverlay').classList.remove('open')" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.85);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;color:#3d2e26;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;">✕</button>
-    <div id="tripHeroImg" style="width:100%;height:180px;background:#f5f0e8;border-radius:12px;margin-bottom:16px;overflow:hidden;"></div>
-    <div class="trip-detail-city">${trip.city}</div>
-    <div class="trip-detail-meta">${trip.dates || ''} &nbsp;·&nbsp; ${trip.duration} day${trip.duration > 1 ? 's' : ''} &nbsp;·&nbsp; ${trip.groupType || ''}</div>
+  // Wire delete button
+  document.getElementById('tdDeleteBtn').onclick = () => deleteTrip(index);
 
-    <div style="display:flex;gap:8px;margin-bottom:20px;">
-      <button onclick="editTrip(${index})" style="flex:1;padding:10px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">EDIT TRIP</button>
-      <button onclick="deleteTrip(${index})" style="padding:10px 16px;background:none;color:#c97b5c;font-family:Bricolage Grotesque,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;border:1.5px solid rgba(201,123,92,0.4);border-radius:10px;cursor:pointer;">DELETE</button>
-    </div>
-
-    ${trip.days.map(day => `
-      <div class="trip-day-header">${day.label}</div>
-      ${day.slots.map(slot => `
-        <div class="trip-slot">
-          <div class="trip-slot-time">${slot.time.toUpperCase()}</div>
-          <div style="flex:1;">
-            <div class="trip-slot-name">${slot.name}</div>
-            <div class="trip-slot-desc">${slot.description}</div>
-            ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
-          </div>
-        </div>
-      `).join('')}
-    `).join('')}
-
-  <div class="tips-section">
-    <div class="tips-section-title">Travel guide</div>
-    <div id="tripTipsContainer">
-      <div class="tip-loading">Loading travel tips...</div>
-    </div>
-  </div>
-  `;
-
-  overlay.classList.add('open');
-
-  // Fetch city hero image — use cached URL if available
+  // Build content
   const rawTripCity = trip.city.replace(/\s*\(.*?\)\s*/g, '').trim().split(/[,/]+/)[0].trim();
   const tripCityId = rawTripCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
 
-  async function loadHero() {
-    // Check Supabase cache first
+  const hasDays = trip.days && trip.days.length > 0 && trip.days[0].slots?.length > 0;
+
+  document.getElementById('tripDetailContent').innerHTML = `
+    <div id="tripHeroImg" style="width:100%;height:200px;background:#f5f0e8;overflow:hidden;flex-shrink:0;"></div>
+    <div style="padding:20px 20px 0;">
+      <button onclick="editTrip(${index})" style="display:block;width:100%;padding:12px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;margin-bottom:20px;">EDIT TRIP</button>
+      ${hasDays ? trip.days.map(day => `
+        <div class="trip-day-header">${day.label}</div>
+        ${day.slots.map(slot => `
+          <div class="trip-slot">
+            <div class="trip-slot-time">${slot.time.toUpperCase()}</div>
+            <div style="flex:1;">
+              <div class="trip-slot-name">${slot.name}</div>
+              <div class="trip-slot-desc">${slot.description}</div>
+              ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      `).join('') : '<div style="font-family:Merriweather,serif;font-size:13px;color:#9b8f82;padding:20px 0;">Itinerary is being built. Check back soon.</div>'}
+      <div class="tips-section">
+        <div class="tips-section-title">Travel guide</div>
+        <div id="tripTipsContainer"><div class="tip-loading">Loading travel tips...</div></div>
+      </div>
+    </div>`;
+
+  // Show page
+  document.getElementById('trip-detail-page').style.display = 'flex';
+  document.querySelector('nav').style.display = 'none';
+  document.querySelector('header').style.display = 'none';
+
+  // Load hero image
+  (async () => {
     const cityData = await db('getCityHero', { cityId: tripCityId });
     const cachedUrl = cityData?.hero_image_url;
-    const wikiTitle = rawTripCity;
-    const imgUrl = cachedUrl || await fetchWikiImageUrl(wikiTitle);
+    const imgUrl = cachedUrl || await fetchWikiImageUrl(rawTripCity);
     const heroEl = document.getElementById('tripHeroImg');
     if (heroEl && imgUrl) {
       heroEl.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'"/>`;
-      // Save to Supabase if not cached
       if (!cachedUrl) db('updateCityHero', { cityId: tripCityId, heroImageUrl: imgUrl });
-    } else if (heroEl) {
-      heroEl.style.display = 'none';
-    }
-  }
-  loadHero();
+    } else if (heroEl) heroEl.style.display = 'none';
+  })();
 
-  // Load tips
   loadTripTips(trip);
+}
+
+function closeTripDetail() {
+  document.getElementById('trip-detail-page').style.display = 'none';
+  document.querySelector('nav').style.display = 'flex';
+  document.querySelector('header').style.display = 'flex';
+  showView('trips-view');
 }
 
 async function loadTripTips(trip) {
@@ -4210,7 +4238,7 @@ function toggleTip(i) {
 function editTrip(index) {
   const trip = savedTrips[index];
   // Close the detail sheet
-  document.getElementById('tripDetailOverlay').classList.remove('open');
+  closeTripDetail();
   // Switch to plan tab
   showView('plan-view');
   // Reset and pre-load conversation with trip context
@@ -4227,7 +4255,7 @@ function deleteTrip(index) {
   const trip = savedTrips[index];
   if (trip.id) db('deleteTrip', { tripId: trip.id });
   savedTrips.splice(index, 1);
-  document.getElementById('tripDetailOverlay').classList.remove('open');
+  closeTripDetail();
   renderTrips();
 }
 
