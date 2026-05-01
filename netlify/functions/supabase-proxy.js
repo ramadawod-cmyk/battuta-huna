@@ -122,6 +122,22 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
+    // ── CREATE DRAFT TRIP ────────────────────────────
+    if (action === 'createDraftTrip') {
+      const trip = { ...data.trip, user_id: deviceId, status: 'planning' };
+      const res = await request('POST', '/rest/v1/trips', trip);
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
+    // ── UPDATE TRIP STATUS ───────────────────────────
+    if (action === 'updateTripStatus') {
+      const { tripId, status, days } = data;
+      const patch = { status };
+      if (days) patch.days = days;
+      const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}&user_id=eq.${deviceId}`, patch);
+      return { statusCode: 200, headers, body: JSON.stringify({ updated: true }) };
+    }
+
     // ── GET TRIPS ────────────────────────────────────
     if (action === 'getTrips') {
       const res = await request('GET', `/rest/v1/trips?user_id=eq.${deviceId}&select=*&order=created_at.desc`);
