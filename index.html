@@ -3616,8 +3616,10 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${ta
         pace: planState.pace || null,
         days: []
       }});
+      console.log('[createDraftTrip] result:', JSON.stringify(result)?.slice(0, 200));
       const saved = Array.isArray(result) ? result[0] : result;
       planState.draftTripId = saved?.id || null;
+      console.log('[createDraftTrip] draftTripId:', planState.draftTripId);
     }
 
   } catch(e) {
@@ -3983,13 +3985,15 @@ async function saveTrip(itinerary) {
   });
 
   // Update draft trip to ready, or create new if no draft exists
+  console.log('[saveTrip] draftTripId:', planState.draftTripId);
   if (planState.draftTripId) {
     cleaned.id = planState.draftTripId;
     db('updateTripStatus', {
       tripId: planState.draftTripId,
       status: 'ready',
       days: cleaned.days
-    }).then(() => {
+    }).then(r => {
+      console.log('[updateTripStatus] result:', JSON.stringify(r)?.slice(0, 100));
       if (cleaned.dates) generateWeatherTip(cleaned, cityId);
     });
     // Update in memory
