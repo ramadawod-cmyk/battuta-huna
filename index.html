@@ -1413,7 +1413,7 @@
       </div>
       <div class="splash-title">Cultural Discovery Engine</div>
       <blockquote class="splash-quote">
-        "Traveling — it leaves you speechless, then turns you into a storyteller."
+        "Traveling, it leaves you speechless, then turns you into a storyteller."
         <cite>— Ibn Battuta</cite>
       </blockquote>
       <button class="start-btn" onclick="startExploration()">BEGIN EXPLORING</button>
@@ -3198,16 +3198,19 @@ async function processAgentStep(userText) {
   }
 
   const gatherPrompt = `You are a travel planning assistant for Battuta Huna. Collect only TWO things:
-1. Specific city or cities to visit (NEVER a country name)
+1. Specific city or cities to visit (NEVER a country name alone)
 2. Dates and duration in days
 
-CRITICAL: If the user gives a country name (e.g. "Switzerland", "Jordan", "Japan", "Italy", "France", "Egypt", "Indonesia" or any other country), you MUST ask which specific cities they want to visit. Never output [PARTIAL] with a country name. Only output [PARTIAL] when you have actual city names.
-
-If user says a country: "Which cities in [country] are you planning to visit? Or I can suggest the best ones if you tell me how many days you have."
+CRITICAL RULES:
+- If the user gives a country name (e.g. "Jordan", "Japan", "France", "Switzerland", "Italy", "Egypt", "Indonesia" or any other country), ask which specific cities they want to visit. You may suggest the best cities for their trip length.
+- Never output [PARTIAL] with only a country name in the city field — always use actual city names.
+- Always identify the country the cities belong to and include it in [PARTIAL].
+- If visiting multiple cities in different countries, use the primary country.
 
 Once you have specific cities AND dates/duration, output:
-[PARTIAL]{"city":"Zurich, Interlaken, Lucerne","dates":"June 2026","duration":5}[/PARTIAL]
+[PARTIAL]{"city":"Amman, Petra, Wadi Rum","country":"Jordan","country_id":"jordan","dates":"May 2026","duration":5}[/PARTIAL]
 
+The country_id must be the country name lowercased with spaces replaced by hyphens (e.g. "Saudi Arabia" → "saudi-arabia").
 No markdown, no bold, no emojis, no em dashes. One question at a time. Very short responses.`;
 
   try {
@@ -3240,6 +3243,8 @@ No markdown, no bold, no emojis, no em dashes. One question at a time. Very shor
         planState.city = partial.city;
         planState.dates = partial.dates;
         planState.duration = partial.duration;
+        planState.country = partial.country || null;
+        planState.countryId = partial.country_id || (partial.country ? partial.country.toLowerCase().replace(/[^a-z0-9]+/g, '-') : null);
         planState.stage = 'sheet';
         const cleanText = agentText.replace(/\[PARTIAL\][\s\S]*?\[\/PARTIAL\]/, '').trim();
         if (cleanText) agentSay(cleanText);
@@ -3699,11 +3704,30 @@ async function saveTrip(itinerary) {
   const firstCity = rawCity.split(/[,/]+/)[0].trim();
   const cityId = firstCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '').replace(/^-+/, '');
 
-  // Upsert each city — split multi-city trips into individual city rows
+  // Upsert country first
+  const countryId = planState.countryId || null;
+  const countryName = planState.country || null;
+  if (countryId && countryName) {
+    await db('upsertCountry', { country: {
+      id: countryId,
+      name: countryName,
+      continent: null,
+      flag_emoji: null
+    }});
+  }
+
+  // Upsert each city with country_id
   const allCities = rawCity.split(/[,/]+/).map(c => c.trim()).filter(Boolean);
   await Promise.all(allCities.map(cityName => {
     const cId = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-    return db('upsertCity', { city: { id: cId, name: cityName, country: null, lat: null, lng: null, wiki: cityName } });
+    return db('upsertCity', { city: {
+      id: cId,
+      name: cityName,
+      country_id: countryId || null,
+      lat: null,
+      lng: null,
+      wiki: cityName
+    }});
   }));
 
   // Save all slots to Supabase as ai_generated sites in one batch call
