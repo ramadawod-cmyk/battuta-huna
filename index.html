@@ -3702,7 +3702,7 @@ function updateTpCount() {
 function triggerBuildItinerary() {
   const selected = [...planState.selectedPlaces].map(i => planState.suggestedPlaces[i]);
   if (!selected.length) return;
-  const capped = selected.slice(0, 12);
+  const capped = selected.slice(0, 9);
   planState.selectedPlacesData = capped;
   planState.stage = 'building';
 
@@ -3722,20 +3722,12 @@ async function buildItineraryFromPlaces() {
   const { city, dates, duration, groupType, pace, selectedPlacesData } = planState;
   const placesJson = JSON.stringify(selectedPlacesData.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
 
-  const buildPrompt = `You are a travel planning assistant. Build a day-by-day itinerary using ONLY the places provided.
-
-Rules:
-- Use ONLY the places from the list, no extras
-- Distribute across ${duration} days logically by location and time-of-day
-- Respect bestTime: Morning places in the morning, Night places at night
-- Pace: ${pace === 'strict' ? 'use exact times like 9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM' : 'use Morning, Afternoon, Evening, Night'}
-- Last slot no earlier than 8:00 PM (strict) or Night (relaxed)
-- Descriptions under 15 words
+  const buildPrompt = `Build a day-by-day itinerary using ONLY these places across ${duration} days. Rules: use ONLY provided places, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words.
 
 Places: ${placesJson}
 
-Output ONLY valid JSON in [ITINERARY] tags:
-[ITINERARY]{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Place Name","description":"Short description.","category":"Category","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Place"}]}]}[/ITINERARY]`;
+Output ONLY valid JSON in [ITINERARY] tags — no other text:
+[ITINERARY]{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}]}[/ITINERARY]`;
 
   try {
     const response = await fetch('/.netlify/functions/plan-agent', {
