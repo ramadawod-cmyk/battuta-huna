@@ -94,6 +94,13 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
+    // ── UPSERT COUNTRY ───────────────────────────────
+    if (action === 'upsertCountry') {
+      const country = data.country;
+      const res = await request('POST', '/rest/v1/countries', country, 'resolution=merge-duplicates');
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
     // ── UPSERT CITY (AI generated) ───────────────────
     if (action === 'upsertCity') {
       const city = data.city;
