@@ -3575,9 +3575,35 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${ta
     renderTripPlannerPlaces(places);
     document.getElementById('tpFooter').style.display = 'block';
 
+    // Save AI-suggested places to Supabase immediately — captures them even if user never builds itinerary
+    const firstCity = planState.city.split(',')[0].trim();
+    const cityId = firstCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+
+    // Upsert country and city first
+    if (planState.countryId && planState.country) {
+      await db('upsertCountry', { country: { id: planState.countryId, name: planState.country, continent: null, flag_emoji: null }});
+    }
+    await db('upsertCity', { city: { id: cityId, name: firstCity, country_id: planState.countryId || null, lat: null, lng: null, wiki: firstCity }});
+
+    // Batch upsert all suggested places
+    const sitesToSave = places.map(place => ({
+      id: place.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 60) + '-' + cityId,
+      city_id: cityId,
+      name: place.name,
+      category: place.category || 'Cultural Site',
+      tags: place.tags || ['Sightseeing'],
+      description: place.description || '',
+      lat: place.lat || null,
+      lng: place.lng || null,
+      map_url: place.mapUrl || null,
+      wiki: place.name.replace(/ /g, '_'),
+      best_time: place.bestTime || null,
+      source: 'ai_generated'
+    }));
+    db('upsertSites', { sites: sitesToSave });
+
     // Create draft trip in Supabase so it appears in My Trips with "Planning" status
     if (!planState.draftTripId) {
-      const cityId = planState.city.split(',')[0].trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const result = await db('createDraftTrip', { trip: {
         city: planState.city,
         dates: planState.dates || null,
@@ -3940,38 +3966,14 @@ async function saveTrip(itinerary) {
     }});
   }));
 
-  // Save all slots to Supabase as ai_generated sites in one batch call
-  const sitesToSave = [];
+  // Update local CITY_DATA with itinerary sites (sites already saved to Supabase at suggestion time)
   cleaned.days.forEach(day => {
-    // Try to detect which city this day is in from the day label
-    let dayCityId = cityId;
-    if (allCities.length > 1) {
-      const matched = allCities.find(c => day.label && day.label.toLowerCase().includes(c.toLowerCase()));
-      if (matched) dayCityId = matched.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-    }
     day.slots.forEach(slot => {
-      const siteId = slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 60) + '-' + dayCityId;
-      sitesToSave.push({
-        id: siteId,
-        city_id: dayCityId,
-        name: slot.name,
-        category: slot.category || 'Cultural Site',
-        tags: slot.tags || ['Sightseeing'],
-        description: slot.description || '',
-        lat: slot.lat || null,
-        lng: slot.lng || null,
-        map_url: slot.mapUrl || null,
-        wiki: slot.name.replace(/ /g, '_'),
-        best_time: slot.time || null,
-        source: 'ai_generated'
-      });
-
-      // Also add to local CITY_DATA if it's a known city
       if (cityKey && CITY_DATA[cityKey].pois) {
         const exists = CITY_DATA[cityKey].pois.find(p => p.name === slot.name);
         if (!exists) {
           CITY_DATA[cityKey].pois.push({
-            id: siteId,
+            id: slot.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + cityId,
             name: slot.name, category: slot.category || 'Cultural Site',
             tags: slot.tags || ['Sightseeing'],
             description: slot.description || '',
@@ -3983,13 +3985,6 @@ async function saveTrip(itinerary) {
       }
     });
   });
-
-  if (sitesToSave.length > 0) {
-    console.log('[saveTrip] Saving', sitesToSave.length, 'sites for', cityId, sitesToSave[0]);
-    db('upsertSites', { sites: sitesToSave }).then(r => console.log('[saveTrip] upsertSites result:', JSON.stringify(r)?.slice(0,100)));
-  } else {
-    console.warn('[saveTrip] No sites to save — cleaned.days:', JSON.stringify(cleaned.days)?.slice(0,200));
-  }
 
   // Update draft trip to ready, or create new if no draft exists
   if (planState.draftTripId) {
