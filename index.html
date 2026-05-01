@@ -3131,10 +3131,13 @@ async function loadSiteLongDescription(poi) {
   const el = document.getElementById('sdLongDesc');
   if (!el) return;
 
-  // Try to get from Supabase first
+  // Derive the correct Supabase site ID
   const cityKey = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id));
-  const cityId = cityKey || poi.id?.split('-').slice(-1)[0] || 'unknown';
-  const siteId = poi.id;
+  const citySlug = cityKey || '';
+  
+  // Try full ID first (e.g. rome-colosseum), then just poi.id
+  const fullId = citySlug ? `${citySlug}-${poi.id}` : poi.id;
+  const siteId = fullId;
 
   if (siteId) {
     const siteData = await db('getSite', { siteId });
