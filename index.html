@@ -1611,7 +1611,7 @@
     </div>
   </main>
 
-  <nav>
+  <nav style="display:none;">
     <button class="nav-btn active" id="navExplore" onclick="showView('explorer')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path fill-rule="evenodd" clip-rule="evenodd" d="M12 3C16.9709 3 21 7.02908 21 12C21 16.9709 16.9709 21 12 21C7.02908 21 3 16.9709 3 12C3 7.02908 7.02908 3 12 3Z"/>
@@ -2687,6 +2687,9 @@ function removeToast(toast) {
 function showView(view) {
   const navIds = ['navExplore', 'navPlan', 'navTrips', 'navSettings'];
   const viewMap = { 'explorer': 0, 'plan-view': 1, 'trips-view': 2, 'settings-view': 3 };
+
+  // Show/hide nav bar based on view
+  document.querySelector('nav').style.display = view === 'splash' ? 'none' : 'flex';
 
   // Hide all views with display:none
   document.getElementById('explorer').style.display = 'none';
