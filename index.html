@@ -1684,7 +1684,7 @@
       </div>
 
       <!-- Footer note + build button -->
-      <div class="tp-footer">
+      <div class="tp-footer" id="tpFooter" style="display:none;">
         <div class="tp-footer-note">Missing a place? You can add it once your itinerary is built.</div>
         <button class="tp-build-btn" id="tpBuildBtn" onclick="triggerBuildItinerary()">
           Build My Itinerary <span id="tpSelectedCount">(0 selected)</span>
@@ -3317,7 +3317,8 @@ function startNewPlan() {
   planState = {
     city: null, dates: null, duration: null, groupSize: null,
     groupType: null, interests: [], pace: null, stage: 'start',
-    itinerary: null, suggestedPlaces: [], selectedPlaces: new Set(), selectedPlacesData: []
+    itinerary: null, suggestedPlaces: [], selectedPlaces: new Set(), selectedPlacesData: [],
+    country: null, countryId: null, draftTripId: null
   };
   document.getElementById('detailsOverlay')?.classList.remove('open');
   document.getElementById('planMessages').innerHTML = '';
@@ -3389,19 +3390,19 @@ async function processAgentStep(userText) {
   }
 
   const gatherPrompt = `You are a travel planning assistant for Battuta Huna. Collect only TWO things:
-1. Specific city or cities to visit (NEVER a country name alone)
+1. Specific city or cities to visit (NEVER a country or region name alone)
 2. Dates and duration in days
 
 CRITICAL RULES:
-- If the user gives a country name (e.g. "Jordan", "Japan", "France", "Switzerland", "Italy", "Egypt", "Indonesia" or any other country), ask which specific cities they want to visit. You may suggest the best cities for their trip length.
-- Never output [PARTIAL] with only a country name in the city field — always use actual city names.
+- If the user gives a country OR a well-known region (e.g. "Jordan", "Japan", "France", "Bali", "Tuscany", "Patagonia", "Andalusia"), ask which specific cities/towns they want to visit. You may suggest the best options for their trip length.
+- Never output [PARTIAL] with only a country or region name — always use actual city or town names (e.g. "Seminyak, Ubud, Canggu" not "Bali").
 - Always identify the country the cities belong to and include it in [PARTIAL].
 - If visiting multiple cities in different countries, use the primary country.
 
 Once you have specific cities AND dates/duration, output:
-[PARTIAL]{"city":"Amman, Petra, Wadi Rum","country":"Jordan","country_id":"jordan","dates":"May 2026","duration":5}[/PARTIAL]
+[PARTIAL]{"city":"Seminyak, Ubud, Canggu","country":"Indonesia","country_id":"indonesia","dates":"May 2026","duration":7}[/PARTIAL]
 
-The country_id must be the country name lowercased with spaces replaced by hyphens (e.g. "Saudi Arabia" → "saudi-arabia").
+The country_id must be the country name lowercased with spaces replaced by hyphens.
 No markdown, no bold, no emojis, no em dashes. One question at a time. Very short responses.`;
 
   try {
@@ -3572,6 +3573,22 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${ta
     planState.suggestedPlaces = places;
     planState.selectedPlaces = new Set(places.map((_, i) => i));
     renderTripPlannerPlaces(places);
+    document.getElementById('tpFooter').style.display = 'block';
+
+    // Create draft trip in Supabase so it appears in My Trips with "Planning" status
+    if (!planState.draftTripId) {
+      const cityId = planState.city.split(',')[0].trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const result = await db('createDraftTrip', { trip: {
+        city: planState.city,
+        dates: planState.dates || null,
+        duration: planState.duration || null,
+        group_type: planState.groupType || null,
+        pace: planState.pace || null,
+        days: []
+      }});
+      const saved = Array.isArray(result) ? result[0] : result;
+      planState.draftTripId = saved?.id || null;
+    }
 
   } catch(e) {
     console.error('[places] Exception:', e.message);
@@ -3974,24 +3991,40 @@ async function saveTrip(itinerary) {
     console.warn('[saveTrip] No sites to save — cleaned.days:', JSON.stringify(cleaned.days)?.slice(0,200));
   }
 
-  // Save trip to Supabase
-  db('saveTrip', { trip: {
-    city: cleaned.city,
-    dates: cleaned.dates || null,
-    duration: cleaned.duration || null,
-    group_type: cleaned.groupType || null,
-    pace: cleaned.pace || null,
-    days: cleaned.days
-  }}).then(result => {
-    const saved = Array.isArray(result) ? result[0] : result;
-    cleaned.id = saved?.id || cleaned.id;
-    savedTrips.unshift(cleaned);
-    // Now we have the ID, generate weather tip
-    if (cleaned.dates && cleaned.id) generateWeatherTip(cleaned, cityId);
-  });
-
-  // Fallback: keep in memory
-  savedTrips.unshift(cleaned);
+  // Update draft trip to ready, or create new if no draft exists
+  if (planState.draftTripId) {
+    cleaned.id = planState.draftTripId;
+    db('updateTripStatus', {
+      tripId: planState.draftTripId,
+      status: 'ready',
+      days: cleaned.days
+    }).then(() => {
+      if (cleaned.dates) generateWeatherTip(cleaned, cityId);
+    });
+    // Update in memory
+    const existing = savedTrips.findIndex(t => t.id === planState.draftTripId);
+    if (existing >= 0) {
+      savedTrips[existing] = { ...savedTrips[existing], ...cleaned, status: 'ready' };
+    } else {
+      savedTrips.unshift({ ...cleaned, status: 'ready' });
+    }
+    planState.draftTripId = null;
+  } else {
+    db('saveTrip', { trip: {
+      city: cleaned.city,
+      dates: cleaned.dates || null,
+      duration: cleaned.duration || null,
+      group_type: cleaned.groupType || null,
+      pace: cleaned.pace || null,
+      days: cleaned.days,
+      status: 'ready'
+    }}).then(result => {
+      const saved = Array.isArray(result) ? result[0] : result;
+      cleaned.id = saved?.id || cleaned.id;
+      savedTrips.unshift({ ...cleaned, status: 'ready' });
+      if (cleaned.dates && cleaned.id) generateWeatherTip(cleaned, cityId);
+    });
+  }
 
   agentSay('Your trip has been saved! You can find it in My Trips.');
 
@@ -4041,7 +4074,10 @@ async function renderTrips() {
       <div class="trip-card-city">${trip.city}</div>
       <div class="trip-card-meta">${trip.dates || ''} &nbsp;·&nbsp; ${trip.duration} day${trip.duration > 1 ? 's' : ''} &nbsp;·&nbsp; ${trip.groupType || ''}</div>
       <div class="trip-card-tags">
-        ${(trip.days || []).reduce((acc, d) => acc + d.slots.length, 0)} stops planned
+        ${trip.status === 'planning'
+          ? '<span style="font-family:Bricolage Grotesque,sans-serif;font-size:11px;color:#c97b5c;background:rgba(201,123,92,0.1);border:1px solid rgba(201,123,92,0.3);padding:3px 10px;border-radius:20px;">Planning in progress</span>'
+          : '<span style="font-family:Bricolage Grotesque,sans-serif;font-size:11px;color:#6f8b6d;background:rgba(111,139,109,0.1);border:1px solid rgba(111,139,109,0.3);padding:3px 10px;border-radius:20px;">Itinerary ready</span>'
+        }
       </div>
     </div>
   `).join('');
