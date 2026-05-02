@@ -33,7 +33,7 @@ function httpsGetBinary(url) {
         'User-Agent': 'BattutaHuna/1.0 (https://battutahuna.com)',
         'Referer': 'https://en.wikipedia.org/'
       },
-      timeout: 8000
+      timeout: 25000
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return httpsGetBinary(res.headers.location).then(resolve).catch(reject);
@@ -85,7 +85,7 @@ exports.handler = async function(event) {
       // Search Commons for images matching the place name
       const commonsUrl = 'https://commons.wikimedia.org/w/api.php?action=query' +
         '&generator=search&gsrnamespace=6&gsrsearch=' + query +
-        '&gsrlimit=10&prop=imageinfo&iiprop=url|size|mime|extmetadata' +
+        '&gsrlimit=10&prop=imageinfo&iiprop=url|size|mime|extmetadata|timestamp' +
         '&iiurlwidth=800&format=json&origin=*';
 
       const data = await httpsGet(commonsUrl);
@@ -116,8 +116,10 @@ exports.handler = async function(event) {
         .slice(0, 5)
         .map(p => {
           const info = p.imageinfo[0];
-          // Strip UTM tracking params from URL
-          const src = info.url.split('?')[0];
+          // Use the API-provided thumbnail URL (800px) — avoids encoding issues
+          const rawUrl = info.url.split('?')[0];
+          const thumbUrl = info.thumburl || rawUrl; // thumburl comes from iiurlwidth=800
+          const src = thumbUrl.split('?')[0]; // strip any params
           const proxied = '/.netlify/functions/wiki-image?img=' + encodeURIComponent(src);
           const artist = info.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, '') || '';
           const license = info.extmetadata?.LicenseShortName?.value || '';

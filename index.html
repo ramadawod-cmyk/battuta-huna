@@ -3138,13 +3138,29 @@ function openSiteDetail(poi, backFn) {
   document.querySelector('nav').style.display = 'none';
   document.querySelector('header').style.display = 'none';
 
-  // Load 5 photos from Wikimedia Commons
+  // Load photos — check Supabase cache first
   (async () => {
-    const searchQuery = poi.name + (poi.cityName ? ' ' + poi.cityName : '');
+    const cityId2 = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id))
+      || poi.cityName?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || '';
     const strip = document.getElementById('sdPhotoStrip');
     const attrib = document.getElementById('sdPhotoAttrib');
     if (!strip) return;
 
+    // Check if we have a cached image_url in Supabase
+    if (poi.name && cityId2) {
+      const siteData = await db('getSite', { name: poi.name, cityId: cityId2 });
+      if (siteData?.image_url) {
+        // Show cached image immediately
+        const proxied = '/.netlify/functions/wiki-image?img=' + encodeURIComponent(siteData.image_url);
+        strip.innerHTML = `<div style="min-width:100%;height:100%;flex-shrink:0;scroll-snap-align:start;">
+          <img src="${proxied}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.parentElement.style.display='none'"/>
+        </div>`;
+        return;
+      }
+    }
+
+    // No cached image — fetch from Wikimedia Commons
+    const searchQuery = poi.name + (poi.cityName ? ' ' + poi.cityName : '');
     try {
       const res = await fetch(`/.netlify/functions/wiki-image?search=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
@@ -3172,6 +3188,14 @@ function openSiteDetail(poi, backFn) {
       // Store attributions for the active photo
       window._sdPhotoAttribs = images.map(i => i.attribution || '');
       updatePhotoAttrib(0);
+
+      // Save first image URL to Supabase for caching
+      const cityId2 = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id))
+        || poi.cityName?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || '';
+      if (poi.name && cityId2 && images[0]?.raw) {
+        console.log('[saveImageUrl] name:', poi.name, 'cityId:', cityId2);
+        db('saveImageUrl', { name: poi.name, cityId: cityId2, imageUrl: images[0].raw });
+      }
 
       // Update attribution on scroll
       strip.addEventListener('scroll', () => {
@@ -3203,8 +3227,13 @@ function openSiteDetailFromSlot(slot) {
     description: slot.description || '',
     mapUrl: slot.mapUrl || '',
     wiki: slot.name.replace(/ /g, '_'),
-    bestTime: slot.time || ''
+    bestTime: slot.time || '',
+    cityName: slot.cityName || savedTrips[currentTripIndex]?.city?.split(',')[0]?.trim() || ''
   };
+
+  // Hide trip detail before showing site detail
+  document.getElementById('trip-detail-page').style.display = 'none';
+
   openSiteDetail(poi, () => {
     // Go back to trip detail
     document.getElementById('trip-detail-page').style.display = 'flex';
@@ -3224,37 +3253,37 @@ async function loadSiteLongDescription(poi) {
   const el = document.getElementById('sdLongDesc');
   if (!el) return;
 
-  // Derive the correct Supabase site ID
   const cityKey = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id));
-  const citySlug = cityKey || '';
-  
-  // Try full ID first (e.g. rome-colosseum), then just poi.id
-  const fullId = citySlug ? `${citySlug}-${poi.id}` : poi.id;
-  const siteId = fullId;
+  const cityId = cityKey || poi.cityName?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || '';
+  const name = poi.name;
 
-  if (siteId) {
-    const siteData = await db('getSite', { siteId });
+  // Look up by name + city — reliable regardless of ID format
+  if (name && cityId) {
+    const siteData = await db('getSite', { name, cityId });
     if (siteData?.long_description) {
       el.textContent = siteData.long_description;
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
       return;
     }
-    // If site not in Supabase yet, upsert it now
-    if (!siteData && citySlug) {
-      db('upsertSite', { site: {
-        id: siteId,
-        city_id: citySlug,
-        name: poi.name,
-        category: poi.category || 'Cultural Site',
-        tags: poi.tags || ['Sightseeing'],
-        description: poi.description || '',
-        lat: poi.lat || null,
-        lng: poi.lng || null,
-        map_url: poi.mapUrl || null,
-        wiki: poi.wiki || poi.name.replace(/ /g, '_'),
-        source: 'seed'
-      }});
+    // Site not in Supabase yet — insert it with ignore on name+city conflict
+    if (!siteData) {
+      const siteId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60) + '-' + cityId;
+      try {
+        await db('upsertSite', { site: {
+          id: siteId, city_id: cityId, name,
+          category: poi.category || 'Cultural Site',
+          tags: poi.tags || ['Sightseeing'],
+          description: poi.description || '',
+          lat: poi.lat || null, lng: poi.lng || null,
+          map_url: poi.mapUrl || null,
+          wiki: poi.wiki || name.replace(/ /g, '_'),
+          source: 'viewed'
+        }});
+      } catch(e) {
+        // Site exists with different ID — that's fine, saveLongDescription will find it by name+city
+        console.log('[upsertSite] conflict ignored for', name);
+      }
     }
   }
 
@@ -3264,8 +3293,8 @@ async function loadSiteLongDescription(poi) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: `Write a rich, engaging 3-4 sentence description of ${poi.name} for travelers. Cover its history, significance, what to expect when visiting, and what makes it special. No markdown, no bullet points, no em dashes. Warm, editorial tone.`,
-        messages: [{ role: 'user', content: `Describe ${poi.name}` }]
+        system: `Write a rich, engaging 3-4 sentence description of ${name} for travelers. Cover its history, significance, what to expect when visiting, and what makes it special. No markdown, no bullet points, no em dashes. Warm, editorial tone.`,
+        messages: [{ role: 'user', content: `Describe ${name}` }]
       })
     });
     const data = await res.json();
@@ -3274,8 +3303,9 @@ async function loadSiteLongDescription(poi) {
       el.textContent = longDesc;
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
-      // Cache it
-      if (siteId) db('saveLongDescription', { siteId, longDescription: longDesc });
+      // Save by name + city
+      console.log('[saveLongDescription] name:', name, 'cityId:', cityId);
+      if (name && cityId) db('saveLongDescription', { name, cityId, longDescription: longDesc });
     }
   } catch(e) {
     if (el) el.textContent = 'Description not available.';
