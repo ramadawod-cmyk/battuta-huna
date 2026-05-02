@@ -93,6 +93,7 @@ exports.handler = async function(event) {
 
       // Filter to only jpg/jpeg/png images, exclude icons/flags/maps/logos
       const EXCLUDE = ['flag', 'logo', 'icon', 'map', 'coat', 'seal', 'banner', 'symbol', 'sign'];
+      const seenBase = new Set();
       const images = Object.values(pages)
         .filter(p => {
           const url = p.imageinfo?.[0]?.url || '';
@@ -103,12 +104,21 @@ exports.handler = async function(event) {
           const isLargeEnough = (p.imageinfo?.[0]?.width || 0) >= 400;
           return isPhoto && !isExcluded && isLargeEnough;
         })
+        .filter(p => {
+          // Deduplicate by dimensions — same width+height = same photo
+          const w = p.imageinfo?.[0]?.width;
+          const h = p.imageinfo?.[0]?.height;
+          const key = `${w}x${h}`;
+          if (seenBase.has(key)) return false;
+          seenBase.add(key);
+          return true;
+        })
         .slice(0, 5)
         .map(p => {
           const info = p.imageinfo[0];
-          const src = info.url;
+          // Strip UTM tracking params from URL
+          const src = info.url.split('?')[0];
           const proxied = '/.netlify/functions/wiki-image?img=' + encodeURIComponent(src);
-          // Get attribution info if available
           const artist = info.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, '') || '';
           const license = info.extmetadata?.LicenseShortName?.value || '';
           return {
