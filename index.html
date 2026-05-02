@@ -3487,6 +3487,7 @@ bestTime must be: Morning, Afternoon, Evening, or Night.`;
       }));
       await db('upsertSites', { sites: sitesToSave });
       if (!CITY_DATA[cityId]) CITY_DATA[cityId] = { name: cityName, lat: null, lng: null, radius: 50, pois: [] };
+      // Replace pois entirely with AI-generated ones since they have accurate lat/lng
       CITY_DATA[cityId].pois = sitesToSave.map(s => ({
         id: s.id, name: s.name, category: s.category, tags: s.tags,
         description: s.description, lat: s.lat, lng: s.lng,
@@ -3505,8 +3506,9 @@ function mergeSitesIntoCityData(sites, cityId) {
   if (!CITY_DATA[cityId]) CITY_DATA[cityId] = { name: cityId, lat: null, lng: null, radius: 50, pois: [] };
   const existing = CITY_DATA[cityId].pois || [];
   const existingIds = new Set(existing.map(p => p.id));
+  const existingNames = new Set(existing.map(p => p.name?.toLowerCase().trim()));
   sites.forEach(s => {
-    if (!existingIds.has(s.id)) {
+    if (!existingIds.has(s.id) && !existingNames.has(s.name?.toLowerCase().trim())) {
       existing.push({ id: s.id, name: s.name, category: s.category, tags: s.tags || [],
         description: s.description, lat: s.lat, lng: s.lng,
         mapUrl: s.map_url, wiki: s.wiki, image: s.image_url || '', emoji: 'map' });
