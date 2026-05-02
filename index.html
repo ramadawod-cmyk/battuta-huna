@@ -3224,37 +3224,31 @@ async function loadSiteLongDescription(poi) {
   const el = document.getElementById('sdLongDesc');
   if (!el) return;
 
-  // Derive the correct Supabase site ID — format is name-cityslug
   const cityKey = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id));
-  const citySlug = cityKey || '';
+  const cityId = cityKey || poi.cityName?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || '';
+  const name = poi.name;
 
-  // Supabase stores IDs as: poi.id + '-' + citySlug (e.g. burj-khalifa-dubai)
-  // But hardcoded poi.ids don't include city prefix, so we try both formats
-  const fullId = citySlug ? `${poi.id}-${citySlug}` : poi.id;
-  const siteId = fullId;
-
-  if (siteId) {
-    const siteData = await db('getSite', { siteId });
+  // Look up by name + city — reliable regardless of ID format
+  if (name && cityId) {
+    const siteData = await db('getSite', { name, cityId });
     if (siteData?.long_description) {
       el.textContent = siteData.long_description;
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
       return;
     }
-    // If site not in Supabase yet, upsert it now
-    if (!siteData && citySlug) {
-      db('upsertSite', { site: {
-        id: siteId,
-        city_id: citySlug,
-        name: poi.name,
+    // Site not in Supabase yet — upsert it so we can save to it
+    if (!siteData) {
+      const siteId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60) + '-' + cityId;
+      await db('upsertSite', { site: {
+        id: siteId, city_id: cityId, name,
         category: poi.category || 'Cultural Site',
         tags: poi.tags || ['Sightseeing'],
         description: poi.description || '',
-        lat: poi.lat || null,
-        lng: poi.lng || null,
+        lat: poi.lat || null, lng: poi.lng || null,
         map_url: poi.mapUrl || null,
-        wiki: poi.wiki || poi.name.replace(/ /g, '_'),
-        source: 'seed'
+        wiki: poi.wiki || name.replace(/ /g, '_'),
+        source: 'viewed'
       }});
     }
   }
@@ -3265,8 +3259,8 @@ async function loadSiteLongDescription(poi) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: `Write a rich, engaging 3-4 sentence description of ${poi.name} for travelers. Cover its history, significance, what to expect when visiting, and what makes it special. No markdown, no bullet points, no em dashes. Warm, editorial tone.`,
-        messages: [{ role: 'user', content: `Describe ${poi.name}` }]
+        system: `Write a rich, engaging 3-4 sentence description of ${name} for travelers. Cover its history, significance, what to expect when visiting, and what makes it special. No markdown, no bullet points, no em dashes. Warm, editorial tone.`,
+        messages: [{ role: 'user', content: `Describe ${name}` }]
       })
     });
     const data = await res.json();
@@ -3275,8 +3269,8 @@ async function loadSiteLongDescription(poi) {
       el.textContent = longDesc;
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
-      // Cache it
-      if (siteId) db('saveLongDescription', { siteId, longDescription: longDesc });
+      // Save by name + city
+      if (name && cityId) db('saveLongDescription', { name, cityId, longDescription: longDesc });
     }
   } catch(e) {
     if (el) el.textContent = 'Description not available.';
