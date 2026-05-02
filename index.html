@@ -3193,6 +3193,7 @@ function openSiteDetail(poi, backFn) {
       const cityId2 = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id))
         || poi.cityName?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || '';
       if (poi.name && cityId2 && images[0]?.raw) {
+        console.log('[saveImageUrl] name:', poi.name, 'cityId:', cityId2);
         db('saveImageUrl', { name: poi.name, cityId: cityId2, imageUrl: images[0].raw });
       }
 
@@ -3226,8 +3227,13 @@ function openSiteDetailFromSlot(slot) {
     description: slot.description || '',
     mapUrl: slot.mapUrl || '',
     wiki: slot.name.replace(/ /g, '_'),
-    bestTime: slot.time || ''
+    bestTime: slot.time || '',
+    cityName: slot.cityName || savedTrips[currentTripIndex]?.city?.split(',')[0]?.trim() || ''
   };
+
+  // Hide trip detail before showing site detail
+  document.getElementById('trip-detail-page').style.display = 'none';
+
   openSiteDetail(poi, () => {
     // Go back to trip detail
     document.getElementById('trip-detail-page').style.display = 'flex';
@@ -3298,6 +3304,7 @@ async function loadSiteLongDescription(poi) {
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
       // Save by name + city
+      console.log('[saveLongDescription] name:', name, 'cityId:', cityId);
       if (name && cityId) db('saveLongDescription', { name, cityId, longDescription: longDesc });
     }
   } catch(e) {
