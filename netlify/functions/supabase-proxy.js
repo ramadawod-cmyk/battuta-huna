@@ -53,16 +53,27 @@ exports.handler = async function(event) {
 
     // ── GET SITE ─────────────────────────────────────
     if (action === 'getSite') {
-      const { siteId } = data;
-      const res = await request('GET', `/rest/v1/sites?id=eq.${siteId}&select=*`);
+      const { siteId, name, cityId } = data;
+      let res;
+      if (name && cityId) {
+        // Look up by name + city — more reliable than ID
+        res = await request('GET', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}&select=*`);
+      } else {
+        res = await request('GET', `/rest/v1/sites?id=eq.${siteId}&select=*`);
+      }
       const rows = res.body;
       return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
     }
 
     // ── SAVE LONG DESCRIPTION ────────────────────────
     if (action === 'saveLongDescription') {
-      const { siteId, longDescription } = data;
-      const res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, { long_description: longDescription });
+      const { siteId, name, cityId, longDescription } = data;
+      let res;
+      if (name && cityId) {
+        res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { long_description: longDescription });
+      } else {
+        res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, { long_description: longDescription });
+      }
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 
