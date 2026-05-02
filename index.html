@@ -3260,19 +3260,24 @@ async function loadSiteLongDescription(poi) {
       el.style.color = '#3d2e26';
       return;
     }
-    // Site not in Supabase yet — upsert it so we can save to it
+    // Site not in Supabase yet — insert it with ignore on name+city conflict
     if (!siteData) {
       const siteId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60) + '-' + cityId;
-      await db('upsertSite', { site: {
-        id: siteId, city_id: cityId, name,
-        category: poi.category || 'Cultural Site',
-        tags: poi.tags || ['Sightseeing'],
-        description: poi.description || '',
-        lat: poi.lat || null, lng: poi.lng || null,
-        map_url: poi.mapUrl || null,
-        wiki: poi.wiki || name.replace(/ /g, '_'),
-        source: 'viewed'
-      }});
+      try {
+        await db('upsertSite', { site: {
+          id: siteId, city_id: cityId, name,
+          category: poi.category || 'Cultural Site',
+          tags: poi.tags || ['Sightseeing'],
+          description: poi.description || '',
+          lat: poi.lat || null, lng: poi.lng || null,
+          map_url: poi.mapUrl || null,
+          wiki: poi.wiki || name.replace(/ /g, '_'),
+          source: 'viewed'
+        }});
+      } catch(e) {
+        // Site exists with different ID — that's fine, saveLongDescription will find it by name+city
+        console.log('[upsertSite] conflict ignored for', name);
+      }
     }
   }
 
