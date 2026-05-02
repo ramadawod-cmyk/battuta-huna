@@ -3450,7 +3450,25 @@ async function ensureCitySites(cityId) {
   const sites = await db('getSites', { cityId });
 
   if (sites && Array.isArray(sites) && sites.length >= 5) {
+    // Enough sites in Supabase — use those, don't call AI
     mergeSitesIntoCityData(sites, cityId);
+    return;
+  }
+
+  // Check if city already has hardcoded pois — if so use those without calling AI
+  const hardcoded = CITY_DATA[cityId]?.pois || [];
+  if (hardcoded.length >= 5 && (!sites || sites.length === 0)) {
+    // Seed hardcoded pois into Supabase silently
+    const cityName = CITY_DATA[cityId]?.name || cityId;
+    await db('upsertCity', { city: { id: cityId, name: cityName, lat: CITY_DATA[cityId]?.lat || null, lng: CITY_DATA[cityId]?.lng || null, wiki: cityName }});
+    const sitesToSave = hardcoded.map(p => ({
+      id: cityId + '-' + p.id,
+      city_id: cityId, name: p.name, category: p.category || 'Cultural Site',
+      tags: p.tags || ['Sightseeing'], description: p.description || '',
+      lat: p.lat || null, lng: p.lng || null, map_url: p.mapUrl || null,
+      wiki: p.wiki || p.name.replace(/ /g, '_'), source: 'seed'
+    }));
+    db('upsertSites', { sites: sitesToSave });
     return;
   }
 
