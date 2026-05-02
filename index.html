@@ -3224,12 +3224,13 @@ async function loadSiteLongDescription(poi) {
   const el = document.getElementById('sdLongDesc');
   if (!el) return;
 
-  // Derive the correct Supabase site ID
+  // Derive the correct Supabase site ID — format is name-cityslug
   const cityKey = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id));
   const citySlug = cityKey || '';
-  
-  // Try full ID first (e.g. rome-colosseum), then just poi.id
-  const fullId = citySlug ? `${citySlug}-${poi.id}` : poi.id;
+
+  // Supabase stores IDs as: poi.id + '-' + citySlug (e.g. burj-khalifa-dubai)
+  // But hardcoded poi.ids don't include city prefix, so we try both formats
+  const fullId = citySlug ? `${poi.id}-${citySlug}` : poi.id;
   const siteId = fullId;
 
   if (siteId) {
