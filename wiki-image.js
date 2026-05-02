@@ -33,7 +33,7 @@ function httpsGetBinary(url) {
         'User-Agent': 'BattutaHuna/1.0 (https://battutahuna.com)',
         'Referer': 'https://en.wikipedia.org/'
       },
-      timeout: 8000
+      timeout: 25000
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return httpsGetBinary(res.headers.location).then(resolve).catch(reject);
@@ -116,8 +116,13 @@ exports.handler = async function(event) {
         .slice(0, 5)
         .map(p => {
           const info = p.imageinfo[0];
-          // Strip UTM tracking params from URL
-          const src = info.url.split('?')[0];
+          // Strip UTM tracking params and request a resized version (800px wide)
+          const rawUrl = info.url.split('?')[0];
+          // Convert to thumbnail URL: insert /thumb/ and append size
+          const thumbUrl = rawUrl
+            .replace('/commons/', '/commons/thumb/')
+            + '/800px-' + rawUrl.split('/').pop();
+          const src = thumbUrl;
           const proxied = '/.netlify/functions/wiki-image?img=' + encodeURIComponent(src);
           const artist = info.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, '') || '';
           const license = info.extmetadata?.LicenseShortName?.value || '';
