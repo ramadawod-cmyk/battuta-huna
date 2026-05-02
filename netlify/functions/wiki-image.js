@@ -105,12 +105,12 @@ exports.handler = async function(event) {
           return isPhoto && !isExcluded && isLargeEnough;
         })
         .filter(p => {
-          // Deduplicate by base filename (strip version suffixes like _copie_2B)
-          const url = p.imageinfo?.[0]?.url || '';
-          const filename = url.split('/').pop().split('?')[0];
-          const base = filename.replace(/_copie.*|_\d+B.*|_edit.*|_crop.*/i, '').toLowerCase();
-          if (seenBase.has(base)) return false;
-          seenBase.add(base);
+          // Deduplicate by dimensions — same width+height = same photo
+          const w = p.imageinfo?.[0]?.width;
+          const h = p.imageinfo?.[0]?.height;
+          const key = `${w}x${h}`;
+          if (seenBase.has(key)) return false;
+          seenBase.add(key);
           return true;
         })
         .slice(0, 5)
