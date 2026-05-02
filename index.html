@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Battuta Huna</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM2ZjhiNmQiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjEyIiByPSI1IiBmaWxsPSJub25lIiBzdHJva2U9IiNmNWYwZTgiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xNiAxNyBRMTAgMjIgMTAgMjcgUTE2IDI0IDIyIDI3IFEyMiAyMiAxNiAxN1oiIGZpbGw9IiNmNWYwZTgiLz48L3N2Zz4=" />
   <meta name="theme-color" content="#3d2e26" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -3193,7 +3194,6 @@ function openSiteDetail(poi, backFn) {
       const cityId2 = Object.keys(CITY_DATA).find(k => CITY_DATA[k].pois?.find(p => p.id === poi.id))
         || poi.cityName?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || '';
       if (poi.name && cityId2 && images[0]?.raw) {
-        console.log('[saveImageUrl] name:', poi.name, 'cityId:', cityId2);
         db('saveImageUrl', { name: poi.name, cityId: cityId2, imageUrl: images[0].raw });
       }
 
@@ -3304,7 +3304,6 @@ async function loadSiteLongDescription(poi) {
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
       // Save by name + city
-      console.log('[saveLongDescription] name:', name, 'cityId:', cityId);
       if (name && cityId) db('saveLongDescription', { name, cityId, longDescription: longDesc });
     }
   } catch(e) {
