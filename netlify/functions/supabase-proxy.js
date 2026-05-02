@@ -51,6 +51,21 @@ exports.handler = async function(event) {
     const { action, data } = JSON.parse(event.body || '{}');
     const deviceId = event.headers['x-device-id'] || 'anonymous';
 
+    // ── GET SITE ─────────────────────────────────────
+    if (action === 'getSite') {
+      const { siteId } = data;
+      const res = await request('GET', `/rest/v1/sites?id=eq.${siteId}&select=*`);
+      const rows = res.body;
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
+    }
+
+    // ── SAVE LONG DESCRIPTION ────────────────────────
+    if (action === 'saveLongDescription') {
+      const { siteId, longDescription } = data;
+      const res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, { long_description: longDescription });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
     // ── GET CITY HERO ────────────────────────────────
     if (action === 'getCityHero') {
       const { cityId } = data;
