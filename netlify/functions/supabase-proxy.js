@@ -77,6 +77,13 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 
+    // ── SAVE IMAGE URL ───────────────────────────────
+    if (action === 'saveImageUrl') {
+      const { name, cityId, imageUrl } = data;
+      const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { image_url: imageUrl });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
     // ── GET CITY HERO ────────────────────────────────
     if (action === 'getCityHero') {
       const { cityId } = data;
