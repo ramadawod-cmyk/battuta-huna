@@ -2052,6 +2052,12 @@ const CITY_DATA = {
 };
 
 let currentCity = localStorage.getItem('bh_city') || null;
+// Clear old hardcoded city — let GPS detect the real location
+const OLD_CITIES = ['rome','amman','malaga','tunis','montreal','dubai'];
+if (currentCity && OLD_CITIES.includes(currentCity)) {
+  localStorage.removeItem('bh_city');
+  currentCity = null;
+}
 
 // City centres for auto-detection (lat, lng, max radius in km)
 const CITY_CENTRES = {
@@ -2504,7 +2510,7 @@ function renderNearby(nearby) {
               <circle cx="22" cy="22" r="18" stroke="#e3b96c" stroke-width="2.5" stroke-dasharray="28 85" stroke-linecap="round"/>
               <circle cx="22" cy="22" r="11" stroke="#c97b5c" stroke-width="2.5" stroke-dasharray="18 52" stroke-linecap="round"/>
             </svg></div>
-      <p class="empty-text" id="emptyNearbyText">No sites within ${settings.radius >= 1000 ? (settings.radius/1000)+'km' : settings.radius+'m'}.<br/>Keep walking. Rome reveals itself slowly.</p>
+      <p class="empty-text" id="emptyNearbyText">No sites within ${settings.radius >= 1000 ? (settings.radius/1000)+'km' : settings.radius+'m'}.<br/>Keep walking. This city reveals itself slowly.</p>
     </div>`;
     return;
   }
