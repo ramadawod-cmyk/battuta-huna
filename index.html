@@ -2200,12 +2200,11 @@ function getActivePois() { return (currentCity && CITY_DATA[currentCity]?.pois) 
 function switchCity(city) {
   currentCity = city;
   localStorage.setItem('bh_city', city);
-  // Update city buttons
+  const cityName = (CITY_DATA[city]?.name) || city;
   // Update current city display in settings
   const cityDisplay = document.getElementById('currentCityDisplay');
   if (cityDisplay) cityDisplay.textContent = cityName;
   // Update labels
-  const cityName = CITY_DATA[city].name;
   const label = document.getElementById('allSitesLabel');
   if (label) label.textContent = 'All Sites · ' + cityName;
   const statLabel = document.getElementById('statCityLabel');
@@ -2385,7 +2384,7 @@ async function startExploration() {
         document.getElementById('city-loading').style.display = 'none';
         showView('explorer');
         // Render nearby sites
-        if (currentPos) renderNearby(currentPos.lat, currentPos.lng);
+        if (currentPos) checkNearby();
       },
       (err) => {
         // Location denied — show prompt
