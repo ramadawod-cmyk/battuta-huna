@@ -882,6 +882,17 @@
       opacity: 0;
     }
     .city-hero-img.loaded { opacity: 1; }
+    .city-hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, #f0ebe3 25%, #e8e0d5 50%, #f0ebe3 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      z-index: 0;
+      border-radius: 20px;
+    }
+    .city-hero.loaded::before { display: none; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .city-hero-overlay {
       position: absolute;
       inset: 0;
@@ -2289,7 +2300,13 @@ function applyCityHero(src, city) {
   applyCityHeroText(city);
   ['', 'AllSites'].forEach(suffix => {
     const img = document.getElementById('cityHeroImg' + suffix);
-    if (img) { img.src = src; img.onload = () => img.classList.add('loaded'); }
+    if (img) {
+        img.src = src;
+        img.onload = () => {
+          img.classList.add('loaded');
+          img.closest('.city-hero')?.classList.add('loaded');
+        };
+      }
   });
 }
 
@@ -2338,7 +2355,12 @@ async function startExploration() {
   isExploring = true;
   document.getElementById('splash').style.display = 'none';
   document.getElementById('location-prompt').style.display = 'none';
-  showView('explorer');
+
+  // Show loading screen with travel quote immediately
+  const quote = TRAVEL_QUOTES[Math.floor(Math.random() * TRAVEL_QUOTES.length)];
+  document.getElementById('clMessage').textContent = 'Finding cultural sites near you...';
+  document.getElementById('clQuote').textContent = '"' + quote + '"';
+  document.getElementById('city-loading').style.display = 'flex';
 
   const pill = document.getElementById('statusPill');
   pill.classList.add('active');
@@ -2350,18 +2372,21 @@ async function startExploration() {
         currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         watchId = navigator.geolocation.watchPosition(onPositionUpdate, onPositionError,
           { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 });
-        // Auto detect city from GPS
+        // Detect city and load POIs — loading screen shows throughout
         await autoDetectCityFromPos(pos.coords.latitude, pos.coords.longitude);
+        // Now show the explorer
+        document.getElementById('city-loading').style.display = 'none';
+        showView('explorer');
       },
       (err) => {
         // Location denied — show prompt
-        document.getElementById('explorer').style.display = 'none';
+        document.getElementById('city-loading').style.display = 'none';
         document.getElementById('location-prompt').style.display = 'flex';
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   } else {
-    document.getElementById('explorer').style.display = 'none';
+    document.getElementById('city-loading').style.display = 'none';
     document.getElementById('location-prompt').style.display = 'flex';
   }
 }
@@ -3175,8 +3200,9 @@ async function ensureCitySites(cityId) {
     return;
   }
 
-  // Not enough sites — generate via AI
-  showCityLoadingScreen(cityId);
+  // Update loading message
+  const msgEl = document.getElementById('clMessage');
+  if (msgEl) msgEl.textContent = 'Discovering the best of ' + cityName + '...';
 
   const cityName = CITY_DATA[cityId]?.name || cityId;
   const suggestPrompt = `List 20 significant cultural sites and landmarks in ${cityName}. Return ONLY a JSON array, no other text:
@@ -3219,7 +3245,6 @@ bestTime must be: Morning, Afternoon, Evening, or Night.`;
     console.warn('[ensureCitySites]', e.message);
   }
 
-  hideCityLoadingScreen();
   updateStats();
 }
 
