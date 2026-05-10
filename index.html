@@ -2269,7 +2269,6 @@ async function fetchCityHero(city) {
     return;
   }
   try {
-    // Use wiki title from CITY_DATA if available, otherwise use city name directly
     const wiki = CITY_DATA[city]?.wiki || city;
     const url = `/.netlify/functions/wiki-image?title=${encodeURIComponent(wiki)}`;
     const res = await fetch(url);
@@ -2278,8 +2277,14 @@ async function fetchCityHero(city) {
     const data = JSON.parse(text);
     if (data.url) {
       cityHeroCache[city] = data.url;
+      // Wait for image to actually load before resolving
+      await new Promise(resolve => {
+        const img = new Image();
+        img.onload = resolve;
+        img.onerror = resolve; // resolve even on error so we don't block
+        img.src = data.url;
+      });
       applyCityHero(data.url, city);
-      // Cache in Supabase so we don't call Wikipedia again
       db('updateCityHero', { cityId: city, heroImageUrl: data.url });
     }
   } catch(e) { console.warn(`[hero] ${city}:`, e); }
@@ -2374,9 +2379,13 @@ async function startExploration() {
           { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 });
         // Detect city and load POIs — loading screen shows throughout
         await autoDetectCityFromPos(pos.coords.latitude, pos.coords.longitude);
+        // Ensure hero image is fetched before showing explorer
+        if (currentCity) await fetchCityHero(currentCity);
         // Now show the explorer
         document.getElementById('city-loading').style.display = 'none';
         showView('explorer');
+        // Render nearby sites
+        if (currentPos) renderNearby(currentPos.lat, currentPos.lng);
       },
       (err) => {
         // Location denied — show prompt
