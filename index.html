@@ -1921,19 +1921,16 @@
     <input type="email" id="authEmail" placeholder="Your email address"
       style="width:100%;padding:14px 16px;border:1.5px solid rgba(61,46,38,0.15);border-radius:12px;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;color:#3d2e26;background:#f5f0e8;outline:none;margin-bottom:12px;"
       onkeydown="if(event.key==='Enter')sendOtp()"/>
-    <button onclick="sendOtp()" style="width:100%;padding:14px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:12px;cursor:pointer;">CONTINUE WITH EMAIL</button>
+    <button onclick="sendOtp()" style="width:100%;padding:14px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:12px;cursor:pointer;">SEND ME A LINK</button>
     <div id="authEmailError" style="color:#c97b5c;font-size:12px;margin-top:8px;text-align:center;"></div>
   </div>
 
-  <!-- Step 2: OTP -->
-  <div id="authStepOtp" style="display:none;width:100%;max-width:360px;">
-    <div style="font-family:'Merriweather',serif;font-size:13px;color:#9b8f82;margin-bottom:20px;text-align:center;">We sent a 6-digit code to<br/><strong id="authEmailDisplay" style="color:#3d2e26;font-style:normal;"></strong></div>
-    <input type="text" id="authOtp" placeholder="Enter 6-digit code" maxlength="6" inputmode="numeric"
-      style="width:100%;padding:14px 16px;border:1.5px solid rgba(61,46,38,0.15);border-radius:12px;font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:700;color:#3d2e26;background:#f5f0e8;outline:none;margin-bottom:12px;text-align:center;letter-spacing:0.3em;"
-      onkeydown="if(event.key==='Enter')verifyOtp()"/>
-    <button onclick="verifyOtp()" style="width:100%;padding:14px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:12px;cursor:pointer;">VERIFY CODE</button>
-    <div id="authOtpError" style="color:#c97b5c;font-size:12px;margin-top:8px;text-align:center;"></div>
-    <button onclick="showAuthStep('email')" style="display:block;margin:12px auto 0;background:none;border:none;cursor:pointer;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;color:#9b8f82;">← Use a different email</button>
+  <!-- Step 2: Sent confirmation -->
+  <div id="authStepOtp" style="display:none;width:100%;max-width:360px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:16px;">✉️</div>
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;color:#3d2e26;margin-bottom:8px;">Check your email</div>
+    <div style="font-family:'Merriweather',serif;font-size:13px;color:#9b8f82;line-height:1.7;margin-bottom:24px;">We sent a sign-in link to<br/><strong id="authEmailDisplay" style="color:#3d2e26;font-style:normal;"></strong><br/>Tap the link to sign in.</div>
+    <button onclick="showAuthStep('email')" style="background:none;border:none;cursor:pointer;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;color:#9b8f82;">← Use a different email</button>
   </div>
 </div>
 
@@ -3519,6 +3516,42 @@ async function migrateDeviceTrips(userId) {
     });
   } catch(e) { console.warn('[auth] migrate trips failed:', e.message); }
 }
+
+// ── MAGIC LINK HANDLER ───────────────────────────────────
+// When user taps magic link in email, they land back here with token in URL hash
+(async function handleMagicLink() {
+  const hash = window.location.hash;
+  if (!hash.includes('access_token')) return;
+
+  const params = new URLSearchParams(hash.replace('#', ''));
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  const type = params.get('type');
+
+  if (!accessToken) return;
+
+  // Clean URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  try {
+    // Get user info using access token
+    const res = await fetch('/.netlify/functions/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getUser', accessToken })
+    });
+    const data = await res.json();
+    if (data.user) {
+      currentUser = data.user;
+      authSession = { access_token: accessToken, refresh_token: refreshToken, user: data.user };
+      localStorage.setItem('bh_session', JSON.stringify(authSession));
+      migrateDeviceTrips(currentUser.id);
+      updateAuthUI();
+      closeAuthScreen();
+      showToastMsg('Welcome! You\'re now signed in.');
+    }
+  } catch(e) { console.warn('[auth] magic link handler:', e.message); }
+})();
 
 // ── SUPABASE HELPER ──────────────────────────────────────
 const deviceId = localStorage.getItem('bh_device_id') || (() => {
