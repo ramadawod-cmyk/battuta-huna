@@ -43,27 +43,36 @@ exports.handler = async function(event) {
   const deviceIdHeader = event.headers['x-device-id'];
 
   try {
-    // ── SEND OTP ─────────────────────────────────────────
+    // ── SEND MAGIC LINK ───────────────────────────────────
     if (action === 'sendOtp') {
-      const res = await supabaseRequest('/auth/v1/otp', 'POST', {
+      const res = await supabaseRequest('/auth/v1/magiclink', 'POST', {
         email,
         options: { shouldCreateUser: true }
       });
       if (res.status !== 200 && res.status !== 204) {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: res.body?.msg || 'Failed to send OTP' }) };
+        return { statusCode: 400, headers, body: JSON.stringify({ error: res.body?.msg || res.body?.error_description || 'Failed to send link' }) };
       }
       return { statusCode: 200, headers, body: JSON.stringify({ sent: true }) };
     }
 
-    // ── VERIFY OTP ───────────────────────────────────────
+    // ── EXCHANGE TOKEN (magic link callback) ─────────────
     if (action === 'verifyOtp') {
       const res = await supabaseRequest('/auth/v1/verify', 'POST', {
-        email, token, type: 'email'
+        email, token, type: 'magiclink'
       });
       if (res.status !== 200 || !res.body?.access_token) {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid or expired code' }) };
+        const errMsg = res.body?.error_description || res.body?.msg || res.body?.message || 'Invalid or expired link';
+        return { statusCode: 400, headers, body: JSON.stringify({ error: errMsg }) };
       }
       return { statusCode: 200, headers, body: JSON.stringify({ session: res.body }) };
+    }
+
+    // ── GET USER FROM TOKEN ───────────────────────────────
+    if (action === 'getUser') {
+      const { accessToken } = JSON.parse(event.body || '{}');
+      const res = await supabaseRequest('/auth/v1/user', 'GET', null, accessToken);
+      if (res.status !== 200) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid token' }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ user: res.body }) };
     }
 
     // ── SIGN OUT ─────────────────────────────────────────
