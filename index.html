@@ -1749,6 +1749,12 @@
 
     <!-- SETTINGS VIEW -->
     <div id="settings-view" style="display:none">
+      <div class="section-label">Account</div>
+      <div class="settings-section">
+        <div class="settings-title">Your account</div>
+        <div id="settingsUserInfo"></div>
+      </div>
+
       <div class="section-label">Preferences</div>
 
       <div class="settings-section">
@@ -1898,6 +1904,33 @@
     </div>
 
     <button class="details-find-btn" id="detailsFindBtn" onclick="submitDetailsSheet()">FIND PLACES</button>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" style="display:none;position:fixed;inset:0;background:#ffffff;z-index:150;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;">
+  <button onclick="closeAuthScreen()" style="position:absolute;top:20px;left:20px;background:none;border:none;cursor:pointer;color:#9b8f82;font-size:22px;">✕</button>
+
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="margin-bottom:20px;"><circle cx="24" cy="24" r="24" fill="#6f8b6d"/><circle cx="24" cy="16" r="7" stroke="#f5f0e8" stroke-width="2" fill="none"/><path d="M8 40c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="#f5f0e8" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+
+  <div id="authTitle" style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:700;color:#3d2e26;margin-bottom:8px;text-align:center;">Save your trip</div>
+  <div id="authSub" style="font-family:'Merriweather',serif;font-style:italic;font-size:13px;color:#9b8f82;margin-bottom:32px;text-align:center;line-height:1.6;">Create a free account to keep your itinerary<br/>and access it from any device.</div>
+
+  <!-- Step 1: Email -->
+  <div id="authStepEmail" style="width:100%;max-width:360px;">
+    <input type="email" id="authEmail" placeholder="Your email address"
+      style="width:100%;padding:14px 16px;border:1.5px solid rgba(61,46,38,0.15);border-radius:12px;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;color:#3d2e26;background:#f5f0e8;outline:none;margin-bottom:12px;"
+      onkeydown="if(event.key==='Enter')sendOtp()"/>
+    <button onclick="sendOtp()" style="width:100%;padding:14px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:12px;cursor:pointer;">SEND ME A LINK</button>
+    <div id="authEmailError" style="color:#c97b5c;font-size:12px;margin-top:8px;text-align:center;"></div>
+  </div>
+
+  <!-- Step 2: Sent confirmation -->
+  <div id="authStepOtp" style="display:none;width:100%;max-width:360px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:16px;">✉️</div>
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;color:#3d2e26;margin-bottom:8px;">Check your email</div>
+    <div style="font-family:'Merriweather',serif;font-size:13px;color:#9b8f82;line-height:1.7;margin-bottom:24px;">We sent a sign-in link to<br/><strong id="authEmailDisplay" style="color:#3d2e26;font-style:normal;"></strong><br/>Tap the link to sign in.</div>
+    <button onclick="showAuthStep('email')" style="background:none;border:none;cursor:pointer;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;color:#9b8f82;">← Use a different email</button>
   </div>
 </div>
 
@@ -2377,13 +2410,15 @@ async function startExploration() {
         watchId = navigator.geolocation.watchPosition(onPositionUpdate, onPositionError,
           { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 });
         // Detect city and load POIs — loading screen shows throughout
-        await autoDetectCityFromPos(pos.coords.latitude, pos.coords.longitude);
-        // Ensure hero image is fetched before showing explorer
-        if (currentCity) await fetchCityHero(currentCity);
-        // Now show the explorer
+        try {
+          await autoDetectCityFromPos(pos.coords.latitude, pos.coords.longitude);
+          if (currentCity) await fetchCityHero(currentCity);
+        } catch(e) {
+          console.warn('[startExploration] error:', e.message);
+        }
+        // Always hide loading screen and show explorer
         document.getElementById('city-loading').style.display = 'none';
         showView('explorer');
-        // Render nearby sites
         if (currentPos) checkNearby();
       },
       (err) => {
@@ -3322,6 +3357,9 @@ async function init() {
     fetchCityHero(currentCity);
     loadSitesFromSupabase();
   }
+
+  // Update auth UI based on session state
+  updateAuthUI();
 }
 
 // ══════════════════════════════════════════════
@@ -3335,6 +3373,187 @@ let planState = {
   itinerary: null, suggestedPlaces: [], selectedPlaces: new Set(), selectedPlacesData: []
 };
 let savedTrips = [];
+
+// ── AUTH ─────────────────────────────────────────────────
+const SUPABASE_URL = ''; // filled from env via proxy
+const SUPABASE_ANON_KEY = ''; // filled from env via proxy
+
+let currentUser = null;
+let authSession = null;
+
+// Restore session from localStorage
+(function restoreSession() {
+  try {
+    const stored = localStorage.getItem('bh_session');
+    if (stored) {
+      authSession = JSON.parse(stored);
+      currentUser = authSession?.user || null;
+    }
+  } catch(e) {}
+})();
+
+function isLoggedIn() { return !!currentUser; }
+
+async function sendOtp() {
+  const email = document.getElementById('authEmail').value.trim();
+  const errEl = document.getElementById('authEmailError');
+  errEl.textContent = '';
+  if (!email || !email.includes('@')) { errEl.textContent = 'Please enter a valid email.'; return; }
+
+  const btn = event.target;
+  btn.textContent = 'Sending...'; btn.disabled = true;
+
+  try {
+    const res = await fetch('/.netlify/functions/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sendOtp', email })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('authEmailDisplay').textContent = email;
+    showAuthStep('otp');
+  } catch(e) {
+    errEl.textContent = e.message || 'Failed to send code. Try again.';
+  } finally {
+    btn.textContent = 'CONTINUE WITH EMAIL'; btn.disabled = false;
+  }
+}
+
+async function verifyOtp() {
+  const email = document.getElementById('authEmail').value.trim();
+  const token = document.getElementById('authOtp').value.trim();
+  const errEl = document.getElementById('authOtpError');
+  errEl.textContent = '';
+  if (token.length < 6) { errEl.textContent = 'Enter the 6-digit code.'; return; }
+
+  const btn = event.target;
+  btn.textContent = 'Verifying...'; btn.disabled = true;
+
+  try {
+    const res = await fetch('/.netlify/functions/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verifyOtp', email, token })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    // Save session
+    authSession = data.session;
+    currentUser = data.session?.user || null;
+    localStorage.setItem('bh_session', JSON.stringify(data.session));
+
+    // Migrate device trips to user account
+    if (currentUser) migrateDeviceTrips(currentUser.id);
+
+    closeAuthScreen();
+    updateAuthUI();
+    showToastMsg('Welcome! Your trip has been saved to your account.');
+
+    // Navigate to My Trips
+    showView('trips-view');
+  } catch(e) {
+    errEl.textContent = e.message || 'Invalid code. Please try again.';
+  } finally {
+    btn.textContent = 'VERIFY CODE'; btn.disabled = false;
+  }
+}
+
+function showAuthStep(step) {
+  document.getElementById('authStepEmail').style.display = step === 'email' ? 'block' : 'none';
+  document.getElementById('authStepOtp').style.display = step === 'otp' ? 'block' : 'none';
+}
+
+function openAuthScreen(title, sub) {
+  document.getElementById('authTitle').textContent = title || 'Save your trip';
+  document.getElementById('authSub').innerHTML = sub || 'Create a free account to keep your itinerary<br/>and access it from any device.';
+  showAuthStep('email');
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authOtp').value = '';
+  document.getElementById('authEmailError').textContent = '';
+  document.getElementById('authOtpError').textContent = '';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+function closeAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'none';
+}
+
+function updateAuthUI() {
+  const settingsUser = document.getElementById('settingsUserInfo');
+  if (settingsUser) {
+    if (currentUser) {
+      settingsUser.innerHTML = `
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;color:#3d2e26;">${currentUser.email}</div>
+        <button onclick="signOut()" style="margin-top:8px;padding:7px 14px;background:none;border:1.5px solid rgba(61,46,38,0.15);border-radius:8px;font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:#9b8f82;cursor:pointer;">Sign out</button>`;
+    } else {
+      settingsUser.innerHTML = `
+        <button onclick="openAuthScreen('Sign in to Battuta','Access your trips from any device.')" style="padding:10px 20px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;border:none;border-radius:10px;cursor:pointer;">SIGN IN</button>`;
+    }
+  }
+}
+
+async function signOut() {
+  await fetch('/.netlify/functions/auth-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'signOut', token: authSession?.access_token })
+  });
+  currentUser = null; authSession = null;
+  localStorage.removeItem('bh_session');
+  updateAuthUI();
+  savedTrips = [];
+  renderTrips();
+  showToastMsg('Signed out.');
+}
+
+async function migrateDeviceTrips(userId) {
+  // Move any trips saved with device ID to the new user account
+  try {
+    await fetch('/.netlify/functions/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
+      body: JSON.stringify({ action: 'migrateTrips', userId, deviceId })
+    });
+  } catch(e) { console.warn('[auth] migrate trips failed:', e.message); }
+}
+
+// ── MAGIC LINK HANDLER ───────────────────────────────────
+// When user taps magic link in email, they land back here with token in URL hash
+(async function handleMagicLink() {
+  const hash = window.location.hash;
+  if (!hash.includes('access_token')) return;
+
+  const params = new URLSearchParams(hash.replace('#', ''));
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  const type = params.get('type');
+
+  if (!accessToken) return;
+
+  // Clean URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  try {
+    // Get user info using access token
+    const res = await fetch('/.netlify/functions/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getUser', accessToken })
+    });
+    const data = await res.json();
+    if (data.user) {
+      currentUser = data.user;
+      authSession = { access_token: accessToken, refresh_token: refreshToken, user: data.user };
+      localStorage.setItem('bh_session', JSON.stringify(authSession));
+      migrateDeviceTrips(currentUser.id);
+      updateAuthUI();
+      closeAuthScreen();
+      showToastMsg('Welcome! You\'re now signed in.');
+    }
+  } catch(e) { console.warn('[auth] magic link handler:', e.message); }
+})();
 
 // ── SUPABASE HELPER ──────────────────────────────────────
 const deviceId = localStorage.getItem('bh_device_id') || (() => {
@@ -3662,7 +3881,8 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${ta
         duration: planState.duration || null,
         group_type: planState.groupType || null,
         pace: planState.pace || null,
-        days: []
+        days: [],
+        auth_user_id: currentUser?.id || null
       }});
       console.log('[createDraftTrip] result:', JSON.stringify(result)?.slice(0, 200));
       const saved = Array.isArray(result) ? result[0] : result;
@@ -4066,7 +4286,8 @@ async function saveTrip(itinerary) {
       group_type: cleaned.groupType || null,
       pace: cleaned.pace || null,
       days: cleaned.days,
-      status: 'ready'
+      status: 'ready',
+      auth_user_id: currentUser?.id || null
     }}).then(result => {
       const saved = Array.isArray(result) ? result[0] : result;
       cleaned.id = saved?.id || cleaned.id;
@@ -4075,7 +4296,15 @@ async function saveTrip(itinerary) {
     });
   }
 
-  agentSay('Your trip has been saved! You can find it in My Trips.');
+  agentSay('Your trip has been saved! ' + (isLoggedIn() ? 'You can find it in My Trips.' : 'Sign in to access it from any device.'));
+
+  // Prompt sign-in if not logged in
+  if (!isLoggedIn()) {
+    setTimeout(() => openAuthScreen(
+      'Save your trip permanently',
+      'Create a free account to keep your itinerary<br/>and access it from any device.'
+    ), 1500);
+  }
 
   // Generate tips in background (city tips + weather tip)
   generateAndSaveTips(cleaned, cityId);
@@ -4100,7 +4329,7 @@ async function renderTrips() {
   el.innerHTML = '<div class="trips-empty">Loading trips...</div>';
 
   // Try Supabase first, fall back to localStorage
-  const result = await db('getTrips');
+  const result = await db('getTrips', { authUserId: currentUser?.id || null });
   if (result && Array.isArray(result) && result.length > 0) {
     savedTrips = result.map(t => ({
       id: t.id,

@@ -70,9 +70,9 @@ exports.handler = async function(event) {
       const { siteId, name, cityId, longDescription } = data;
       let res;
       if (name && cityId) {
-        res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { long_description: longDescription });
+        res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { long_description: longDescription, review_status: 'ai_complete' });
       } else {
-        res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, { long_description: longDescription });
+        res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, { long_description: longDescription, review_status: 'ai_complete' });
       }
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
@@ -80,7 +80,7 @@ exports.handler = async function(event) {
     // ── SAVE IMAGE URL ───────────────────────────────
     if (action === 'saveImageUrl') {
       const { name, cityId, imageUrl } = data;
-      const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { image_url: imageUrl });
+      const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { image_url: imageUrl, review_status: 'ai_complete' });
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 
@@ -173,7 +173,16 @@ exports.handler = async function(event) {
 
     // ── GET TRIPS ────────────────────────────────────
     if (action === 'getTrips') {
-      const res = await request('GET', `/rest/v1/trips?user_id=eq.${deviceId}&select=*&order=created_at.desc`);
+      const authUserId = data.authUserId;
+      let query;
+      if (authUserId) {
+        // Logged in — fetch by auth_user_id
+        query = `/rest/v1/trips?auth_user_id=eq.${authUserId}&select=*&order=created_at.desc`;
+      } else {
+        // Guest — fetch by device ID
+        query = `/rest/v1/trips?user_id=eq.${deviceId}&select=*&order=created_at.desc`;
+      }
+      const res = await request('GET', query);
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
