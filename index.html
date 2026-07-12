@@ -1670,7 +1670,7 @@
       <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;color:#3d2e26;margin-bottom:12px;">Location access needed</div>
       <div style="font-family:'Merriweather',serif;font-size:13px;color:#9b8f82;line-height:1.7;margin-bottom:32px;">Battuta Huna needs your location to find cultural sites nearby. Please enable location access in your device settings.</div>
       <button onclick="openLocationSettings()" style="display:block;width:100%;max-width:280px;padding:14px;background:#6f8b6d;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:12px;cursor:pointer;margin-bottom:12px;">OPEN LOCATION SETTINGS</button>
-      <button onclick="startExploration()" style="display:block;width:100%;max-width:280px;padding:14px;background:none;color:#9b8f82;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;border:1.5px solid rgba(61,46,38,0.15);border-radius:12px;cursor:pointer;">Continue without location</button>
+      <button onclick="continueWithoutLocation()" style="display:block;width:100%;max-width:280px;padding:14px;background:none;color:#9b8f82;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;border:1.5px solid rgba(61,46,38,0.15);border-radius:12px;cursor:pointer;">Continue without location</button>
     </div>
     <div id="trip-planner-view" style="display:none;flex-direction:column;position:fixed;inset:0;background:#ffffff;z-index:100;overflow:hidden;">
 
@@ -2380,6 +2380,16 @@ function formatDist(m) {
 // ══════════════════════════════════════════════
 //  EXPLORATION CONTROLS
 // ══════════════════════════════════════════════
+function continueWithoutLocation() {
+  document.getElementById('location-prompt').style.display = 'none';
+  document.getElementById('city-loading').style.display = 'none';
+  isExploring = true;
+  document.getElementById('splash').style.display = 'none';
+  showView('explorer');
+  // Show plan tab since they can't explore nearby without location
+  showView('plan-view');
+}
+
 async function startExploration() {
   if ('Notification' in window && Notification.permission === 'default') {
     const perm = await Notification.requestPermission();
