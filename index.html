@@ -2410,13 +2410,15 @@ async function startExploration() {
         watchId = navigator.geolocation.watchPosition(onPositionUpdate, onPositionError,
           { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 });
         // Detect city and load POIs — loading screen shows throughout
-        await autoDetectCityFromPos(pos.coords.latitude, pos.coords.longitude);
-        // Ensure hero image is fetched before showing explorer
-        if (currentCity) await fetchCityHero(currentCity);
-        // Now show the explorer
+        try {
+          await autoDetectCityFromPos(pos.coords.latitude, pos.coords.longitude);
+          if (currentCity) await fetchCityHero(currentCity);
+        } catch(e) {
+          console.warn('[startExploration] error:', e.message);
+        }
+        // Always hide loading screen and show explorer
         document.getElementById('city-loading').style.display = 'none';
         showView('explorer');
-        // Render nearby sites
         if (currentPos) checkNearby();
       },
       (err) => {
