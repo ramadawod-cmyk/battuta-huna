@@ -3640,7 +3640,10 @@ async function showPlaceSelection(tripInfo) {
     CITY_DATA[k].name.toLowerCase() === tripInfo.city.toLowerCase()
   );
   const existingPois = cityKey ? CITY_DATA[cityKey].pois : [];
-  const targetCount = Math.min(16, Math.max(12, tripInfo.duration * 3));
+  const slotsPerDay = tripInfo.pace === 'strict' ? 5 : 4;
+  const totalSlots = tripInfo.duration * slotsPerDay;
+  // Suggest at least one unique place per itinerary slot so the build step never has to repeat a site to fill days.
+  const targetCount = Math.min(30, Math.max(totalSlots, 8));
 
   const suggestPrompt = `You are a travel expert. Suggest ${targetCount} diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
 
@@ -3814,7 +3817,12 @@ function updateTpCount() {
 function triggerBuildItinerary() {
   const selected = [...planState.selectedPlaces].map(i => planState.suggestedPlaces[i]);
   if (!selected.length) return;
-  const capped = selected.slice(0, 9);
+  // Cap must cover every itinerary slot (duration x slots/day), otherwise the build step
+  // is forced to reuse places across days to fill the schedule.
+  const slotsPerDay = planState.pace === 'strict' ? 5 : 4;
+  const totalSlots = planState.duration * slotsPerDay;
+  const cap = Math.min(30, Math.max(totalSlots, 9));
+  const capped = selected.slice(0, cap);
   planState.selectedPlacesData = capped;
   planState.stage = 'building';
 
@@ -3833,10 +3841,12 @@ async function buildItineraryFromPlaces() {
   agentTyping();
   const { city, dates, duration, groupType, pace, selectedPlacesData } = planState;
   const placesJson = JSON.stringify(selectedPlacesData.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
+  const slotsPerDay = pace === 'strict' ? 5 : 4;
+  const totalSlots = duration * slotsPerDay;
 
-  const buildPrompt = `Build a day-by-day itinerary using ONLY these places across ${duration} days. Rules: use ONLY provided places, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words.
+  const buildPrompt = `Build a day-by-day itinerary using ONLY these places across ${duration} days (${slotsPerDay} slots/day, ${totalSlots} slots total). Rules: use ONLY provided places, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words. Each place must appear ONLY ONCE across the entire itinerary — never schedule the same place on two different days — UNLESS a single site is genuinely large enough to need a second visit (e.g. a sprawling museum complex or ancient city), in which case it may appear on at most 2 consecutive days and the description must say why. If there are fewer places than total slots, leave later days with fewer stops rather than repeating a place.
 
-Places: ${placesJson}
+Places (${selectedPlacesData.length} unique): ${placesJson}
 
 Output ONLY valid JSON in [ITINERARY] tags — no other text:
 [ITINERARY]{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}]}[/ITINERARY]`;
@@ -3863,6 +3873,23 @@ Output ONLY valid JSON in [ITINERARY] tags — no other text:
     if (itinMatch) {
       try {
         const itinerary = JSON.parse(itinMatch[1].trim());
+
+        // Safety net: the model can still repeat a place despite instructions. Allow a place to
+        // reappear only on the immediately following day (a genuine 2-day site), drop any other repeat.
+        const placeCount = {}, placeLastDay = {};
+        itinerary.days.forEach(day => {
+          day.slots = day.slots.filter(slot => {
+            const count = placeCount[slot.name] || 0;
+            const consecutive = placeLastDay[slot.name] === day.day - 1;
+            if (count === 0 || (count === 1 && consecutive)) {
+              placeCount[slot.name] = count + 1;
+              placeLastDay[slot.name] = day.day;
+              return true;
+            }
+            return false;
+          });
+        });
+
         itinerary.days.forEach(day => {
           day.slots.forEach(slot => {
             const original = selectedPlacesData.find(p => p.name === slot.name);
