@@ -3643,7 +3643,7 @@ async function showPlaceSelection(tripInfo) {
   const slotsPerDay = tripInfo.pace === 'strict' ? 5 : 4;
   const totalSlots = tripInfo.duration * slotsPerDay;
   // Suggest at least one unique place per itinerary slot so the build step never has to repeat a site to fill days.
-  const targetCount = Math.min(30, Math.max(totalSlots, 8));
+  const targetCount = Math.min(40, Math.max(totalSlots, 8));
 
   // A single call generating more than ~14 detailed places risks exceeding the Netlify
   // function's 30s timeout on longer trips, so split large requests into parallel chunks.
@@ -3835,7 +3835,7 @@ function triggerBuildItinerary() {
   // is forced to reuse places across days to fill the schedule.
   const slotsPerDay = planState.pace === 'strict' ? 5 : 4;
   const totalSlots = planState.duration * slotsPerDay;
-  const cap = Math.min(30, Math.max(totalSlots, 9));
+  const cap = Math.min(40, Math.max(totalSlots, 9));
   const capped = selected.slice(0, cap);
   planState.selectedPlacesData = capped;
   planState.stage = 'building';
@@ -3856,47 +3856,44 @@ async function buildItineraryFromPlaces() {
   const { city, dates, duration, groupType, pace, selectedPlacesData } = planState;
   const slotsPerDay = pace === 'strict' ? 5 : 4;
 
-  // A single call generating a full multi-day itinerary risks exceeding the Netlify function's
-  // 30s timeout on longer trips, so split into parallel day-range chunks (~15 slots/call, safe).
-  const CHUNK_DAYS = Math.max(1, Math.floor(15 / slotsPerDay));
-  const dayRanges = [];
-  for (let start = 1; start <= duration; start += CHUNK_DAYS) {
-    dayRanges.push({ startDay: start, endDay: Math.min(start + CHUNK_DAYS - 1, duration) });
-  }
-
-  // Allocate places proportionally across chunks (not front-loaded) so if there are fewer
-  // places than total slots, every day gets thinner rather than later days going empty.
+  // One AI call per day, run in parallel: each call is small and fast (well under Netlify's 30s
+  // function timeout even for long trips), and it makes cross-day duplicates and day-mislabeling
+  // structurally impossible — every day gets its own disjoint place pool and the client (not the
+  // model) assigns the day number.
   const supply = selectedPlacesData.length;
   const totalDemand = duration * slotsPerDay;
   const ratio = Math.min(1, supply / totalDemand);
 
   let placeCursor = 0;
-  const chunks = dayRanges.map(({ startDay, endDay }, i) => {
-    const isLast = i === dayRanges.length - 1;
-    const idealEnd = isLast ? supply : Math.round(endDay * slotsPerDay * ratio);
-    const places = selectedPlacesData.slice(placeCursor, Math.max(placeCursor, Math.min(supply, idealEnd)));
+  const dayPlans = [];
+  for (let day = 1; day <= duration; day++) {
+    const isLast = day === duration;
+    const idealEnd = isLast ? supply : Math.round(day * slotsPerDay * ratio);
+    const dayCap = placeCursor + slotsPerDay;
+    const end = Math.max(placeCursor, Math.min(supply, idealEnd, dayCap));
+    const places = selectedPlacesData.slice(placeCursor, end);
     placeCursor += places.length;
-    return { startDay, endDay, places };
-  }).filter(c => c.places.length > 0);
+    dayPlans.push({ day, places });
+  }
 
-  const buildChunkPrompt = ({ startDay, endDay, places }) => {
-    const daysInChunk = endDay - startDay + 1;
-    const chunkSlots = daysInChunk * slotsPerDay;
+  const buildDayPrompt = ({ day, places }) => {
     const placesJson = JSON.stringify(places.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
-    return `Build days ${startDay}-${endDay} of a day-by-day itinerary using ONLY these places (${daysInChunk} days, ${slotsPerDay} slots/day, ${chunkSlots} slots total). Rules: use ONLY provided places, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words. Each place must appear ONLY ONCE across these days — never repeat a place — UNLESS a single site is genuinely large enough to need a second visit (e.g. a sprawling museum complex or ancient city), in which case it may appear on at most 2 consecutive days and the description must say why. If there are fewer places than total slots, leave later days with fewer stops rather than repeating a place. Use the exact day numbers ${startDay} through ${endDay} — do not restart numbering at 1.
+    return `Build day ${day} of a ${duration}-day trip using ONLY these places. Use every place provided, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words.
 
-Places (${places.length} unique): ${placesJson}
+Places: ${placesJson}
 
 Output ONLY valid JSON in [ITINERARY] tags — no other text:
-[ITINERARY]{"days":[{"day":${startDay},"label":"Day ${startDay} — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}]}[/ITINERARY]`;
+[ITINERARY]{"label":"Day ${day} — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}[/ITINERARY]`;
   };
 
+  const callableDays = dayPlans.filter(dp => dp.places.length > 0);
+
   try {
-    const chunkResults = await Promise.allSettled(chunks.map(chunk =>
+    const results = await Promise.allSettled(callableDays.map(dp =>
       fetch('/.netlify/functions/plan-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system: buildChunkPrompt(chunk), messages: [{ role: 'user', content: `Build days ${chunk.startDay}-${chunk.endDay} now.` }] })
+        body: JSON.stringify({ system: buildDayPrompt(dp), messages: [{ role: 'user', content: `Build day ${dp.day} now.` }] })
       }).then(r => r.json().then(data => {
         if (!r.ok || data.error) throw new Error(JSON.stringify(data));
         return data;
@@ -3906,47 +3903,48 @@ Output ONLY valid JSON in [ITINERARY] tags — no other text:
     removeTyping();
 
     let anyOverloaded = false;
-    const allDays = [];
-    chunkResults.forEach(result => {
+    const dayResults = {};
+    results.forEach((result, i) => {
+      const { day } = callableDays[i];
       if (result.status !== 'fulfilled') {
-        console.error('[itinerary] chunk API error:', result.reason);
+        console.error(`[itinerary] day ${day} API error:`, result.reason);
         if (String(result.reason).includes('overloaded_error')) anyOverloaded = true;
         return;
       }
       const agentText = result.value.content?.[0]?.text || '';
       const itinMatch = agentText.match(/\[ITINERARY\]([\s\S]*?)\[\/ITINERARY\]/);
-      if (!itinMatch) return;
+      if (!itinMatch) { console.error(`[itinerary] day ${day} response cut off`); return; }
       try {
-        const chunkItin = JSON.parse(itinMatch[1].trim());
-        allDays.push(...(chunkItin.days || []));
+        const parsed = JSON.parse(itinMatch[1].trim());
+        dayResults[day] = { label: parsed.label || `Day ${day}`, slots: parsed.slots || [] };
       } catch(e) {
-        console.error('[itinerary] chunk JSON parse error:', e.message);
+        console.error(`[itinerary] day ${day} JSON parse error:`, e.message);
       }
     });
 
-    if (!allDays.length) {
+    if (!Object.keys(dayResults).length) {
       if (anyOverloaded) { agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
       planState.stage = 'building';
       agentSay("I had trouble building the itinerary. Type 'retry' to try again or 'New Plan' to start over.");
       return;
     }
 
-    allDays.sort((a, b) => a.day - b.day);
+    // Day number and order come from dayPlans (the client), never from the model — every day
+    // 1..duration is represented, and a day with no allocated places shows as a free day.
+    const allDays = dayPlans.map(({ day }) => {
+      const r = dayResults[day];
+      return r ? { day, label: r.label, slots: r.slots } : { day, label: `Day ${day} — Free day`, slots: [] };
+    });
+
     const itinerary = { city, dates, duration, groupType, pace, days: allDays };
 
-    // Safety net: the model can still repeat a place despite instructions. Allow a place to
-    // reappear only on the immediately following day (a genuine 2-day site), drop any other repeat.
-    const placeCount = {}, placeLastDay = {};
+    // Safety net: drop any place the model repeated within a single day's own slots.
     itinerary.days.forEach(day => {
+      const seen = new Set();
       day.slots = day.slots.filter(slot => {
-        const count = placeCount[slot.name] || 0;
-        const consecutive = placeLastDay[slot.name] === day.day - 1;
-        if (count === 0 || (count === 1 && consecutive)) {
-          placeCount[slot.name] = count + 1;
-          placeLastDay[slot.name] = day.day;
-          return true;
-        }
-        return false;
+        if (seen.has(slot.name)) return false;
+        seen.add(slot.name);
+        return true;
       });
     });
 
