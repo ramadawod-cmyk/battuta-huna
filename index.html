@@ -3645,41 +3645,55 @@ async function showPlaceSelection(tripInfo) {
   // Suggest at least one unique place per itinerary slot so the build step never has to repeat a site to fill days.
   const targetCount = Math.min(30, Math.max(totalSlots, 8));
 
-  const suggestPrompt = `You are a travel expert. Suggest ${targetCount} diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
+  // A single call generating more than ~14 detailed places risks exceeding the Netlify
+  // function's 30s timeout on longer trips, so split large requests into parallel chunks.
+  const CHUNK_SIZE = 14;
+  const chunkCounts = [];
+  for (let remaining = targetCount; remaining > 0; remaining -= CHUNK_SIZE) {
+    chunkCounts.push(Math.min(CHUNK_SIZE, remaining));
+  }
+
+  const buildSuggestPrompt = (count) => `You are a travel expert. Suggest ${count} diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
 
 ${existingPois.length > 0 ? 'Our database already has: ' + existingPois.map(p => p.name).join(', ') + '. Include the most relevant ones and add others not in this list.' : ''}
 
 Return ONLY a JSON array, no other text:
 [{"name":"Place Name","category":"Museum","description":"One sentence under 12 words.","tags":["History"],"bestTime":"Morning","lat":30.0444,"lng":31.2357,"mapUrl":"https://maps.google.com/?q=Place+Name+${tripInfo.city}"}]
 
-bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${targetCount} items.`;
+bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${count} items.`;
 
   try {
-    const response = await fetch('/.netlify/functions/plan-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system: suggestPrompt,
-        messages: [{ role: 'user', content: 'Suggest ' + targetCount + ' places for ' + tripInfo.city }]
-      })
-    });
+    const chunkResults = await Promise.allSettled(chunkCounts.map(count =>
+      fetch('/.netlify/functions/plan-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: buildSuggestPrompt(count),
+          messages: [{ role: 'user', content: 'Suggest ' + count + ' places for ' + tripInfo.city }]
+        })
+      }).then(r => r.json().then(data => {
+        if (!r.ok || data.error) throw new Error(JSON.stringify(data));
+        return data;
+      }))
+    ));
 
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      console.error('[places] API error:', JSON.stringify(data));
-      showTpError('Could not load places. Please go back and try again.');
-      return;
-    }
-
-    const rawText = data.content?.[0]?.text || '[]';
-    const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+    const seenNames = new Set();
     let places = [];
-    try {
-      places = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-    } catch(e) {
-      console.error('[places] JSON parse error:', e.message);
-    }
+    chunkResults.forEach(result => {
+      if (result.status !== 'fulfilled') { console.error('[places] chunk API error:', result.reason); return; }
+      const rawText = result.value.content?.[0]?.text || '[]';
+      const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+      let chunkPlaces = [];
+      try {
+        chunkPlaces = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+      } catch(e) {
+        console.error('[places] JSON parse error:', e.message);
+      }
+      chunkPlaces.forEach(p => {
+        const key = (p.name || '').trim().toLowerCase();
+        if (key && !seenNames.has(key)) { seenNames.add(key); places.push(p); }
+      });
+    });
 
     if (!places.length) {
       showTpError('Could not load places. Please go back and try again.');
@@ -3840,79 +3854,118 @@ function triggerBuildItinerary() {
 async function buildItineraryFromPlaces() {
   agentTyping();
   const { city, dates, duration, groupType, pace, selectedPlacesData } = planState;
-  const placesJson = JSON.stringify(selectedPlacesData.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
   const slotsPerDay = pace === 'strict' ? 5 : 4;
-  const totalSlots = duration * slotsPerDay;
 
-  const buildPrompt = `Build a day-by-day itinerary using ONLY these places across ${duration} days (${slotsPerDay} slots/day, ${totalSlots} slots total). Rules: use ONLY provided places, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words. Each place must appear ONLY ONCE across the entire itinerary — never schedule the same place on two different days — UNLESS a single site is genuinely large enough to need a second visit (e.g. a sprawling museum complex or ancient city), in which case it may appear on at most 2 consecutive days and the description must say why. If there are fewer places than total slots, leave later days with fewer stops rather than repeating a place.
+  // A single call generating a full multi-day itinerary risks exceeding the Netlify function's
+  // 30s timeout on longer trips, so split into parallel day-range chunks (~15 slots/call, safe).
+  const CHUNK_DAYS = Math.max(1, Math.floor(15 / slotsPerDay));
+  const dayRanges = [];
+  for (let start = 1; start <= duration; start += CHUNK_DAYS) {
+    dayRanges.push({ startDay: start, endDay: Math.min(start + CHUNK_DAYS - 1, duration) });
+  }
 
-Places (${selectedPlacesData.length} unique): ${placesJson}
+  // Allocate places proportionally across chunks (not front-loaded) so if there are fewer
+  // places than total slots, every day gets thinner rather than later days going empty.
+  const supply = selectedPlacesData.length;
+  const totalDemand = duration * slotsPerDay;
+  const ratio = Math.min(1, supply / totalDemand);
+
+  let placeCursor = 0;
+  const chunks = dayRanges.map(({ startDay, endDay }, i) => {
+    const isLast = i === dayRanges.length - 1;
+    const idealEnd = isLast ? supply : Math.round(endDay * slotsPerDay * ratio);
+    const places = selectedPlacesData.slice(placeCursor, Math.max(placeCursor, Math.min(supply, idealEnd)));
+    placeCursor += places.length;
+    return { startDay, endDay, places };
+  }).filter(c => c.places.length > 0);
+
+  const buildChunkPrompt = ({ startDay, endDay, places }) => {
+    const daysInChunk = endDay - startDay + 1;
+    const chunkSlots = daysInChunk * slotsPerDay;
+    const placesJson = JSON.stringify(places.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
+    return `Build days ${startDay}-${endDay} of a day-by-day itinerary using ONLY these places (${daysInChunk} days, ${slotsPerDay} slots/day, ${chunkSlots} slots total). Rules: use ONLY provided places, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words. Each place must appear ONLY ONCE across these days — never repeat a place — UNLESS a single site is genuinely large enough to need a second visit (e.g. a sprawling museum complex or ancient city), in which case it may appear on at most 2 consecutive days and the description must say why. If there are fewer places than total slots, leave later days with fewer stops rather than repeating a place. Use the exact day numbers ${startDay} through ${endDay} — do not restart numbering at 1.
+
+Places (${places.length} unique): ${placesJson}
 
 Output ONLY valid JSON in [ITINERARY] tags — no other text:
-[ITINERARY]{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}]}[/ITINERARY]`;
+[ITINERARY]{"days":[{"day":${startDay},"label":"Day ${startDay} — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}]}[/ITINERARY]`;
+  };
 
   try {
-    const response = await fetch('/.netlify/functions/plan-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: buildPrompt, messages: [{ role: 'user', content: 'Build the itinerary now.' }] })
-    });
+    const chunkResults = await Promise.allSettled(chunks.map(chunk =>
+      fetch('/.netlify/functions/plan-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: buildChunkPrompt(chunk), messages: [{ role: 'user', content: `Build days ${chunk.startDay}-${chunk.endDay} now.` }] })
+      }).then(r => r.json().then(data => {
+        if (!r.ok || data.error) throw new Error(JSON.stringify(data));
+        return data;
+      }))
+    ));
 
-    const data = await response.json();
     removeTyping();
 
-    if (!response.ok || data.error) {
-      if (data.error?.type === 'overloaded_error') { agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
-      agentSay('Something went wrong building the itinerary. Please try again.');
+    let anyOverloaded = false;
+    const allDays = [];
+    chunkResults.forEach(result => {
+      if (result.status !== 'fulfilled') {
+        console.error('[itinerary] chunk API error:', result.reason);
+        if (String(result.reason).includes('overloaded_error')) anyOverloaded = true;
+        return;
+      }
+      const agentText = result.value.content?.[0]?.text || '';
+      const itinMatch = agentText.match(/\[ITINERARY\]([\s\S]*?)\[\/ITINERARY\]/);
+      if (!itinMatch) return;
+      try {
+        const chunkItin = JSON.parse(itinMatch[1].trim());
+        allDays.push(...(chunkItin.days || []));
+      } catch(e) {
+        console.error('[itinerary] chunk JSON parse error:', e.message);
+      }
+    });
+
+    if (!allDays.length) {
+      if (anyOverloaded) { agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
+      planState.stage = 'building';
+      agentSay("I had trouble building the itinerary. Type 'retry' to try again or 'New Plan' to start over.");
       return;
     }
 
-    const agentText = data.content?.[0]?.text || '';
-    const itinMatch = agentText.match(/\[ITINERARY\]([\s\S]*?)\[\/ITINERARY\]/);
+    allDays.sort((a, b) => a.day - b.day);
+    const itinerary = { city, dates, duration, groupType, pace, days: allDays };
 
-    if (itinMatch) {
-      try {
-        const itinerary = JSON.parse(itinMatch[1].trim());
+    // Safety net: the model can still repeat a place despite instructions. Allow a place to
+    // reappear only on the immediately following day (a genuine 2-day site), drop any other repeat.
+    const placeCount = {}, placeLastDay = {};
+    itinerary.days.forEach(day => {
+      day.slots = day.slots.filter(slot => {
+        const count = placeCount[slot.name] || 0;
+        const consecutive = placeLastDay[slot.name] === day.day - 1;
+        if (count === 0 || (count === 1 && consecutive)) {
+          placeCount[slot.name] = count + 1;
+          placeLastDay[slot.name] = day.day;
+          return true;
+        }
+        return false;
+      });
+    });
 
-        // Safety net: the model can still repeat a place despite instructions. Allow a place to
-        // reappear only on the immediately following day (a genuine 2-day site), drop any other repeat.
-        const placeCount = {}, placeLastDay = {};
-        itinerary.days.forEach(day => {
-          day.slots = day.slots.filter(slot => {
-            const count = placeCount[slot.name] || 0;
-            const consecutive = placeLastDay[slot.name] === day.day - 1;
-            if (count === 0 || (count === 1 && consecutive)) {
-              placeCount[slot.name] = count + 1;
-              placeLastDay[slot.name] = day.day;
-              return true;
-            }
-            return false;
-          });
-        });
+    itinerary.days.forEach(day => {
+      day.slots.forEach(slot => {
+        const original = selectedPlacesData.find(p => p.name === slot.name);
+        if (original) { slot.lat = original.lat || slot.lat; slot.lng = original.lng || slot.lng; slot.mapUrl = original.mapUrl || slot.mapUrl; }
+      });
+    });
 
-        itinerary.days.forEach(day => {
-          day.slots.forEach(slot => {
-            const original = selectedPlacesData.find(p => p.name === slot.name);
-            if (original) { slot.lat = original.lat || slot.lat; slot.lng = original.lng || slot.lng; slot.mapUrl = original.mapUrl || slot.mapUrl; }
-          });
-        });
-        planState.itinerary = itinerary;
-        planState.stage = 'done';
-        saveTrip(itinerary);
+    planState.itinerary = itinerary;
+    planState.stage = 'done';
+    saveTrip(itinerary);
 
-        const cta = document.createElement('div');
-        cta.style.cssText = 'margin-top:12px;';
-        cta.innerHTML = `<div style="background:#f5f0e8;border:1.5px solid rgba(111,139,109,0.4);border-radius:14px;padding:14px 16px;"><div style="font-family:Bricolage Grotesque,sans-serif;font-size:13px;font-weight:600;color:#3d2e26;margin-bottom:6px;">Trip saved to My Trips</div><div style="font-family:Merriweather,serif;font-size:12px;color:#9b8f82;margin-bottom:12px;line-height:1.5;">Your ${itinerary.duration}-day ${itinerary.city} itinerary is ready.</div><button onclick="showView('trips-view')" style="display:block;width:100%;padding:10px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">VIEW IN MY TRIPS</button></div>`;
-        document.getElementById('planMessages').appendChild(cta);
-        document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
-
-      } catch(e) {
-        agentSay("I had trouble formatting the itinerary. Please tap 'New Plan' and try again.");
-      }
-    } else {
-      planState.stage = 'building';
-      agentSay("My response was cut off. Type 'retry' to try again or 'New Plan' to start over.");
-    }
+    const cta = document.createElement('div');
+    cta.style.cssText = 'margin-top:12px;';
+    cta.innerHTML = `<div style="background:#f5f0e8;border:1.5px solid rgba(111,139,109,0.4);border-radius:14px;padding:14px 16px;"><div style="font-family:Bricolage Grotesque,sans-serif;font-size:13px;font-weight:600;color:#3d2e26;margin-bottom:6px;">Trip saved to My Trips</div><div style="font-family:Merriweather,serif;font-size:12px;color:#9b8f82;margin-bottom:12px;line-height:1.5;">Your ${itinerary.duration}-day ${itinerary.city} itinerary is ready.</div><button onclick="showView('trips-view')" style="display:block;width:100%;padding:10px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">VIEW IN MY TRIPS</button></div>`;
+    document.getElementById('planMessages').appendChild(cta);
+    document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
 
   } catch(e) {
     removeTyping();
