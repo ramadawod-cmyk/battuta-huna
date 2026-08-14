@@ -1228,6 +1228,11 @@
       font-size: 12px; color: #9b8f82;
       line-height: 1.5;
     }
+    .trip-slot-duration {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 10px; font-weight: 600; color: #6f8b6d;
+      letter-spacing: 0.06em; margin-top: 4px;
+    }
     .trips-empty {
       text-align: center; padding: 60px 24px;
       font-family: 'Merriweather', serif;
@@ -2124,6 +2129,29 @@ async function fetchWikiImageUrl(title) {
   } catch(e) { return null; }
 }
 
+// Renders a hero <img> into containerEl. If the URL came from the Supabase cache and turns out
+// to be broken (e.g. cached before a wiki-image fix), re-fetches fresh and heals the cache —
+// otherwise a bad cached URL stays broken forever since callers only fetch fresh on a cache miss.
+function setCityHeroImage(containerEl, imgUrl, cityId, rawCity, isFromCache, onFail) {
+  const img = document.createElement('img');
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+  img.onerror = async () => {
+    if (img.dataset.retried) { (onFail || (() => { containerEl.innerHTML = ''; }))(); return; }
+    img.dataset.retried = '1';
+    const freshUrl = await fetchWikiImageUrl(rawCity);
+    if (freshUrl && freshUrl !== imgUrl) {
+      db('updateCityHero', { cityId, heroImageUrl: freshUrl });
+      img.src = freshUrl;
+    } else {
+      (onFail || (() => { containerEl.innerHTML = ''; }))();
+    }
+  };
+  img.src = imgUrl;
+  containerEl.innerHTML = '';
+  containerEl.appendChild(img);
+  if (!isFromCache) db('updateCityHero', { cityId, heroImageUrl: imgUrl });
+}
+
 const cityHeroCache = {};
 
 async function fetchCityHero(city) {
@@ -2683,7 +2711,7 @@ let siteDetailBackFn = null;
 function openSiteDetail(poi, backFn) {
   // Set header
   document.getElementById('sdHeaderName').textContent = poi.name;
-  document.getElementById('sdHeaderMeta').textContent = [poi.category, poi.bestTime || ''].filter(Boolean).join(' · ');
+  document.getElementById('sdHeaderMeta').textContent = [poi.category, poi.bestTime || '', poi.visitDuration || ''].filter(Boolean).join(' · ');
 
   // Set back button
   siteDetailBackFn = backFn || null;
@@ -2811,6 +2839,7 @@ function openSiteDetailFromSlot(slot) {
     mapUrl: slot.mapUrl || '',
     wiki: slot.name.replace(/ /g, '_'),
     bestTime: slot.time || '',
+    visitDuration: slot.visitDuration || '',
     cityName: slot.cityName || savedTrips[currentTripIndex]?.city?.split(',')[0]?.trim() || ''
   };
 
@@ -3262,46 +3291,6 @@ async function sendOtp() {
   }
 }
 
-async function verifyOtp() {
-  const email = document.getElementById('authEmail').value.trim();
-  const token = document.getElementById('authOtp').value.trim();
-  const errEl = document.getElementById('authOtpError');
-  errEl.textContent = '';
-  if (token.length < 6) { errEl.textContent = 'Enter the 6-digit code.'; return; }
-
-  const btn = event.target;
-  btn.textContent = 'Verifying...'; btn.disabled = true;
-
-  try {
-    const res = await fetch('/.netlify/functions/auth-proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'verifyOtp', email, token })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    // Save session
-    authSession = data.session;
-    currentUser = data.session?.user || null;
-    localStorage.setItem('bh_session', JSON.stringify(data.session));
-
-    // Migrate device trips to user account
-    if (currentUser) migrateDeviceTrips(currentUser.id);
-
-    closeAuthScreen();
-    updateAuthUI();
-    showToastMsg('Welcome! Your trip has been saved to your account.');
-
-    // Navigate to My Trips
-    showView('trips-view');
-  } catch(e) {
-    errEl.textContent = e.message || 'Invalid code. Please try again.';
-  } finally {
-    btn.textContent = 'VERIFY CODE'; btn.disabled = false;
-  }
-}
-
 function showAuthStep(step) {
   document.getElementById('authStepEmail').style.display = step === 'email' ? 'block' : 'none';
   document.getElementById('authStepOtp').style.display = step === 'otp' ? 'block' : 'none';
@@ -3312,9 +3301,7 @@ function openAuthScreen(title, sub) {
   document.getElementById('authSub').innerHTML = sub || 'Create a free account to keep your itinerary<br/>and access it from any device.';
   showAuthStep('email');
   document.getElementById('authEmail').value = '';
-  document.getElementById('authOtp').value = '';
   document.getElementById('authEmailError').textContent = '';
-  document.getElementById('authOtpError').textContent = '';
   document.getElementById('auth-screen').style.display = 'flex';
 }
 
@@ -3640,43 +3627,60 @@ async function showPlaceSelection(tripInfo) {
     CITY_DATA[k].name.toLowerCase() === tripInfo.city.toLowerCase()
   );
   const existingPois = cityKey ? CITY_DATA[cityKey].pois : [];
-  const targetCount = Math.min(16, Math.max(12, tripInfo.duration * 3));
+  const slotsPerDay = tripInfo.pace === 'strict' ? 5 : 4;
+  const totalSlots = tripInfo.duration * slotsPerDay;
+  // Suggest at least one unique place per itinerary slot so the build step never has to repeat a site to fill days.
+  const targetCount = Math.min(40, Math.max(totalSlots, 8));
 
-  const suggestPrompt = `You are a travel expert. Suggest ${targetCount} diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
+  // A single call generating more than ~14 detailed places risks exceeding the Netlify
+  // function's 30s timeout on longer trips, so split large requests into parallel chunks.
+  const CHUNK_SIZE = 14;
+  const chunkCounts = [];
+  for (let remaining = targetCount; remaining > 0; remaining -= CHUNK_SIZE) {
+    chunkCounts.push(Math.min(CHUNK_SIZE, remaining));
+  }
+
+  const buildSuggestPrompt = (count) => `You are a travel expert. Suggest ${count} diverse places/experiences for a ${tripInfo.duration}-day ${tripInfo.groupType} trip to ${tripInfo.city} focused on: ${(tripInfo.interests || []).join(', ')}.
 
 ${existingPois.length > 0 ? 'Our database already has: ' + existingPois.map(p => p.name).join(', ') + '. Include the most relevant ones and add others not in this list.' : ''}
 
 Return ONLY a JSON array, no other text:
-[{"name":"Place Name","category":"Museum","description":"One sentence under 12 words.","tags":["History"],"bestTime":"Morning","lat":30.0444,"lng":31.2357,"mapUrl":"https://maps.google.com/?q=Place+Name+${tripInfo.city}"}]
+[{"name":"Place Name","category":"Museum","description":"One sentence under 12 words.","tags":["History"],"bestTime":"Morning","visitDuration":"1-2 hours","lat":30.0444,"lng":31.2357,"mapUrl":"https://maps.google.com/?q=Place+Name+${tripInfo.city}"}]
 
-bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${targetCount} items.`;
+bestTime must be one of: Morning, Afternoon, Evening, Night. visitDuration is a short realistic estimate of how long a typical visitor spends there (e.g. "30 min", "1 hour", "2-3 hours", "half day"). Return exactly ${count} items.`;
 
   try {
-    const response = await fetch('/.netlify/functions/plan-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system: suggestPrompt,
-        messages: [{ role: 'user', content: 'Suggest ' + targetCount + ' places for ' + tripInfo.city }]
-      })
-    });
+    const chunkResults = await Promise.allSettled(chunkCounts.map(count =>
+      fetch('/.netlify/functions/plan-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: buildSuggestPrompt(count),
+          messages: [{ role: 'user', content: 'Suggest ' + count + ' places for ' + tripInfo.city }]
+        })
+      }).then(r => r.json().then(data => {
+        if (!r.ok || data.error) throw new Error(JSON.stringify(data));
+        return data;
+      }))
+    ));
 
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      console.error('[places] API error:', JSON.stringify(data));
-      showTpError('Could not load places. Please go back and try again.');
-      return;
-    }
-
-    const rawText = data.content?.[0]?.text || '[]';
-    const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+    const seenNames = new Set();
     let places = [];
-    try {
-      places = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-    } catch(e) {
-      console.error('[places] JSON parse error:', e.message);
-    }
+    chunkResults.forEach(result => {
+      if (result.status !== 'fulfilled') { console.error('[places] chunk API error:', result.reason); return; }
+      const rawText = result.value.content?.[0]?.text || '[]';
+      const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+      let chunkPlaces = [];
+      try {
+        chunkPlaces = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+      } catch(e) {
+        console.error('[places] JSON parse error:', e.message);
+      }
+      chunkPlaces.forEach(p => {
+        const key = (p.name || '').trim().toLowerCase();
+        if (key && !seenNames.has(key)) { seenNames.add(key); places.push(p); }
+      });
+    });
 
     if (!places.length) {
       showTpError('Could not load places. Please go back and try again.');
@@ -3775,7 +3779,7 @@ function renderTripPlannerPlaces(places) {
           <div class="tp-place-name">${place.name}</div>
           <div class="tp-place-meta">
             <span class="poi-tag tag-${tagCls}" style="font-size:10px;">${place.tags?.[0] || place.category}</span>
-            <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:#9b8f82;letter-spacing:0.06em;">${place.bestTime}</span>
+            <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:#9b8f82;letter-spacing:0.06em;">${place.bestTime}${place.visitDuration ? ' · ' + place.visitDuration : ''}</span>
           </div>
           <div class="tp-place-desc">${place.description}</div>
         </div>
@@ -3814,7 +3818,12 @@ function updateTpCount() {
 function triggerBuildItinerary() {
   const selected = [...planState.selectedPlaces].map(i => planState.suggestedPlaces[i]);
   if (!selected.length) return;
-  const capped = selected.slice(0, 9);
+  // Cap must cover every itinerary slot (duration x slots/day), otherwise the build step
+  // is forced to reuse places across days to fill the schedule.
+  const slotsPerDay = planState.pace === 'strict' ? 5 : 4;
+  const totalSlots = planState.duration * slotsPerDay;
+  const cap = Math.min(40, Math.max(totalSlots, 9));
+  const capped = selected.slice(0, cap);
   planState.selectedPlacesData = capped;
   planState.stage = 'building';
 
@@ -3832,60 +3841,116 @@ function triggerBuildItinerary() {
 async function buildItineraryFromPlaces() {
   agentTyping();
   const { city, dates, duration, groupType, pace, selectedPlacesData } = planState;
-  const placesJson = JSON.stringify(selectedPlacesData.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
+  const slotsPerDay = pace === 'strict' ? 5 : 4;
 
-  const buildPrompt = `Build a day-by-day itinerary using ONLY these places across ${duration} days. Rules: use ONLY provided places, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words.
+  // One AI call per day, run in parallel: each call is small and fast (well under Netlify's 30s
+  // function timeout even for long trips), and it makes cross-day duplicates and day-mislabeling
+  // structurally impossible — every day gets its own disjoint place pool and the client (not the
+  // model) assigns the day number.
+  const supply = selectedPlacesData.length;
+  const totalDemand = duration * slotsPerDay;
+  const ratio = Math.min(1, supply / totalDemand);
+
+  let placeCursor = 0;
+  const dayPlans = [];
+  for (let day = 1; day <= duration; day++) {
+    const isLast = day === duration;
+    const idealEnd = isLast ? supply : Math.round(day * slotsPerDay * ratio);
+    const dayCap = placeCursor + slotsPerDay;
+    const end = Math.max(placeCursor, Math.min(supply, idealEnd, dayCap));
+    const places = selectedPlacesData.slice(placeCursor, end);
+    placeCursor += places.length;
+    dayPlans.push({ day, places });
+  }
+
+  const buildDayPrompt = ({ day, places }) => {
+    const placesJson = JSON.stringify(places.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags, visitDuration: p.visitDuration })));
+    return `Build day ${day} of a ${duration}-day trip using ONLY these places. Use every place provided, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words. Echo each place's visitDuration back unchanged.
 
 Places: ${placesJson}
 
 Output ONLY valid JSON in [ITINERARY] tags — no other text:
-[ITINERARY]{"city":"${city}","dates":"${dates}","duration":${duration},"groupType":"${groupType}","pace":"${pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}]}[/ITINERARY]`;
+[ITINERARY]{"label":"Day ${day} — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"visitDuration":"1-2 hours","lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}[/ITINERARY]`;
+  };
+
+  const callableDays = dayPlans.filter(dp => dp.places.length > 0);
 
   try {
-    const response = await fetch('/.netlify/functions/plan-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: buildPrompt, messages: [{ role: 'user', content: 'Build the itinerary now.' }] })
-    });
+    const results = await Promise.allSettled(callableDays.map(dp =>
+      fetch('/.netlify/functions/plan-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: buildDayPrompt(dp), messages: [{ role: 'user', content: `Build day ${dp.day} now.` }] })
+      }).then(r => r.json().then(data => {
+        if (!r.ok || data.error) throw new Error(JSON.stringify(data));
+        return data;
+      }))
+    ));
 
-    const data = await response.json();
     removeTyping();
 
-    if (!response.ok || data.error) {
-      if (data.error?.type === 'overloaded_error') { agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
-      agentSay('Something went wrong building the itinerary. Please try again.');
+    let anyOverloaded = false;
+    const dayResults = {};
+    results.forEach((result, i) => {
+      const { day } = callableDays[i];
+      if (result.status !== 'fulfilled') {
+        console.error(`[itinerary] day ${day} API error:`, result.reason);
+        if (String(result.reason).includes('overloaded_error')) anyOverloaded = true;
+        return;
+      }
+      const agentText = result.value.content?.[0]?.text || '';
+      const itinMatch = agentText.match(/\[ITINERARY\]([\s\S]*?)\[\/ITINERARY\]/);
+      if (!itinMatch) { console.error(`[itinerary] day ${day} response cut off`); return; }
+      try {
+        const parsed = JSON.parse(itinMatch[1].trim());
+        dayResults[day] = { label: parsed.label || `Day ${day}`, slots: parsed.slots || [] };
+      } catch(e) {
+        console.error(`[itinerary] day ${day} JSON parse error:`, e.message);
+      }
+    });
+
+    if (!Object.keys(dayResults).length) {
+      if (anyOverloaded) { agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
+      planState.stage = 'building';
+      agentSay("I had trouble building the itinerary. Type 'retry' to try again or 'New Plan' to start over.");
       return;
     }
 
-    const agentText = data.content?.[0]?.text || '';
-    const itinMatch = agentText.match(/\[ITINERARY\]([\s\S]*?)\[\/ITINERARY\]/);
+    // Day number and order come from dayPlans (the client), never from the model — every day
+    // 1..duration is represented, and a day with no allocated places shows as a free day.
+    const allDays = dayPlans.map(({ day }) => {
+      const r = dayResults[day];
+      return r ? { day, label: r.label, slots: r.slots } : { day, label: `Day ${day} — Free day`, slots: [] };
+    });
 
-    if (itinMatch) {
-      try {
-        const itinerary = JSON.parse(itinMatch[1].trim());
-        itinerary.days.forEach(day => {
-          day.slots.forEach(slot => {
-            const original = selectedPlacesData.find(p => p.name === slot.name);
-            if (original) { slot.lat = original.lat || slot.lat; slot.lng = original.lng || slot.lng; slot.mapUrl = original.mapUrl || slot.mapUrl; }
-          });
-        });
-        planState.itinerary = itinerary;
-        planState.stage = 'done';
-        saveTrip(itinerary);
+    const itinerary = { city, dates, duration, groupType, pace, days: allDays };
 
-        const cta = document.createElement('div');
-        cta.style.cssText = 'margin-top:12px;';
-        cta.innerHTML = `<div style="background:#f5f0e8;border:1.5px solid rgba(111,139,109,0.4);border-radius:14px;padding:14px 16px;"><div style="font-family:Bricolage Grotesque,sans-serif;font-size:13px;font-weight:600;color:#3d2e26;margin-bottom:6px;">Trip saved to My Trips</div><div style="font-family:Merriweather,serif;font-size:12px;color:#9b8f82;margin-bottom:12px;line-height:1.5;">Your ${itinerary.duration}-day ${itinerary.city} itinerary is ready.</div><button onclick="showView('trips-view')" style="display:block;width:100%;padding:10px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">VIEW IN MY TRIPS</button></div>`;
-        document.getElementById('planMessages').appendChild(cta);
-        document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
+    // Safety net: drop any place the model repeated within a single day's own slots.
+    itinerary.days.forEach(day => {
+      const seen = new Set();
+      day.slots = day.slots.filter(slot => {
+        if (seen.has(slot.name)) return false;
+        seen.add(slot.name);
+        return true;
+      });
+    });
 
-      } catch(e) {
-        agentSay("I had trouble formatting the itinerary. Please tap 'New Plan' and try again.");
-      }
-    } else {
-      planState.stage = 'building';
-      agentSay("My response was cut off. Type 'retry' to try again or 'New Plan' to start over.");
-    }
+    itinerary.days.forEach(day => {
+      day.slots.forEach(slot => {
+        const original = selectedPlacesData.find(p => p.name === slot.name);
+        if (original) { slot.lat = original.lat || slot.lat; slot.lng = original.lng || slot.lng; slot.mapUrl = original.mapUrl || slot.mapUrl; slot.visitDuration = original.visitDuration || slot.visitDuration; }
+      });
+    });
+
+    planState.itinerary = itinerary;
+    planState.stage = 'done';
+    saveTrip(itinerary);
+
+    const cta = document.createElement('div');
+    cta.style.cssText = 'margin-top:12px;';
+    cta.innerHTML = `<div style="background:#f5f0e8;border:1.5px solid rgba(111,139,109,0.4);border-radius:14px;padding:14px 16px;"><div style="font-family:Bricolage Grotesque,sans-serif;font-size:13px;font-weight:600;color:#3d2e26;margin-bottom:6px;">Trip saved to My Trips</div><div style="font-family:Merriweather,serif;font-size:12px;color:#9b8f82;margin-bottom:12px;line-height:1.5;">Your ${itinerary.duration}-day ${itinerary.city} itinerary is ready.</div><button onclick="showView('trips-view')" style="display:block;width:100%;padding:10px;background:#6f8b6d;color:#fff;font-family:Bricolage Grotesque,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;">VIEW IN MY TRIPS</button></div>`;
+    document.getElementById('planMessages').appendChild(cta);
+    document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
 
   } catch(e) {
     removeTyping();
@@ -4093,6 +4158,7 @@ async function saveTrip(itinerary) {
             description: slot.description || '',
             lat: slot.lat, lng: slot.lng,
             mapUrl: slot.mapUrl, wiki: slot.name.replace(/ /g, '_'),
+            visitDuration: slot.visitDuration || '',
             image: '', emoji: 'map'
           });
         }
@@ -4223,11 +4289,9 @@ async function renderTrips() {
     const heroEl = document.getElementById('tc-hero-' + i);
     if (!heroEl) return;
     const cityData = await db('getCityHero', { cityId });
+    const isFromCache = !!cityData?.hero_image_url;
     const imgUrl = cityData?.hero_image_url || await fetchWikiImageUrl(rawCity);
-    if (imgUrl) {
-      heroEl.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML=''"/>`;
-      if (!cityData?.hero_image_url) db('updateCityHero', { cityId, heroImageUrl: imgUrl });
-    }
+    if (imgUrl) setCityHeroImage(heroEl, imgUrl, cityId, rawCity, isFromCache);
   });
 }
 
@@ -4263,6 +4327,7 @@ function openTripDetail(index) {
             <div style="flex:1;">
               <div class="trip-slot-name" onclick="openSiteDetailFromSlot(${JSON.stringify(slot).replace(/"/g, '&quot;')})" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(111,139,109,0.4);text-underline-offset:3px;">${slot.name}</div>
               <div class="trip-slot-desc">${slot.description}</div>
+              ${slot.visitDuration ? `<div class="trip-slot-duration">~ ${slot.visitDuration} at this site</div>` : ''}
               ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
             </div>
           </div>
@@ -4286,8 +4351,7 @@ function openTripDetail(index) {
     const imgUrl = cachedUrl || await fetchWikiImageUrl(rawTripCity);
     const heroEl = document.getElementById('tripHeroImg');
     if (heroEl && imgUrl) {
-      heroEl.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'"/>`;
-      if (!cachedUrl) db('updateCityHero', { cityId: tripCityId, heroImageUrl: imgUrl });
+      setCityHeroImage(heroEl, imgUrl, tripCityId, rawTripCity, !!cachedUrl, () => { heroEl.style.display = 'none'; });
     } else if (heroEl) heroEl.style.display = 'none';
   })();
 

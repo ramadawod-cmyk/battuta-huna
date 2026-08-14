@@ -149,26 +149,34 @@ exports.handler = async function(event) {
 
   try {
     const title = params.title;
-    const wikiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' +
-      encodeURIComponent(title);
+    // Ask Wikipedia's thumbnailer for an 800px version directly via the Action API (piprop
+    // pithumbsize) instead of guessing via URL rewriting — Wikimedia's image resizer only
+    // accepts specific widths per source image, so a rewritten "/800px-" URL 400s for many
+    // images whose native resolution or size whitelist doesn't include 800.
+    // redirects=1 is required for titles that differ only by diacritics/casing (e.g. "Malaga"
+    // vs the actual article "Málaga") — without it, a mismatched title silently resolves to an
+    // unrelated page instead of following Wikipedia's redirect, and comes back with no thumbnail.
+    const wikiUrl = 'https://en.wikipedia.org/w/api.php?action=query&redirects=1&titles=' +
+      encodeURIComponent(title) + '&prop=pageimages&piprop=thumbnail&pithumbsize=800&format=json';
 
     const data = await httpsGet(wikiUrl);
+    const pages = data?.query?.pages || {};
+    const page = Object.values(pages)[0];
+    const thumbSrc = page?.thumbnail?.source;
 
-    if (data.thumbnail && data.thumbnail.source) {
-      const src = data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
-      const cleanSrc = encodeURIComponent(decodeURIComponent(src));
-      const proxied = '/.netlify/functions/wiki-image?img=' + cleanSrc;
+    if (thumbSrc) {
+      const proxied = '/.netlify/functions/wiki-image?img=' + encodeURIComponent(thumbSrc);
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ url: proxied, title: data.title })
+        body: JSON.stringify({ url: proxied, title: page.title || title })
       };
     }
 
     return {
       statusCode: 404,
       headers,
-      body: JSON.stringify({ error: 'No thumbnail', page: data.title || title })
+      body: JSON.stringify({ error: 'No thumbnail', page: page?.title || title })
     };
 
   } catch (e) {
