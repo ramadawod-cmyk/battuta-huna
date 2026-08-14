@@ -2129,6 +2129,29 @@ async function fetchWikiImageUrl(title) {
   } catch(e) { return null; }
 }
 
+// Renders a hero <img> into containerEl. If the URL came from the Supabase cache and turns out
+// to be broken (e.g. cached before a wiki-image fix), re-fetches fresh and heals the cache —
+// otherwise a bad cached URL stays broken forever since callers only fetch fresh on a cache miss.
+function setCityHeroImage(containerEl, imgUrl, cityId, rawCity, isFromCache, onFail) {
+  const img = document.createElement('img');
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+  img.onerror = async () => {
+    if (img.dataset.retried) { (onFail || (() => { containerEl.innerHTML = ''; }))(); return; }
+    img.dataset.retried = '1';
+    const freshUrl = await fetchWikiImageUrl(rawCity);
+    if (freshUrl && freshUrl !== imgUrl) {
+      db('updateCityHero', { cityId, heroImageUrl: freshUrl });
+      img.src = freshUrl;
+    } else {
+      (onFail || (() => { containerEl.innerHTML = ''; }))();
+    }
+  };
+  img.src = imgUrl;
+  containerEl.innerHTML = '';
+  containerEl.appendChild(img);
+  if (!isFromCache) db('updateCityHero', { cityId, heroImageUrl: imgUrl });
+}
+
 const cityHeroCache = {};
 
 async function fetchCityHero(city) {
@@ -4308,11 +4331,9 @@ async function renderTrips() {
     const heroEl = document.getElementById('tc-hero-' + i);
     if (!heroEl) return;
     const cityData = await db('getCityHero', { cityId });
+    const isFromCache = !!cityData?.hero_image_url;
     const imgUrl = cityData?.hero_image_url || await fetchWikiImageUrl(rawCity);
-    if (imgUrl) {
-      heroEl.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML=''"/>`;
-      if (!cityData?.hero_image_url) db('updateCityHero', { cityId, heroImageUrl: imgUrl });
-    }
+    if (imgUrl) setCityHeroImage(heroEl, imgUrl, cityId, rawCity, isFromCache);
   });
 }
 
@@ -4372,8 +4393,7 @@ function openTripDetail(index) {
     const imgUrl = cachedUrl || await fetchWikiImageUrl(rawTripCity);
     const heroEl = document.getElementById('tripHeroImg');
     if (heroEl && imgUrl) {
-      heroEl.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'"/>`;
-      if (!cachedUrl) db('updateCityHero', { cityId: tripCityId, heroImageUrl: imgUrl });
+      setCityHeroImage(heroEl, imgUrl, tripCityId, rawTripCity, !!cachedUrl, () => { heroEl.style.display = 'none'; });
     } else if (heroEl) heroEl.style.display = 'none';
   })();
 
