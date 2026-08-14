@@ -1336,6 +1336,16 @@
       });
     }
   </script>
+
+  <!-- Mixpanel — project token is a client-side identifier by design, safe to embed here -->
+  <script type="text/javascript">
+    (function (f, b) { if (!b.__SV) { var e, g, i, h; window.mixpanel = b; b._i = []; b.init = function (e, f, c) { function g(a, d) { var b = d.split("."); 2 == b.length && ((a = a[b[0]]), (d = b[1])); a[d] = function () { a.push([d].concat(Array.prototype.slice.call(arguments, 0))); }; } var a = b; "undefined" !== typeof c ? (a = b[c] = []) : (c = "mixpanel"); a.people = a.people || []; a.toString = function (a) { var d = "mixpanel"; "mixpanel" !== c && (d += "." + c); a || (d += " (stub)"); return d; }; a.people.toString = function () { return a.toString(1) + ".people (stub)"; }; i = "disable time_event track track_pageview track_links track_forms track_with_groups add_group set_group remove_group register register_once alias unregister identify name_tag set_config reset opt_in_tracking opt_out_tracking has_opted_in_tracking has_opted_out_tracking clear_opt_in_out_tracking start_batch_senders people.set people.set_once people.unset people.increment people.append people.union people.track_charge people.clear_charges people.delete_user people.remove".split(" "); for (h = 0; h < i.length; h++) g(a, i[h]); var j = "set set_once union unset remove delete".split(" "); a.get_group = function () { function b(c) { d[c] = function () { call2_args = arguments; call2 = [c].concat(Array.prototype.slice.call(call2_args, 0)); a.push([e, call2]); }; } for (var d = {}, e = ["get_group"].concat(Array.prototype.slice.call(arguments, 0)), c = 0; c < j.length; c++) b(j[c]); return d; }; b._i.push([e, f, c]); }; b.__SV = 1.2; e = f.createElement("script"); e.type = "text/javascript"; e.async = !0; e.src = "undefined" !== typeof MIXPANEL_CUSTOM_LIB_URL ? MIXPANEL_CUSTOM_LIB_URL : "file:" === f.location.protocol && "//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js".match(/^\/\//) ? "https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js" : "//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js"; g = f.getElementsByTagName("script")[0]; g.parentNode.insertBefore(e, g); } })(document, window.mixpanel || []);
+    mixpanel.init("49d14e14d53337e935ad6f811a7973dd", {
+      track_pageview: false, // SPA with no real page loads — screens tracked manually as "View Screen"
+      persistence: "localStorage",
+      ignore_dnt: false
+    });
+  </script>
 </head>
 <body>
 <div id="app">
@@ -1468,7 +1478,7 @@
       <div class="section-label" id="allSitesLabel">All Sites · Rome</div>
       <div class="search-bar">
         <span class="search-icon"><svg width="14" height="14" fill="none" stroke="#6f7f96" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg></span>
-        <input type="text" id="searchInput" placeholder="Search sites, categories…" oninput="filterSites()" />
+        <input type="text" id="searchInput" placeholder="Search sites, categories…" oninput="filterSites()" onblur="trackSiteSearch(this.value)" />
       </div>
       <div class="tag-filter-bar" id="tagFilterBarSites">
         <button class="tag-filter-btn active-tag" onclick="toggleTagSites(null, this)">All</button>
@@ -1600,7 +1610,7 @@
             <div class="settings-label">Proximity Radius</div>
             <div class="settings-sub">Trigger distance for alerts</div>
           </div>
-          <select class="radius-select" id="radiusSelect" onchange="saveSettings()">
+          <select class="radius-select" id="radiusSelect" onchange="saveSettings(true)">
             <option value="500">500 m</option>
             <option value="1000">1 km</option>
             <option value="1500" selected>1.5 km</option>
@@ -1988,9 +1998,11 @@ async function autoDetectCityFromPos(lat, lng) {
 
     if (cityName) {
       const cityId = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-      if (!CITY_DATA[cityId]) {
+      const isNewCity = !CITY_DATA[cityId];
+      if (isNewCity) {
         CITY_DATA[cityId] = { name: cityName, lat, lng, radius: 50, pois: [], wiki: cityName };
       }
+      mixpanel.track('City Auto-Detected', { city: cityName, method: 'geocoded', new_city: isNewCity });
       currentCity = cityId;
       localStorage.setItem('bh_city', cityId);
       applyCityHeroText(cityId);
@@ -2032,7 +2044,8 @@ function autoDetectCity() {
         const cityId = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
 
         // Add to CITY_DATA if not already there
-        if (!CITY_DATA[cityId]) {
+        const isNewCity = !CITY_DATA[cityId];
+        if (isNewCity) {
           CITY_DATA[cityId] = {
             name: cityName,
             lat, lng,
@@ -2041,6 +2054,7 @@ function autoDetectCity() {
             wiki: cityName
           };
         }
+        mixpanel.track('City Auto-Detected', { city: cityName, method: 'geocoded', new_city: isNewCity });
 
         currentCity = cityId;
         localStorage.setItem('bh_city', cityId);
@@ -2067,6 +2081,7 @@ if (!currentCity) {
 function getActivePois() { return (currentCity && CITY_DATA[currentCity]?.pois) || []; }
 
 function switchCity(city) {
+  mixpanel.track('City Switched', { from_city: currentCity, to_city: city });
   currentCity = city;
   localStorage.setItem('bh_city', city);
   const cityName = (CITY_DATA[city]?.name) || city;
@@ -2136,13 +2151,15 @@ function setCityHeroImage(containerEl, imgUrl, cityId, rawCity, isFromCache, onF
   const img = document.createElement('img');
   img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
   img.onerror = async () => {
-    if (img.dataset.retried) { (onFail || (() => { containerEl.innerHTML = ''; }))(); return; }
+    if (img.dataset.retried) { mixpanel.track('Hero Image Broken', { city_id: cityId, recovered: false }); (onFail || (() => { containerEl.innerHTML = ''; }))(); return; }
     img.dataset.retried = '1';
     const freshUrl = await fetchWikiImageUrl(rawCity);
     if (freshUrl && freshUrl !== imgUrl) {
+      mixpanel.track('Hero Image Broken', { city_id: cityId, recovered: true });
       db('updateCityHero', { cityId, heroImageUrl: freshUrl });
       img.src = freshUrl;
     } else {
+      mixpanel.track('Hero Image Broken', { city_id: cityId, recovered: false });
       (onFail || (() => { containerEl.innerHTML = ''; }))();
     }
   };
@@ -2240,6 +2257,7 @@ function formatDist(m) {
 //  EXPLORATION CONTROLS
 // ══════════════════════════════════════════════
 function continueWithoutLocation() {
+  mixpanel.track('Location Skipped');
   document.getElementById('location-prompt').style.display = 'none';
   document.getElementById('city-loading').style.display = 'none';
   isExploring = true;
@@ -2292,12 +2310,14 @@ async function startExploration() {
       },
       (err) => {
         // Location denied — show prompt
+        mixpanel.track('Location Permission Denied', { reason: err?.message || 'denied' });
         document.getElementById('city-loading').style.display = 'none';
         document.getElementById('location-prompt').style.display = 'flex';
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   } else {
+    mixpanel.track('Location Permission Denied', { reason: 'unsupported' });
     document.getElementById('city-loading').style.display = 'none';
     document.getElementById('location-prompt').style.display = 'flex';
   }
@@ -2318,6 +2338,7 @@ function openLocationSettings() {
 }
 
 function toggleExploration() {
+  mixpanel.track('Exploration Toggled', { active: !isExploring });
   if (!isExploring) {
     startExploration();
   } else {
@@ -2404,6 +2425,7 @@ function checkNearby() {
 }
 
 function triggerGroupAlert(count, message, pois) {
+  mixpanel.track('Proximity Notification Shown', { poi_count: count, city: currentCity });
   // In-app toast
   if (settings.toast) {
     const container = document.getElementById('toast-container');
@@ -2473,7 +2495,7 @@ function renderNearby(nearby) {
         </div>
       <div class="poi-desc">${poi.description.substring(0, 110)}…</div>
       <div class="poi-footer">
-        <a class="map-link" href="${poi.mapUrl}" target="_blank" onclick="event.stopPropagation()">
+        <a class="map-link" href="${poi.mapUrl}" target="_blank" onclick="event.stopPropagation();trackMapClick('${poi.name.replace(/'/g,"\\'")}','nearby')">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           VIEW ON MAP
         </a>
@@ -2487,6 +2509,7 @@ function renderNearby(nearby) {
 //  ALERTS
 // ══════════════════════════════════════════════
 function triggerAlert(poi, dist) {
+  mixpanel.track('Proximity Notification Shown', { poi_count: 1, city: currentCity, name: poi.name });
   if (settings.toast) showToast(poi, dist);
   if (settings.notif && 'Notification' in window && Notification.permission === 'granted') {
     const payload = {
@@ -2520,12 +2543,13 @@ function showToast(poi, dist) {
     <div class="toast-name">${poi.name}</div>
     <div class="toast-dist">${formatDist(dist)} · ${poi.category}</div>
   `;
-  toast.onclick = () => { openDetail(poi.id); removeToast(toast); };
+  toast.onclick = () => { mixpanel.track('Proximity Notification Clicked', { name: poi.name }); openDetail(poi.id); removeToast(toast); };
   container.appendChild(toast);
   setTimeout(() => removeToast(toast), 6000);
 }
 
 function showInfoToast(msg) {
+  mixpanel.track('Toast Shown', { message: msg, kind: 'info' });
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = 'toast';
@@ -2535,6 +2559,7 @@ function showInfoToast(msg) {
 }
 
 function showToastMsg(msg) {
+  mixpanel.track('Toast Shown', { message: msg, kind: 'notice' });
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = 'toast';
@@ -2552,6 +2577,8 @@ function removeToast(toast) {
 //  VIEWS & NAVIGATION
 // ══════════════════════════════════════════════
 function showView(view) {
+  mixpanel.track('View Screen', { screen: view, previous_screen: currentView });
+  currentView = view;
   const navIds = ['navExplore', 'navPlan', 'navTrips', 'navSettings'];
   const viewMap = { 'explorer': 0, 'plan-view': 1, 'trips-view': 2, 'settings-view': 3 };
 
@@ -2594,6 +2621,7 @@ function showView(view) {
 //  ALL SITES
 // ══════════════════════════════════════════════
 function toggleTagSites(tag, btn) {
+  if (tag) mixpanel.track('Site Filter Toggled', { tag, active: !activeTagsSites.has(tag), view: 'all_sites' });
   const allBtn = document.querySelector('#tagFilterBarSites .tag-filter-btn');
   if (!tag) {
     activeTagsSites.clear();
@@ -2614,6 +2642,7 @@ function toggleTagSites(tag, btn) {
 }
 
 function toggleTagExplore(tag, btn) {
+  if (tag) mixpanel.track('Site Filter Toggled', { tag, active: !activeTagsExplore.has(tag), view: 'nearby' });
   const allBtn = document.querySelector('#tagFilterBarExplore .tag-filter-btn');
   if (!tag) {
     activeTagsExplore.clear();
@@ -2692,6 +2721,14 @@ function filterSites() {
   renderAllSites(document.getElementById('searchInput').value);
 }
 
+function trackSiteSearch(query) {
+  if (query && query.trim()) mixpanel.track('Site Search', { query: query.trim() });
+}
+
+function trackMapClick(name, source) {
+  mixpanel.track('Map Link Clicked', { name, source });
+}
+
 // ══════════════════════════════════════════════
 //  DETAIL SHEET
 // ══════════════════════════════════════════════
@@ -2709,6 +2746,7 @@ function openDetail(id) {
 let siteDetailBackFn = null;
 
 function openSiteDetail(poi, backFn) {
+  mixpanel.track('Site Viewed', { name: poi.name, category: poi.category, source: backFn ? 'trip_slot' : 'explore' });
   // Set header
   document.getElementById('sdHeaderName').textContent = poi.name;
   document.getElementById('sdHeaderMeta').textContent = [poi.category, poi.bestTime || '', poi.visitDuration || ''].filter(Boolean).join(' · ');
@@ -2735,7 +2773,7 @@ function openSiteDetail(poi, backFn) {
       <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:700;color:#3d2e26;margin-bottom:8px;">${poi.name}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${tagPills}</div>
       <div style="font-family:'Merriweather',serif;font-size:14px;color:#3d2e26;line-height:1.8;margin-bottom:20px;">${poi.description}</div>
-      ${poi.mapUrl ? `<a href="${poi.mapUrl}" target="_blank" style="display:flex;align-items:center;gap:8px;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;margin-bottom:24px;">
+      ${poi.mapUrl ? `<a href="${poi.mapUrl}" target="_blank" onclick="trackMapClick('${poi.name.replace(/'/g,"\\'")}','site_detail')" style="display:flex;align-items:center;gap:8px;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;margin-bottom:24px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
         VIEW ON MAP
       </a>` : ''}
@@ -2873,6 +2911,7 @@ async function loadSiteLongDescription(poi) {
   if (name && cityId) {
     const siteData = await db('getSite', { name, cityId });
     if (siteData?.long_description) {
+      mixpanel.track('Site Description Generated', { name, source: 'cache', success: true });
       el.textContent = siteData.long_description;
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
@@ -2912,13 +2951,17 @@ async function loadSiteLongDescription(poi) {
     const data = await res.json();
     const longDesc = data.content?.[0]?.text || '';
     if (longDesc && el) {
+      mixpanel.track('Site Description Generated', { name, source: 'ai', success: true });
       el.textContent = longDesc;
       el.style.fontStyle = 'normal';
       el.style.color = '#3d2e26';
       // Save by name + city
       if (name && cityId) db('saveLongDescription', { name, cityId, longDescription: longDesc });
+    } else {
+      mixpanel.track('Site Description Generated', { name, source: 'ai', success: false });
     }
   } catch(e) {
+    mixpanel.track('Site Description Generated', { name, source: 'ai', success: false, message: e.message });
     if (el) el.textContent = 'Description not available.';
   }
 }
@@ -2951,12 +2994,14 @@ function closeDetail(e) {
 // ══════════════════════════════════════════════
 //  SETTINGS
 // ══════════════════════════════════════════════
-function saveSettings() {
+function saveSettings(trackChange) {
   settings.radius = parseInt(document.getElementById('radiusSelect').value);
+  if (trackChange) mixpanel.track('Setting Changed', { setting: 'radius', value: settings.radius, source: 'settings' });
   localStorage.setItem('bh_settings', JSON.stringify(settings));
 }
 
 function setRadiusQuick(r) {
+  mixpanel.track('Setting Changed', { setting: 'radius', value: r, source: 'explorer_quick' });
   settings.radius = r;
   localStorage.setItem('bh_settings', JSON.stringify(settings));
   // Sync both dropdowns
@@ -2973,17 +3018,20 @@ function setRadiusQuick(r) {
 
 function toggleNotif() {
   settings.notif = !settings.notif;
+  mixpanel.track('Setting Changed', { setting: 'notifications', value: settings.notif });
   document.getElementById('notifToggle').classList.toggle('on', settings.notif);
   saveSettings();
 }
 
 function toggleToast() {
   settings.toast = !settings.toast;
+  mixpanel.track('Setting Changed', { setting: 'toasts', value: settings.toast });
   document.getElementById('toastToggle').classList.toggle('on', settings.toast);
   saveSettings();
 }
 
 function resetHistory() {
+  mixpanel.track('Discovery History Reset', { visited_count: visitedSites.size });
   notifiedToday.clear();
   visitedSites.clear();
   localStorage.removeItem('bh_notified');
@@ -3006,6 +3054,9 @@ function updateStats() {
 //  VISITED / CHECK-IN
 // ══════════════════════════════════════════════
 function toggleVisited(id) {
+  const willBeVisited = !visitedSites.has(id);
+  const poi = getActivePois().find(p => p.id === id);
+  mixpanel.track('Site Marked Visited', { name: poi?.name || id, visited: willBeVisited });
   if (visitedSites.has(id)) {
     visitedSites.delete(id);
   } else {
@@ -3037,6 +3088,7 @@ function toggleVisited(id) {
 //  DEMO / TEST MODE
 // ══════════════════════════════════════════════
 async function simulateLocation(lat, lng, label) {
+  mixpanel.track('Test Location Used', { label });
   // Start exploration if not already active
   if (!isExploring) {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -3099,6 +3151,7 @@ async function ensureCitySites(cityId) {
   // Check if city already has hardcoded pois — if so use those without calling AI
   const hardcoded = CITY_DATA[cityId]?.pois || [];
   if (hardcoded.length >= 5 && (!sites || sites.length === 0)) {
+    mixpanel.track('New City Cold Start', { city_id: cityId, source: 'hardcoded' });
     // Seed hardcoded pois into Supabase silently
     const cityName = CITY_DATA[cityId]?.name || cityId;
     await db('upsertCity', { city: { id: cityId, name: cityName, lat: CITY_DATA[cityId]?.lat || null, lng: CITY_DATA[cityId]?.lng || null, wiki: cityName }});
@@ -3136,6 +3189,7 @@ bestTime must be: Morning, Afternoon, Evening, or Night.`;
     const raw = data.content?.[0]?.text || '[]';
     const match = raw.match(/\[[\s\S]*\]/);
     const places = match ? JSON.parse(match[0]) : [];
+    mixpanel.track('New City Cold Start', { city_id: cityId, source: 'ai_generated', success: places.length > 0, place_count: places.length });
 
     if (places.length > 0) {
       await db('upsertCity', { city: { id: cityId, name: cityName, lat: null, lng: null, wiki: cityName }});
@@ -3156,6 +3210,7 @@ bestTime must be: Morning, Afternoon, Evening, or Night.`;
       }));
     }
   } catch(e) {
+    mixpanel.track('New City Cold Start', { city_id: cityId, source: 'ai_generated', success: false, message: e.message });
     console.warn('[ensureCitySites]', e.message);
   }
 
@@ -3252,6 +3307,12 @@ const SUPABASE_ANON_KEY = ''; // filled from env via proxy
 let currentUser = null;
 let authSession = null;
 
+function identifyUser(user) {
+  if (!user) return;
+  mixpanel.identify(user.id);
+  mixpanel.people.set({ $email: user.email, email: user.email });
+}
+
 // Restore session from localStorage
 (function restoreSession() {
   try {
@@ -3259,6 +3320,7 @@ let authSession = null;
     if (stored) {
       authSession = JSON.parse(stored);
       currentUser = authSession?.user || null;
+      if (currentUser) identifyUser(currentUser);
     }
   } catch(e) {}
 })();
@@ -3269,7 +3331,7 @@ async function sendOtp() {
   const email = document.getElementById('authEmail').value.trim();
   const errEl = document.getElementById('authEmailError');
   errEl.textContent = '';
-  if (!email || !email.includes('@')) { errEl.textContent = 'Please enter a valid email.'; return; }
+  if (!email || !email.includes('@')) { mixpanel.track('Magic Link Requested', { success: false, reason: 'invalid_email' }); errEl.textContent = 'Please enter a valid email.'; return; }
 
   const btn = event.target;
   btn.textContent = 'Sending...'; btn.disabled = true;
@@ -3282,9 +3344,11 @@ async function sendOtp() {
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+    mixpanel.track('Magic Link Requested', { success: true });
     document.getElementById('authEmailDisplay').textContent = email;
     showAuthStep('otp');
   } catch(e) {
+    mixpanel.track('Magic Link Requested', { success: false, reason: e.message });
     errEl.textContent = e.message || 'Failed to send code. Try again.';
   } finally {
     btn.textContent = 'CONTINUE WITH EMAIL'; btn.disabled = false;
@@ -3318,7 +3382,7 @@ function updateAuthUI() {
         <button onclick="signOut()" style="margin-top:8px;padding:7px 14px;background:none;border:1.5px solid rgba(61,46,38,0.15);border-radius:8px;font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:#9b8f82;cursor:pointer;">Sign out</button>`;
     } else {
       settingsUser.innerHTML = `
-        <button onclick="openAuthScreen('Sign in to Battuta','Access your trips from any device.')" style="padding:10px 20px;background:#ffffff;color:#3d2e26;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;border:1.5px solid rgba(61,46,38,0.15);border-radius:10px;cursor:pointer;">SIGN IN</button>`;
+        <button onclick="mixpanel.track('Auth Screen Opened',{source:'settings_manual'});openAuthScreen('Sign in to Battuta','Access your trips from any device.')" style="padding:10px 20px;background:#ffffff;color:#3d2e26;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;border:1.5px solid rgba(61,46,38,0.15);border-radius:10px;cursor:pointer;">SIGN IN</button>`;
     }
   }
 }
@@ -3329,6 +3393,8 @@ async function signOut() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'signOut', token: authSession?.access_token })
   });
+  mixpanel.track('Signed Out');
+  mixpanel.reset();
   currentUser = null; authSession = null;
   localStorage.removeItem('bh_session');
   updateAuthUI();
@@ -3345,7 +3411,11 @@ async function migrateDeviceTrips(userId) {
       headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
       body: JSON.stringify({ action: 'migrateTrips', userId, deviceId })
     });
-  } catch(e) { console.warn('[auth] migrate trips failed:', e.message); }
+    mixpanel.track('Device Trips Migrated', { success: true });
+  } catch(e) {
+    mixpanel.track('Device Trips Migrated', { success: false, message: e.message });
+    console.warn('[auth] migrate trips failed:', e.message);
+  }
 }
 
 // ── MAGIC LINK HANDLER ───────────────────────────────────
@@ -3376,6 +3446,8 @@ async function migrateDeviceTrips(userId) {
       currentUser = data.user;
       authSession = { access_token: accessToken, refresh_token: refreshToken, user: data.user };
       localStorage.setItem('bh_session', JSON.stringify(authSession));
+      identifyUser(currentUser);
+      mixpanel.track('Signed In', { method: 'magic_link' });
       migrateDeviceTrips(currentUser.id);
       updateAuthUI();
       closeAuthScreen();
@@ -3413,6 +3485,7 @@ function initPlanView() {
 }
 
 function startNewPlan() {
+  mixpanel.track('Plan Started');
   planConversation = [];
   planState = {
     city: null, dates: null, duration: null, groupSize: null,
@@ -3475,6 +3548,7 @@ async function sendPlanMessage() {
   const input = document.getElementById('planInput');
   const text = input.value.trim();
   if (!text) return;
+  mixpanel.track('Plan Message Sent', { stage: planState.stage });
   input.value = '';
   userSay(text);
   planConversation.push({ role: 'user', content: text });
@@ -3517,10 +3591,12 @@ No markdown, no bold, no emojis, no em dashes. One question at a time. Very shor
 
     if (!response.ok || data.error) {
       if (data.error?.type === 'overloaded_error') {
+        mixpanel.track('Plan AI Retry', { reason: 'overloaded' });
         agentSay('The service is busy right now. Retrying in a moment...');
         setTimeout(() => processAgentStep(userText), 3000);
         return;
       }
+      mixpanel.track('Plan AI Failed', { reason: data.error?.type || 'error' });
       agentSay('Something went wrong: ' + (data.error?.message || 'Please try again.'));
       return;
     }
@@ -3538,6 +3614,7 @@ No markdown, no bold, no emojis, no em dashes. One question at a time. Very shor
         planState.country = partial.country || null;
         planState.countryId = partial.country_id || (partial.country ? partial.country.toLowerCase().replace(/[^a-z0-9]+/g, '-') : null);
         planState.stage = 'sheet';
+        mixpanel.track('Plan Details Extracted', { city: planState.city, dates: planState.dates, duration: planState.duration });
         const cleanText = agentText.replace(/\[PARTIAL\][\s\S]*?\[\/PARTIAL\]/, '').trim();
         if (cleanText) agentSay(cleanText);
         else agentSay(`Got it. Let me get a few more details about your ${partial.city} trip.`);
@@ -3582,10 +3659,11 @@ function submitDetailsSheet() {
   const paceEl = document.querySelector('#pacePills .details-pill.selected');
   const pace = paceEl ? paceEl.dataset.value : null;
 
-  if (!groupType) { alert('Please select a group type.'); return; }
-  if (!interests.length) { alert('Please select at least one interest.'); return; }
-  if (!pace) { alert('Please select a pace.'); return; }
+  if (!groupType) { mixpanel.track('Trip Details Validation Failed', { missing_field: 'group_type' }); alert('Please select a group type.'); return; }
+  if (!interests.length) { mixpanel.track('Trip Details Validation Failed', { missing_field: 'interests' }); alert('Please select at least one interest.'); return; }
+  if (!pace) { mixpanel.track('Trip Details Validation Failed', { missing_field: 'pace' }); alert('Please select a pace.'); return; }
 
+  mixpanel.track('Trip Details Submitted', { group_type: groupType, interests, pace, city: planState.city, duration: planState.duration });
   document.getElementById('detailsOverlay').classList.remove('open');
 
   // Merge into planState
@@ -3682,6 +3760,9 @@ bestTime must be one of: Morning, Afternoon, Evening, Night. visitDuration is a 
       });
     });
 
+    const chunkFailures = chunkResults.filter(r => r.status !== 'fulfilled').length;
+    mixpanel.track('Places Suggested', { count: places.length, target_count: targetCount, duration: tripInfo.duration, chunk_failures: chunkFailures });
+
     if (!places.length) {
       showTpError('Could not load places. Please go back and try again.');
       return;
@@ -3757,6 +3838,7 @@ function closeTripPlanner() {
 }
 
 function showTpError(msg) {
+  mixpanel.track('Places Suggested Failed', { message: msg });
   document.getElementById('tpContent').innerHTML =
     '<div class="tp-loading" style="color:#c97b5c;">' + msg + '</div>';
 }
@@ -3803,6 +3885,7 @@ function toggleTpCard(i) {
   const card = document.getElementById('tp-card-' + i);
   const check = document.getElementById('tp-check-' + i);
   const selected = planState.selectedPlaces.has(i);
+  mixpanel.track('Place Toggled', { name: planState.suggestedPlaces[i]?.name, selected, selected_count: planState.selectedPlaces.size });
   card.classList.toggle('selected', selected);
   check.style.background = selected ? '#6f7f96' : '#ffffff';
   check.style.borderColor = selected ? '#6f7f96' : 'rgba(61,46,38,0.15)';
@@ -3826,6 +3909,7 @@ function triggerBuildItinerary() {
   const capped = selected.slice(0, cap);
   planState.selectedPlacesData = capped;
   planState.stage = 'building';
+  mixpanel.track('Itinerary Build Started', { place_count: capped.length, duration: planState.duration, pace: planState.pace });
 
   // Close planner, go back to plan chat
   document.getElementById('trip-planner-view').style.display = 'none';
@@ -3910,7 +3994,8 @@ Output ONLY valid JSON in [ITINERARY] tags — no other text:
     });
 
     if (!Object.keys(dayResults).length) {
-      if (anyOverloaded) { agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
+      if (anyOverloaded) { mixpanel.track('Itinerary Build Failed', { reason: 'overloaded', retrying: true }); agentSay('The service is busy. Retrying...'); setTimeout(() => buildItineraryFromPlaces(), 3000); return; }
+      mixpanel.track('Itinerary Build Failed', { reason: 'no_days_returned' });
       planState.stage = 'building';
       agentSay("I had trouble building the itinerary. Type 'retry' to try again or 'New Plan' to start over.");
       return;
@@ -3942,6 +4027,9 @@ Output ONLY valid JSON in [ITINERARY] tags — no other text:
       });
     });
 
+    const failedDays = dayPlans.length - Object.keys(dayResults).length;
+    mixpanel.track('Itinerary Build Completed', { day_count: itinerary.days.length, failed_days: failedDays, duration, pace });
+
     planState.itinerary = itinerary;
     planState.stage = 'done';
     saveTrip(itinerary);
@@ -3953,6 +4041,7 @@ Output ONLY valid JSON in [ITINERARY] tags — no other text:
     document.getElementById('planMessages').scrollTop = document.getElementById('planMessages').scrollHeight;
 
   } catch(e) {
+    mixpanel.track('Itinerary Build Failed', { reason: 'exception', message: e.message });
     removeTyping();
     agentSay('Something went wrong. Please try again.');
   }
@@ -4057,11 +4146,14 @@ async function generateAndSaveTips(trip, cityId) {
     if (match) {
       const tips = JSON.parse(match[0]);
       const saveResult = await db('saveCityTips', { cityId, tips });
+      mixpanel.track('City Tips Generated', { city_id: cityId, success: true });
       console.log('[tips] save result:', JSON.stringify(saveResult));
     } else {
+      mixpanel.track('City Tips Generated', { city_id: cityId, success: false, reason: 'no_json' });
       console.warn('[tips] No JSON found in response:', raw.slice(0, 300));
     }
   } catch(e) {
+    mixpanel.track('City Tips Generated', { city_id: cityId, success: false, reason: e.message });
     console.warn('[tips] Generation failed:', e.message);
   }
 }
@@ -4082,8 +4174,12 @@ async function generateWeatherTip(trip, cityId) {
     if (weatherTip && trip.id) {
       db('saveWeatherTip', { tripId: trip.id, weatherTip });
       trip.weatherTip = weatherTip;
+      mixpanel.track('Weather Tip Generated', { trip_id: trip.id, success: true });
+    } else {
+      mixpanel.track('Weather Tip Generated', { trip_id: trip.id, success: false });
     }
   } catch(e) {
+    mixpanel.track('Weather Tip Generated', { trip_id: trip.id, success: false, message: e.message });
     console.warn('[tips] Weather tip generation failed:', e.message);
   }
 }
@@ -4204,14 +4300,18 @@ async function saveTrip(itinerary) {
     });
   }
 
+  mixpanel.track('Trip Saved', { trip_id: cleaned.id, city: cleaned.city, day_count: cleaned.days.length, duration: cleaned.duration, logged_in: isLoggedIn() });
   agentSay('Your trip has been saved! ' + (isLoggedIn() ? 'You can find it in My Trips.' : 'Sign in to access it from any device.'));
 
   // Prompt sign-in if not logged in
   if (!isLoggedIn()) {
-    setTimeout(() => openAuthScreen(
-      'Save your trip permanently',
-      'Create a free account to keep your itinerary<br/>and access it from any device.'
-    ), 1500);
+    setTimeout(() => {
+      mixpanel.track('Auth Screen Opened', { source: 'post_save_prompt' });
+      openAuthScreen(
+        'Save your trip permanently',
+        'Create a free account to keep your itinerary<br/>and access it from any device.'
+      );
+    }, 1500);
   }
 
   // Generate tips in background (city tips + weather tip)
@@ -4223,6 +4323,7 @@ async function saveTrip(itinerary) {
     saveBtn.disabled = true;
   }
   } catch(e) {
+    mixpanel.track('Trip Save Failed', { city: itinerary?.city, message: e.message });
     console.error('[saveTrip] ERROR:', e.message, e.stack?.slice(0,200));
     agentSay('Trip save failed: ' + e.message);
   }
@@ -4253,6 +4354,8 @@ async function renderTrips() {
   } else {
     savedTrips = [];
   }
+
+  mixpanel.track('Trips List Viewed', { count: savedTrips.length, logged_in: isLoggedIn() });
 
   if (!savedTrips.length) {
     el.innerHTML = `<div class="trips-empty">No trips planned yet.<br>Head to Plan to start your first one.</div>`;
@@ -4300,6 +4403,7 @@ let currentTripIndex = null;
 function openTripDetail(index) {
   const trip = savedTrips[index];
   currentTripIndex = index;
+  mixpanel.track('Trip Detail Viewed', { trip_id: trip.id, city: trip.city, status: trip.status || 'unknown', day_count: trip.days?.length || 0 });
 
   // Set header
   document.getElementById('tdHeaderCity').textContent = trip.city;
@@ -4328,7 +4432,7 @@ function openTripDetail(index) {
               <div class="trip-slot-name" onclick="openSiteDetailFromSlot(${JSON.stringify(slot).replace(/"/g, '&quot;')})" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(111,139,109,0.4);text-underline-offset:3px;">${slot.name}</div>
               <div class="trip-slot-desc">${slot.description}</div>
               ${slot.visitDuration ? `<div class="trip-slot-duration">~ ${slot.visitDuration} at this site</div>` : ''}
-              ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
+              ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" onclick="trackMapClick('${slot.name.replace(/'/g,"\\'")}','trip_slot')" style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
             </div>
           </div>
         `).join('')}
@@ -4377,9 +4481,12 @@ async function loadTripTips(trip) {
 
   if (!tips) {
     // Generate on the fly if missing
+    mixpanel.track('Trip Tips Generated', { trip_id: trip.id, source: 'on_demand' });
     container.innerHTML = '<div class="tip-loading">Generating travel tips for ' + trip.city + '...</div>';
     await generateAndSaveTips(trip, cityId);
     tips = await db('getCityTips', { cityId });
+  } else {
+    mixpanel.track('Trip Tips Generated', { trip_id: trip.id, source: 'cache' });
   }
 
   if (!tips) {
@@ -4405,7 +4512,7 @@ async function loadTripTips(trip) {
       : (tips[s.key] || 'Coming soon.');
     return `
       <div class="tip-item">
-        <div class="tip-header" onclick="toggleTip(${i})">
+        <div class="tip-header" onclick="toggleTip(${i},'${s.key}')">
           <div class="tip-header-left">
             <div class="tip-icon">${s.icon}</div>
             <div class="tip-title">${s.title}</div>
@@ -4417,15 +4524,18 @@ async function loadTripTips(trip) {
   }).join('');
 }
 
-function toggleTip(i) {
+function toggleTip(i, key) {
   const body = document.getElementById('tip-body-' + i);
   const chevron = document.getElementById('tip-chevron-' + i);
+  const expanded = !body.classList.contains('open');
+  mixpanel.track('Trip Guide Section Toggled', { section: key, expanded });
   body.classList.toggle('open');
   chevron.classList.toggle('open');
 }
 
 function editTrip(index) {
   const trip = savedTrips[index];
+  mixpanel.track('Trip Edit Started', { trip_id: trip.id, city: trip.city });
   // Close the detail sheet
   closeTripDetail();
   // Switch to plan tab
@@ -4442,6 +4552,7 @@ function editTrip(index) {
 function deleteTrip(index) {
   if (!confirm('Delete this trip?')) return;
   const trip = savedTrips[index];
+  mixpanel.track('Trip Deleted', { trip_id: trip.id, city: trip.city });
   if (trip.id) db('deleteTrip', { tripId: trip.id });
   savedTrips.splice(index, 1);
   closeTripDetail();
