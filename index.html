@@ -1228,6 +1228,11 @@
       font-size: 12px; color: #9b8f82;
       line-height: 1.5;
     }
+    .trip-slot-duration {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 10px; font-weight: 600; color: #6f8b6d;
+      letter-spacing: 0.06em; margin-top: 4px;
+    }
     .trips-empty {
       text-align: center; padding: 60px 24px;
       font-family: 'Merriweather', serif;
@@ -2683,7 +2688,7 @@ let siteDetailBackFn = null;
 function openSiteDetail(poi, backFn) {
   // Set header
   document.getElementById('sdHeaderName').textContent = poi.name;
-  document.getElementById('sdHeaderMeta').textContent = [poi.category, poi.bestTime || ''].filter(Boolean).join(' · ');
+  document.getElementById('sdHeaderMeta').textContent = [poi.category, poi.bestTime || '', poi.visitDuration || ''].filter(Boolean).join(' · ');
 
   // Set back button
   siteDetailBackFn = backFn || null;
@@ -2811,6 +2816,7 @@ function openSiteDetailFromSlot(slot) {
     mapUrl: slot.mapUrl || '',
     wiki: slot.name.replace(/ /g, '_'),
     bestTime: slot.time || '',
+    visitDuration: slot.visitDuration || '',
     cityName: slot.cityName || savedTrips[currentTripIndex]?.city?.split(',')[0]?.trim() || ''
   };
 
@@ -3658,9 +3664,9 @@ async function showPlaceSelection(tripInfo) {
 ${existingPois.length > 0 ? 'Our database already has: ' + existingPois.map(p => p.name).join(', ') + '. Include the most relevant ones and add others not in this list.' : ''}
 
 Return ONLY a JSON array, no other text:
-[{"name":"Place Name","category":"Museum","description":"One sentence under 12 words.","tags":["History"],"bestTime":"Morning","lat":30.0444,"lng":31.2357,"mapUrl":"https://maps.google.com/?q=Place+Name+${tripInfo.city}"}]
+[{"name":"Place Name","category":"Museum","description":"One sentence under 12 words.","tags":["History"],"bestTime":"Morning","visitDuration":"1-2 hours","lat":30.0444,"lng":31.2357,"mapUrl":"https://maps.google.com/?q=Place+Name+${tripInfo.city}"}]
 
-bestTime must be one of: Morning, Afternoon, Evening, Night. Return exactly ${count} items.`;
+bestTime must be one of: Morning, Afternoon, Evening, Night. visitDuration is a short realistic estimate of how long a typical visitor spends there (e.g. "30 min", "1 hour", "2-3 hours", "half day"). Return exactly ${count} items.`;
 
   try {
     const chunkResults = await Promise.allSettled(chunkCounts.map(count =>
@@ -3792,7 +3798,7 @@ function renderTripPlannerPlaces(places) {
           <div class="tp-place-name">${place.name}</div>
           <div class="tp-place-meta">
             <span class="poi-tag tag-${tagCls}" style="font-size:10px;">${place.tags?.[0] || place.category}</span>
-            <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:#9b8f82;letter-spacing:0.06em;">${place.bestTime}</span>
+            <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:#9b8f82;letter-spacing:0.06em;">${place.bestTime}${place.visitDuration ? ' · ' + place.visitDuration : ''}</span>
           </div>
           <div class="tp-place-desc">${place.description}</div>
         </div>
@@ -3877,13 +3883,13 @@ async function buildItineraryFromPlaces() {
   }
 
   const buildDayPrompt = ({ day, places }) => {
-    const placesJson = JSON.stringify(places.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags })));
-    return `Build day ${day} of a ${duration}-day trip using ONLY these places. Use every place provided, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words.
+    const placesJson = JSON.stringify(places.map(p => ({ name: p.name, category: p.category, bestTime: p.bestTime, tags: p.tags, visitDuration: p.visitDuration })));
+    return `Build day ${day} of a ${duration}-day trip using ONLY these places. Use every place provided, respect bestTime, pace is ${pace === 'strict' ? 'exact times (9:00 AM, 12:00 PM, 3:00 PM, 7:00 PM, 9:00 PM)' : 'Morning/Afternoon/Evening/Night'}, last slot no earlier than 8PM/Night, descriptions under 10 words. Echo each place's visitDuration back unchanged.
 
 Places: ${placesJson}
 
 Output ONLY valid JSON in [ITINERARY] tags — no other text:
-[ITINERARY]{"label":"Day ${day} — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}[/ITINERARY]`;
+[ITINERARY]{"label":"Day ${day} — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Cat","tags":["Tag"],"visitDuration":"1-2 hours","lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}[/ITINERARY]`;
   };
 
   const callableDays = dayPlans.filter(dp => dp.places.length > 0);
@@ -3951,7 +3957,7 @@ Output ONLY valid JSON in [ITINERARY] tags — no other text:
     itinerary.days.forEach(day => {
       day.slots.forEach(slot => {
         const original = selectedPlacesData.find(p => p.name === slot.name);
-        if (original) { slot.lat = original.lat || slot.lat; slot.lng = original.lng || slot.lng; slot.mapUrl = original.mapUrl || slot.mapUrl; }
+        if (original) { slot.lat = original.lat || slot.lat; slot.lng = original.lng || slot.lng; slot.mapUrl = original.mapUrl || slot.mapUrl; slot.visitDuration = original.visitDuration || slot.visitDuration; }
       });
     });
 
@@ -4171,6 +4177,7 @@ async function saveTrip(itinerary) {
             description: slot.description || '',
             lat: slot.lat, lng: slot.lng,
             mapUrl: slot.mapUrl, wiki: slot.name.replace(/ /g, '_'),
+            visitDuration: slot.visitDuration || '',
             image: '', emoji: 'map'
           });
         }
@@ -4341,6 +4348,7 @@ function openTripDetail(index) {
             <div style="flex:1;">
               <div class="trip-slot-name" onclick="openSiteDetailFromSlot(${JSON.stringify(slot).replace(/"/g, '&quot;')})" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(111,139,109,0.4);text-underline-offset:3px;">${slot.name}</div>
               <div class="trip-slot-desc">${slot.description}</div>
+              ${slot.visitDuration ? `<div class="trip-slot-duration">~ ${slot.visitDuration} at this site</div>` : ''}
               ${slot.mapUrl ? `<a href="${slot.mapUrl}" target="_blank" style="font-family:Bricolage Grotesque,sans-serif;font-size:10px;color:#6f7f96;letter-spacing:0.08em;text-decoration:none;display:inline-block;margin-top:6px;">VIEW ON MAP</a>` : ''}
             </div>
           </div>
