@@ -153,7 +153,10 @@ exports.handler = async function(event) {
     // pithumbsize) instead of guessing via URL rewriting — Wikimedia's image resizer only
     // accepts specific widths per source image, so a rewritten "/800px-" URL 400s for many
     // images whose native resolution or size whitelist doesn't include 800.
-    const wikiUrl = 'https://en.wikipedia.org/w/api.php?action=query&titles=' +
+    // redirects=1 is required for titles that differ only by diacritics/casing (e.g. "Malaga"
+    // vs the actual article "Málaga") — without it, a mismatched title silently resolves to an
+    // unrelated page instead of following Wikipedia's redirect, and comes back with no thumbnail.
+    const wikiUrl = 'https://en.wikipedia.org/w/api.php?action=query&redirects=1&titles=' +
       encodeURIComponent(title) + '&prop=pageimages&piprop=thumbnail&pithumbsize=800&format=json';
 
     const data = await httpsGet(wikiUrl);

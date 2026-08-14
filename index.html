@@ -3291,46 +3291,6 @@ async function sendOtp() {
   }
 }
 
-async function verifyOtp() {
-  const email = document.getElementById('authEmail').value.trim();
-  const token = document.getElementById('authOtp').value.trim();
-  const errEl = document.getElementById('authOtpError');
-  errEl.textContent = '';
-  if (token.length < 6) { errEl.textContent = 'Enter the 6-digit code.'; return; }
-
-  const btn = event.target;
-  btn.textContent = 'Verifying...'; btn.disabled = true;
-
-  try {
-    const res = await fetch('/.netlify/functions/auth-proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'verifyOtp', email, token })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    // Save session
-    authSession = data.session;
-    currentUser = data.session?.user || null;
-    localStorage.setItem('bh_session', JSON.stringify(data.session));
-
-    // Migrate device trips to user account
-    if (currentUser) migrateDeviceTrips(currentUser.id);
-
-    closeAuthScreen();
-    updateAuthUI();
-    showToastMsg('Welcome! Your trip has been saved to your account.');
-
-    // Navigate to My Trips
-    showView('trips-view');
-  } catch(e) {
-    errEl.textContent = e.message || 'Invalid code. Please try again.';
-  } finally {
-    btn.textContent = 'VERIFY CODE'; btn.disabled = false;
-  }
-}
-
 function showAuthStep(step) {
   document.getElementById('authStepEmail').style.display = step === 'email' ? 'block' : 'none';
   document.getElementById('authStepOtp').style.display = step === 'otp' ? 'block' : 'none';
@@ -3341,9 +3301,7 @@ function openAuthScreen(title, sub) {
   document.getElementById('authSub').innerHTML = sub || 'Create a free account to keep your itinerary<br/>and access it from any device.';
   showAuthStep('email');
   document.getElementById('authEmail').value = '';
-  document.getElementById('authOtp').value = '';
   document.getElementById('authEmailError').textContent = '';
-  document.getElementById('authOtpError').textContent = '';
   document.getElementById('auth-screen').style.display = 'flex';
 }
 
