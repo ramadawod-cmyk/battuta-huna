@@ -37,7 +37,6 @@
       --rose:         #d9a39a;   /* Rose Sand */
       --argan:        #8ea081;   /* Argan Green */
       --shadow:       rgba(61, 46, 38, 0.14);
-      --shell-w:      480px;     /* app column width — widened at the desktop breakpoint below */
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -54,7 +53,7 @@
       position: relative; z-index: 1;
       height: 100dvh;
       display: flex; flex-direction: column;
-      max-width: var(--shell-w); margin: 0 auto;
+      max-width: 480px; margin: 0 auto;
     }
 
     /* ── HEADER ── */
@@ -399,7 +398,7 @@
     /* ── BOTTOM NAV ── */
     nav {
       position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: var(--shell-w);
+      width: 100%; max-width: 480px;
       border-top: 1px solid rgba(61,46,38,0.1);
       background: #f5f0e8;
       display: flex;
@@ -1320,41 +1319,6 @@
     .empty-text {
       color: var(--text);
       font-size: 16px; line-height: 1.7;
-    }
-
-    /* ══════════════════════════════════════════════
-       DESKTOP / WIDE VIEWPORT — widen the app column, let list
-       views go multi-column, and give the letterboxed area either
-       side a background so the centered layout reads as intentional
-       rather than a mobile screen floating on a blank page.
-       ══════════════════════════════════════════════ */
-    @media (min-width: 900px) {
-      :root { --shell-w: 820px; }
-
-      body { background: var(--surface) !important; }
-
-      /* Full-viewport overlay pages (site/trip detail, trip planner) are
-         position:fixed;inset:0 via inline style — constrain + center them
-         to match #app instead of stretching edge-to-edge full-bleed. */
-      #trip-planner-view,
-      #site-detail-page,
-      #trip-detail-page {
-        max-width: var(--shell-w) !important;
-        margin: 0 auto !important;
-        box-shadow: 0 0 60px rgba(61,46,38,0.15);
-      }
-
-      #nearbyList, #allSitesList, #tripsList {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        align-content: start;
-      }
-
-      #nearbyList .empty-state,
-      #allSitesList .empty-state,
-      #tripsList .trips-empty {
-        grid-column: 1 / -1;
-      }
     }
   </style>
 
