@@ -3469,6 +3469,12 @@ const deviceId = localStorage.getItem('bh_device_id') || (() => {
   return id;
 })();
 
+// Create a Mixpanel People profile for every visitor, not just logged-in ones — otherwise
+// only users who complete magic-link sign-in ever show up in the Users/People report, even
+// though Events tracks everyone (Events doesn't require a People profile, Users does).
+mixpanel.register({ device_id: deviceId });
+mixpanel.people.set_once({ 'First Visit': new Date().toISOString(), 'Device ID': deviceId });
+
 async function db(action, data = {}) {
   try {
     const res = await fetch('/.netlify/functions/supabase-proxy', {
