@@ -43,10 +43,7 @@ function MomentsAccordion() {
             <p className="font-heading font-semibold text-white text-lg leading-snug">
               {moment.title}
             </p>
-            <p
-              className="mt-2 text-white/80 text-sm leading-relaxed transition-opacity duration-300"
-              style={{ opacity: hovered === i ? 1 : 0 }}
-            >
+            <p className="mt-2 text-white/80 text-sm leading-relaxed">
               {moment.caption}
             </p>
           </div>
