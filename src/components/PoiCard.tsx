@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { track } from "../lib/analytics";
+import ImagePlaceholder from "./ImagePlaceholder";
 
 type PoiCardProps = {
   name: string;
@@ -21,6 +23,7 @@ export default function PoiCard({
   mapUrl,
   onClick,
 }: PoiCardProps) {
+  const [imgFailed, setImgFailed] = useState(false);
   return (
     <div className={`bg-white border border-secondary-purple rounded-[20px] w-[358px] p-[19px] ${className}`}>
       <div className="flex justify-between gap-4">
@@ -30,13 +33,15 @@ export default function PoiCard({
           <p className="font-medium text-[11px] text-secondary-purple tracking-[0.44px] mt-[3px]">{category}</p>
         </button>
         <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
-          {imageUrl && (
+          {imageUrl && !imgFailed ? (
             <img
               src={imageUrl}
               alt={name}
-              onError={(e) => (e.currentTarget.style.display = "none")}
+              onError={() => setImgFailed(true)}
               className="size-full object-cover"
             />
+          ) : (
+            <ImagePlaceholder />
           )}
         </div>
       </div>

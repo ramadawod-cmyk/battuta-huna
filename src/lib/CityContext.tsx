@@ -7,7 +7,13 @@ import type { Site } from "./types";
 
 const STORAGE_KEY = "bh_current_city";
 
-type CurrentCity = { id: string; name: string; countryId: string; countryName: string };
+type CurrentCity = {
+  id: string;
+  name: string;
+  countryId: string;
+  countryName: string;
+  locality?: string | null;
+};
 
 type CityStatus = "idle" | "locating" | "loading-sites" | "ready" | "error";
 
@@ -90,6 +96,7 @@ export function CityProvider({ children }: { children: ReactNode }) {
         name: geo.cityName,
         countryId: geo.countryId,
         countryName: geo.countryName,
+        locality: geo.locality,
       };
       setCity(next);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

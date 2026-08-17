@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button";
+import ImagePlaceholder from "../components/ImagePlaceholder";
 import { useCity } from "../lib/CityContext";
 import { db, planAgent, type WikiImage, wikiImagesBySearch } from "../lib/api";
 import { normalizeCategory } from "../lib/categories";
@@ -17,6 +18,7 @@ export default function SiteDetail() {
   const [loading, setLoading] = useState(true);
   const [photos, setPhotos] = useState<WikiImage[]>([]);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [photoFailed, setPhotoFailed] = useState(false);
   const [longDescription, setLongDescription] = useState<string | null>(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
 
@@ -71,6 +73,10 @@ export default function SiteDetail() {
 
   const activePhoto = photos[photoIndex];
 
+  useEffect(() => {
+    setPhotoFailed(false);
+  }, [activePhoto?.url]);
+
   if (loading) {
     return <div className="px-[48px] py-[40px] text-text-secondary">Loading…</div>;
   }
@@ -95,13 +101,15 @@ export default function SiteDetail() {
       <div className="flex gap-[48px] mt-[32px] items-start flex-wrap">
         <div>
           <div className="bg-surface-lavender rounded-[24px] size-[640px] max-w-full overflow-hidden relative">
-            {activePhoto && (
+            {activePhoto && !photoFailed ? (
               <img
                 src={activePhoto.url}
                 alt={site.name}
-                onError={(e) => (e.currentTarget.style.display = "none")}
+                onError={() => setPhotoFailed(true)}
                 className="size-full object-cover"
               />
+            ) : (
+              <ImagePlaceholder />
             )}
             {photos.length > 1 && (
               <div className="absolute bottom-[16px] left-1/2 -translate-x-1/2 flex gap-[6px]">
