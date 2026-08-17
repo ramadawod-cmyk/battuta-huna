@@ -164,9 +164,11 @@ exports.handler = async function(event) {
 
     // ── UPDATE TRIP STATUS ───────────────────────────
     if (action === 'updateTripStatus') {
-      const { tripId, status, days } = data;
+      const { tripId, status, days, groupType, pace } = data;
       const patch = { status };
       if (days) patch.days = days;
+      if (groupType) patch.group_type = groupType;
+      if (pace) patch.pace = pace;
       const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}&user_id=eq.${deviceId}`, patch);
       return { statusCode: 200, headers, body: JSON.stringify({ updated: true }) };
     }
