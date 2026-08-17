@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
+import Landing from "./pages/Landing";
 import Plan from "./pages/Plan";
 import Explore from "./pages/Explore";
 import SiteDetail from "./pages/SiteDetail";
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
+      <Route path="/welcome" element={<Landing />} />
 
       <Route path="/" element={<Layout><Plan /></Layout>} />
       <Route path="/explore" element={<Layout><Explore /></Layout>} />
