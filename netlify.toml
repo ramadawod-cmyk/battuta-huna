@@ -1,10 +1,5 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
   functions = "netlify/functions"
-
-[build.environment]
-  NODE_VERSION = "22.12.0"
 
 [functions]
   node_bundler = "esbuild"
@@ -16,8 +11,3 @@
   for = "/.netlify/functions/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
