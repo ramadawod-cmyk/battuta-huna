@@ -16,7 +16,7 @@ const FADE_MS = 2200;
 
 const NAV_ITEMS = [
   { label: "Explore", path: "/explore" },
-  { label: "Plan", path: "/" },
+  { label: "Plan", path: "/plan" },
   { label: "My Trips", path: "/my-trips" },
   { label: "Settings", path: "/settings" },
 ];
@@ -91,7 +91,7 @@ export default function Landing() {
             ))}
             <button
               className="bg-primary-orange text-white text-sm font-medium rounded-full px-4 py-2 transition-opacity hover:opacity-90"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/plan")}
             >
               Get Started
             </button>
@@ -126,7 +126,7 @@ export default function Landing() {
             <span className="not-italic opacity-80">— Ibn Battuta</span>
           </p>
 
-          <Button variant="orange" className="mt-8" onClick={() => navigate("/")}>
+          <Button variant="orange" className="mt-8" onClick={() => navigate("/plan")}>
             Start Planning your Trip
           </Button>
         </div>
@@ -151,7 +151,7 @@ export default function Landing() {
             {item.label}
           </Link>
         ))}
-        <Button variant="orange" className="landing-menu-link landing-menu-cta mt-4" onClick={() => navigate("/")}>
+        <Button variant="orange" className="landing-menu-link landing-menu-cta mt-4" onClick={() => navigate("/plan")}>
           Get Started
         </Button>
       </div>

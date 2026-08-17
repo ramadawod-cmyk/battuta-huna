@@ -20,9 +20,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
-      <Route path="/welcome" element={<Landing />} />
+      <Route path="/" element={<Landing />} />
 
-      <Route path="/" element={<Layout><Plan /></Layout>} />
+      <Route path="/plan" element={<Layout><Plan /></Layout>} />
       <Route path="/explore" element={<Layout><Explore /></Layout>} />
       <Route path="/site/:siteName" element={<Layout><SiteDetail /></Layout>} />
       <Route path="/all-sites" element={<Layout><AllSites /></Layout>} />

@@ -17,7 +17,7 @@ export default function Auth() {
   useTrackScreen("auth");
 
   useEffect(() => {
-    if (session) navigate("/");
+    if (session) navigate("/plan");
   }, [session, navigate]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -46,7 +46,7 @@ export default function Auth() {
     <div className="min-h-screen w-full flex items-center justify-center bg-text-primary p-6">
       <div className="w-full max-w-[440px] rounded-[28px] bg-surface-white shadow-[0px_20px_60px_0px_rgba(48,48,48,0.2)] overflow-hidden px-10 py-12 flex flex-col items-center">
         <Link
-          to="/"
+          to="/plan"
           aria-label="Back to app"
           className="mb-2 flex size-[56px] items-center justify-center rounded-full bg-secondary-purple transition-opacity hover:opacity-90"
         />
