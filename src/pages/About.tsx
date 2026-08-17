@@ -85,7 +85,7 @@ export default function About() {
         </Link>
       </nav>
 
-      <div className="max-w-[680px] mx-auto px-6 pt-16 sm:pt-20">
+      <div className="max-w-[1040px] mx-auto px-6 pt-16 sm:pt-20">
         <h1 className="font-heading font-semibold text-3xl sm:text-4xl text-text-primary">About Battuta</h1>
 
         <div className="mt-8 flex flex-col gap-5 text-[15px] sm:text-base leading-relaxed text-text-secondary">
