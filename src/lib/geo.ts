@@ -30,24 +30,54 @@ export type ReverseGeocodeResult = {
   cityName: string;
   countryId: string;
   countryName: string;
+  /** Finer-grained area (suburb/subdistrict) within the resolved city, when Nominatim has one. */
+  locality: string | null;
 };
+
+// Nominatim resolves rural/exurban GPS points to whatever the *nearest* administrative feature
+// is — a subdistrict, a small town — rather than the metro area a traveller actually thinks of
+// (e.g. a point in Wadi Essier resolves to "Wadi Essier Sub-District", not "Amman"). Matching the
+// legacy PWA's checkNearby behavior: check proximity to known major-city centres first, and only
+// fall back to Nominatim's raw address match when the point isn't near one of them.
+const MAJOR_CITIES = [
+  { name: "Rome", lat: 41.8967, lng: 12.4822, radiusKm: 50 },
+  { name: "Amman", lat: 31.9539, lng: 35.9106, radiusKm: 50 },
+  { name: "Malaga", lat: 36.7213, lng: -4.4216, radiusKm: 50 },
+  { name: "Tunis", lat: 36.819, lng: 10.1658, radiusKm: 80 },
+  { name: "Montreal", lat: 45.5019, lng: -73.5674, radiusKm: 50 },
+  { name: "Dubai", lat: 25.2048, lng: 55.2708, radiusKm: 80 },
+];
+
+function nearestMajorCity(lat: number, lng: number): string | null {
+  for (const city of MAJOR_CITIES) {
+    if (haversineMeters(lat, lng, city.lat, city.lng) / 1000 <= city.radiusKm) return city.name;
+  }
+  return null;
+}
 
 /** Reverse-geocode lat/lng to a city via Nominatim (OpenStreetMap), same provider the legacy PWA uses. */
 export async function reverseGeocodeCity(lat: number, lng: number): Promise<ReverseGeocodeResult> {
-  const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+  const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
     headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error("Reverse geocoding failed");
   const data = await res.json();
   const address = data.address || {};
-  const cityName: string | undefined = address.city || address.town || address.village || address.county;
   const countryName: string | undefined = address.country;
+
+  const preciseName: string | undefined = address.city || address.town || address.village;
+  const cityName = nearestMajorCity(lat, lng) || preciseName || address.county;
   if (!cityName) throw new Error("Could not determine a city from your location");
+
+  const fineGrained: string | undefined =
+    address.suburb || address.neighbourhood || address.city_district || preciseName || address.county;
+  const locality = fineGrained && fineGrained !== cityName ? fineGrained : null;
 
   return {
     cityId: slugify(cityName),
     cityName,
     countryId: slugify(countryName || "unknown"),
     countryName: countryName || "Unknown",
+    locality,
   };
 }

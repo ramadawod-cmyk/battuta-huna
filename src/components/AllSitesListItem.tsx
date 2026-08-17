@@ -1,3 +1,6 @@
+import { useState } from "react";
+import ImagePlaceholder from "./ImagePlaceholder";
+
 type AllSitesListItemProps = {
   name: string;
   category: string;
@@ -15,19 +18,22 @@ export default function AllSitesListItem({
   imageUrl,
   onClick,
 }: AllSitesListItemProps) {
+  const [imgFailed, setImgFailed] = useState(false);
   return (
     <button
       onClick={onClick}
       className={`text-left flex gap-[16px] items-start bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
     >
       <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
-        {imageUrl && (
+        {imageUrl && !imgFailed ? (
           <img
             src={imageUrl}
             alt={name}
-            onError={(e) => (e.currentTarget.style.display = "none")}
+            onError={() => setImgFailed(true)}
             className="size-full object-cover"
           />
+        ) : (
+          <ImagePlaceholder />
         )}
       </div>
       <div>

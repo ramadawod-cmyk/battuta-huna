@@ -139,7 +139,9 @@ export default function Explore() {
         )}
       </div>
 
-      <p className="font-medium text-[12px] text-text-primary tracking-[0.48px] mt-[20px]">NEARBY · WITHIN RANGE</p>
+      <p className="font-medium text-[12px] text-text-primary tracking-[0.48px] mt-[20px]">
+        NEARBY · WITHIN RANGE{city?.locality ? ` · ${city.locality.toUpperCase()}` : ""}
+      </p>
 
       <div className="flex gap-[10px] mt-[16px] flex-wrap">
         {CATEGORIES.map((cat) => (
