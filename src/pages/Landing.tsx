@@ -70,10 +70,16 @@ export default function Landing() {
 
       <div className="absolute inset-0 bg-black/25 pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col h-full" style={{ color: fg, transition: "color 700ms ease" }}>
+      <img
+        className="landing-overlay-bob absolute inset-0 w-full h-full object-contain opacity-70 pointer-events-none"
+        src="https://soft-zoom-63098134.figma.site/_assets/v11/0b4a435b2df2747593c43d7a1c9b4578f7d8d90c.png"
+        alt=""
+      />
+
+      <div className="relative z-10 flex flex-col h-full text-white">
         <nav className="flex items-center justify-between px-6 py-5 sm:px-10 sm:py-6">
           <div className="flex items-center gap-2">
-            <BrandMark color={fg} size={42} />
+            <BrandMark color="#ffffff" size={42} />
             <span className="font-heading font-semibold text-xl sm:text-2xl">Battuta</span>
           </div>
 
@@ -93,7 +99,6 @@ export default function Landing() {
 
           <button
             className={`md:hidden liquid-glass rounded-full w-11 h-11 flex items-center justify-center ${menuOpen ? "landing-menu-open" : ""}`}
-            style={{ color: fg }}
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Toggle menu"
           >
@@ -105,17 +110,20 @@ export default function Landing() {
         </nav>
 
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-          <div className="liquid-glass rounded-full px-4 py-1.5 mb-6 text-xs sm:text-sm opacity-90">
-            Over 10,000 explorers already chasing forgotten stories
-          </div>
-
-          <h1 className="font-heading font-semibold text-4xl sm:text-5xl md:text-7xl lg:text-[5.5rem] leading-[1.1] max-w-4xl">
-            Fully Experience<br />Every Trip
+          <h1
+            className="font-heading font-semibold text-3xl sm:text-4xl md:text-6xl lg:text-[4.5rem] leading-[1.1] max-w-4xl"
+            style={{ color: fg, transition: "color 700ms ease" }}
+          >
+            Battuta Huna
           </h1>
 
-          <p className="mt-6 max-w-xl leading-relaxed opacity-80 text-sm sm:text-base">
-            Plan what's worth seeing. Discover more along the way.
-            Never miss a place that matters.
+          <p
+            className="mt-6 max-w-xl italic opacity-80 text-lg sm:text-xl leading-relaxed"
+            style={{ color: fg, transition: "color 700ms ease" }}
+          >
+            &ldquo;Traveling, it leaves you speechless, then turns you into a storyteller.&rdquo;
+            <br />
+            <span className="not-italic opacity-80">— Ibn Battuta</span>
           </p>
 
           <Button variant="orange" className="mt-8" onClick={() => navigate("/")}>

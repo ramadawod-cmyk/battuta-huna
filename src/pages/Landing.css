@@ -28,6 +28,14 @@
   transition: opacity 2200ms ease-in-out;
 }
 
+@keyframes landing-overlay-bob {
+  0%, 100% { transform: translateY(0) scale(1.03); }
+  50% { transform: translateY(-6px) scale(1.03); }
+}
+.landing-overlay-bob {
+  animation: landing-overlay-bob 3s ease-in-out infinite;
+}
+
 .landing-icon-wrap {
   position: relative;
   width: 22px;
