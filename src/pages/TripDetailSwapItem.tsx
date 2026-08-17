@@ -10,7 +10,6 @@ import { db, planAgent } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { normalizeCategory } from "../lib/categories";
 import { slugify } from "../lib/geo";
-import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Site, Trip, TripSlot } from "../lib/types";
 
