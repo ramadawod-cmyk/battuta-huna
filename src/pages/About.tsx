@@ -1,27 +1,31 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import marrakech from "../assets/about/marrakech.jpg";
+import kyoto from "../assets/about/kyoto.jpg";
+import highlands from "../assets/about/highlands.jpg";
+import maldives from "../assets/about/maldives.jpg";
 
 const SECTIONS = [
   {
     title: "Battuta brings those two parts of travel together.",
     body: "We help you plan your trip around the places worth seeing, while making it easier to discover more as you explore. From the landmarks you came for to the places you might have otherwise missed, Battuta helps you make better choices about where to go and what to experience.",
-    gradient: "linear-gradient(160deg, #ff9f68 0%, #fe9c5e 55%, #e8794f 100%)",
+    image: marrakech,
   },
   {
     title: "Travel with more curiosity",
     body: "We believe the best trips aren't necessarily the ones where you see the most. They're the ones where you discover something you'll remember — a street with a story, a place you would have walked past, a piece of history hiding in plain sight, a local tradition you never knew existed. Battuta is designed to help you find those moments.",
-    gradient: "linear-gradient(160deg, #8f86e0 0%, #6155cc 55%, #453f99 100%)",
+    image: kyoto,
   },
   {
     title: "Built for the way people actually travel",
     body: "You shouldn't need to become a travel expert to have a great trip. Battuta takes the research, planning, and discovery that usually happens across dozens of tabs and apps and brings it into one experience. Plan less. Discover more. Make every trip count.",
-    gradient: "linear-gradient(160deg, #57667a 0%, #33404f 55%, #1c2531 100%)",
+    image: highlands,
   },
   {
     title: "Why Battuta?",
     body: "Because travel should leave you with more than photos. It should leave you with stories. And we want to help you find them.",
-    gradient: "linear-gradient(160deg, #5fae8f 0%, #3f8a6d 55%, #2b6350 100%)",
+    image: maldives,
   },
 ];
 
@@ -42,12 +46,12 @@ function SectionsAccordion() {
       {SECTIONS.map((section, i) => (
         <div
           key={section.title}
-          className="relative overflow-hidden rounded-[20px] cursor-default transition-[flex-grow] duration-500 ease-out"
-          style={{ background: section.gradient, flexGrow: hovered === i ? 2 : 1, flexBasis: 0 }}
+          className="relative overflow-hidden rounded-[20px] cursor-default bg-cover bg-center transition-[flex-grow] duration-500 ease-out"
+          style={{ backgroundImage: `url(${section.image})`, flexGrow: hovered === i ? 2 : 1, flexBasis: 0 }}
           onMouseEnter={() => setHovered(i)}
           onMouseLeave={() => setHovered(null)}
         >
-          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-black/45" />
           <SectionCard section={section} />
         </div>
       ))}
@@ -59,8 +63,8 @@ function SectionsStack() {
   return (
     <div className="md:hidden flex flex-col gap-3">
       {SECTIONS.map((section) => (
-        <div key={section.title} className="relative rounded-[20px] overflow-hidden p-5" style={{ background: section.gradient }}>
-          <div className="absolute inset-0 bg-black/35" />
+        <div key={section.title} className="relative rounded-[20px] overflow-hidden p-5 bg-cover bg-center" style={{ backgroundImage: `url(${section.image})` }}>
+          <div className="absolute inset-0 bg-black/45" />
           <div className="relative">
             <p className="font-heading font-semibold text-white text-base leading-snug">{section.title}</p>
             <p className="mt-3 text-white/85 text-[13px] leading-relaxed">{section.body}</p>
