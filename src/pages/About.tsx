@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 
 const SECTIONS = [
@@ -76,15 +76,6 @@ export default function About() {
 
   return (
     <div className="min-h-screen bg-white">
-      <nav className="flex items-center justify-between px-6 py-5 sm:px-10 sm:py-6">
-        <Link to="/" className="font-heading font-semibold text-xl text-text-primary">
-          Battuta
-        </Link>
-        <Link to="/" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-          Back home
-        </Link>
-      </nav>
-
       <div className="max-w-[1040px] mx-auto px-6 pt-16 sm:pt-20">
         <h1 className="font-heading font-semibold text-3xl sm:text-4xl text-text-primary">About Battuta</h1>
 
