@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { getCurrentPosition, reverseGeocodeCity } from "./geo";
 import { ensureCitySites } from "./sites";
 import { db, wikiImageByTitle } from "./api";
@@ -56,8 +56,14 @@ export function CityProvider({ children }: { children: ReactNode }) {
   const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<CityStatus>(() => (loadStoredCity() ? "loading-sites" : "idle"));
   const [error, setError] = useState<string | null>(null);
+  // Guards against duplicate concurrent loads for the same city — e.g. React StrictMode's
+  // deliberate double-invoke of mount effects in development, which would otherwise fire two
+  // full ensureCitySites() runs (10 concurrent AI batches instead of 5) for the same city.
+  const loadingCityIdRef = useRef<string | null>(null);
 
   const loadSitesFor = useCallback(async (c: CurrentCity) => {
+    if (loadingCityIdRef.current === c.id) return;
+    loadingCityIdRef.current = c.id;
     setStatus("loading-sites");
     setHeroImageUrl(null);
     resolveHeroImage(c).then(setHeroImageUrl);
@@ -68,6 +74,8 @@ export function CityProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sites");
       setStatus("error");
+    } finally {
+      loadingCityIdRef.current = null;
     }
   }, []);
 

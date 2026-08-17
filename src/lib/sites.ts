@@ -22,14 +22,48 @@ function extractJsonArray(text: string): unknown[] {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-async function generatePois(cityName: string, countryName: string): Promise<GeneratedPoi[]> {
-  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate 20 real, accurate points of interest for a given city. Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. At least 30% should be lesser-known "hidden gem" spots, not just the top tourist landmarks. Coordinates must be real and accurate. Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (1-2 sentences, warm editorial tone, no markdown), "lat": number, "lng": number}.`;
+// Netlify Functions hard-cap synchronous execution at 10s on this project's plan, regardless of
+// the 30s configured in netlify.toml (that setting only takes effect on paid plans). Measured
+// directly against this deployment: a single call for 10 POIs with 1-2 sentence descriptions took
+// ~23s — nowhere close. Batches of 4 with short (10-14 word) descriptions measured ~7s, leaving a
+// real margin. Five such batches in parallel cover 20 POIs without serializing the wait.
+const BATCH_SIZE = 4;
+const BATCH_COUNT = 5;
+
+async function generatePoiBatch(cityName: string, countryName: string, focus: string, count: number): Promise<GeneratedPoi[]> {
+  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (10-14 words, warm editorial tone, no markdown), "lat": number, "lng": number}.`;
 
   const text = await planAgent(system, [
-    { role: "user", content: `Generate 20 points of interest for ${cityName}, ${countryName}.` },
+    { role: "user", content: `Generate ${count} points of interest for ${cityName}, ${countryName}.` },
   ]);
   const pois = extractJsonArray(text) as GeneratedPoi[];
   return pois.map((poi) => ({ ...poi, category: normalizeCategory(poi.category) }));
+}
+
+async function generatePois(cityName: string, countryName: string): Promise<GeneratedPoi[]> {
+  // At least 30% hidden gems overall: 2 of every 5 batches lean toward lesser-known spots.
+  const batches = Array.from({ length: BATCH_COUNT }, (_, i) => {
+    const focus =
+      i % 5 < 3
+        ? "Focus on the best-known, must-see highlights."
+        : "Focus on lesser-known \"hidden gem\" spots locals love, not tourist staples.";
+    return generatePoiBatch(cityName, countryName, focus, BATCH_SIZE);
+  });
+
+  const results = await Promise.allSettled(batches);
+  const seen = new Set<string>();
+  const pois: GeneratedPoi[] = [];
+  for (const result of results) {
+    if (result.status !== "fulfilled") continue;
+    for (const poi of result.value) {
+      const key = poi.name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pois.push(poi);
+    }
+  }
+  if (pois.length === 0) throw new Error("Couldn't generate any points of interest for this city.");
+  return pois;
 }
 
 /**
