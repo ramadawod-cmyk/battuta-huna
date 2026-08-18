@@ -86,7 +86,7 @@ export default function Explore() {
   );
 
   return (
-    <div className="px-4 sm:px-6 md:px-8 lg:px-[32px] py-6 md:py-[32px] max-w-[1260px] mx-auto">
+    <div className="px-4 sm:px-6 md:px-8 lg:px-[32px] py-6 md:py-[32px] max-w-[1260px]">
       <p className="text-[16px] text-text-primary">Cultural Discovery{city ? ` · ${city.name}` : ""}</p>
 
       <div className="relative bg-secondary-purple rounded-[24px] w-full h-[320px] overflow-hidden mt-[36px]">

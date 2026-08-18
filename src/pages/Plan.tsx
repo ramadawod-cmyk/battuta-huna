@@ -219,7 +219,7 @@ export default function Plan() {
 
   if (phase === "landing") {
     return (
-      <div className="relative px-4 sm:px-10 md:px-16 lg:px-[80px] py-16 sm:py-24 md:py-32 lg:py-[140px] max-w-[1180px] mx-auto">
+      <div className="relative px-4 sm:px-10 md:px-16 lg:px-[80px] py-16 sm:py-24 md:py-32 lg:py-[140px] max-w-[1180px]">
         <img src={heroIllustration} alt="" className="hidden lg:block absolute right-[80px] top-[140px] w-[203px]" />
 
         <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">YOUR TRAVEL AI AGENT</p>
@@ -271,7 +271,7 @@ export default function Plan() {
 
   if (phase === "chat") {
     return (
-      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] mx-auto flex flex-col min-h-[calc(100vh-120px)]">
+      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col min-h-[calc(100vh-120px)]">
         <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">YOUR TRAVEL AI AGENT</p>
         <div className="flex flex-col gap-[16px] mt-[24px] flex-1">
           {messages.map((m, i) => (
@@ -318,7 +318,7 @@ export default function Plan() {
 
   // selecting / building
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px] mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px]">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">
         Planning {partial?.city}
       </h1>

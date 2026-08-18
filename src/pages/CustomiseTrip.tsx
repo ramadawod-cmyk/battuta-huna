@@ -74,7 +74,7 @@ export default function CustomiseTrip() {
   }
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] max-w-[1180px] mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] max-w-[1180px]">
       <Link to={`/trip/${tripId}`} className="font-medium text-[13px] text-text-secondary hover:text-text-primary">
         ← Back to Trip
       </Link>

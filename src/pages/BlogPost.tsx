@@ -17,7 +17,7 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-[720px] mx-auto px-6 pt-16 sm:pt-20">
+      <div className="max-w-[720px] px-6 pt-16 sm:pt-20">
         <Link to="/blog" className="text-[14px] font-medium text-secondary-purple">
           ← Back to Blog
         </Link>
@@ -46,8 +46,8 @@ export default function BlogPost() {
         </div>
       </div>
 
-      <div className="max-w-[680px] mx-auto px-6 pt-16 pb-16 sm:pb-20">
-        <div className="flex justify-center">
+      <div className="max-w-[680px] px-6 pt-16 pb-16 sm:pb-20">
+        <div className="flex justify-start">
           <Button variant="orange" onClick={() => navigate("/plan")}>
             Start Planning your Trip
           </Button>

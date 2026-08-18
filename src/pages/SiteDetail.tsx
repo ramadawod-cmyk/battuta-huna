@@ -93,7 +93,7 @@ export default function SiteDetail() {
   }
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px] mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px]">
       <button className="font-medium text-[13px] text-text-secondary" onClick={() => navigate(-1)}>
         ← Back to Explore
       </button>

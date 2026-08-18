@@ -35,14 +35,14 @@ function PostCard({ post }: { post: (typeof BLOG_POSTS)[number] }) {
 export default function Blog() {
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-[1040px] mx-auto px-6 pt-16 sm:pt-20">
+      <div className="max-w-[1040px] px-6 pt-16 sm:pt-20">
         <h1 className="font-heading font-semibold text-3xl sm:text-4xl text-text-primary">The Battuta Blog</h1>
         <p className="mt-4 max-w-[640px] text-[15px] sm:text-base leading-relaxed text-text-secondary">
           Stories, history, and ideas for travelers who want more than a list of landmarks.
         </p>
       </div>
 
-      <div className="max-w-[1040px] mx-auto px-6 mt-10 pb-16 sm:pb-20">
+      <div className="max-w-[1040px] px-6 mt-10 pb-16 sm:pb-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {BLOG_POSTS.map((post) => (
             <PostCard key={post.slug} post={post} />

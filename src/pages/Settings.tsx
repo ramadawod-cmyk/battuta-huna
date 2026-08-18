@@ -83,7 +83,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px] mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px]">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">Settings</h1>
 
       <div className="flex flex-wrap gap-x-[60px] lg:gap-x-[100px] gap-y-[48px] mt-[40px] md:mt-[64px]">

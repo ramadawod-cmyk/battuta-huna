@@ -54,7 +54,7 @@ export default function AllSites() {
   }, [sites, activeCategory, query]);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1260px] mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1260px]">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">
         All Sites{city ? ` · ${city.name}` : ""}
       </h1>
