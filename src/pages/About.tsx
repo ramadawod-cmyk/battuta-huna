@@ -32,9 +32,9 @@ const SECTIONS = [
 function SectionCard({ section, expanded }: { section: (typeof SECTIONS)[number]; expanded: boolean }) {
   return (
     <div className="absolute inset-0 p-5 flex flex-col overflow-hidden">
-      <p className="font-heading font-semibold text-white text-base leading-snug">{section.title}</p>
+      <p className="font-heading font-semibold text-white text-xl leading-snug">{section.title}</p>
       <p
-        className="mt-3 text-white/85 text-[13px] leading-relaxed transition-opacity duration-300"
+        className="mt-3 text-white/85 text-base leading-relaxed transition-opacity duration-300"
         style={{ opacity: expanded ? 1 : 0 }}
       >
         {section.body}
@@ -71,8 +71,8 @@ function SectionsStack() {
         <div key={section.title} className="relative rounded-[20px] overflow-hidden p-5 bg-cover bg-center" style={{ backgroundImage: `url(${section.image})` }}>
           <div className="absolute inset-0 bg-black/25" />
           <div className="relative">
-            <p className="font-heading font-semibold text-white text-base leading-snug">{section.title}</p>
-            <p className="mt-3 text-white/85 text-[13px] leading-relaxed">{section.body}</p>
+            <p className="font-heading font-semibold text-white text-xl leading-snug">{section.title}</p>
+            <p className="mt-3 text-white/85 text-base leading-relaxed">{section.body}</p>
           </div>
         </div>
       ))}
