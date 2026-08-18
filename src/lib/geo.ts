@@ -14,12 +14,13 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
       reject(new Error("Geolocation is not available in this browser"));
       return;
     }
-    // City-level detection only needs network/Wi-Fi-based positioning (a few km of accuracy,
-    // matching the 50-80km MAJOR_CITIES radii below) — enableHighAccuracy forces GPS-grade
-    // positioning, which has no hardware to serve it on most laptops and either times out or
-    // fails outright, even with location permission granted.
+    // enableHighAccuracy:false was tried here to sidestep GPS timeouts on hardware without a GPS
+    // chip, but it also made the browser fall back to coarse IP-based geolocation on at least one
+    // real device — landing continents away from the actual position. WiFi/GPS-based positioning
+    // (enableHighAccuracy:true) is more reliable in practice despite the occasional timeout, so
+    // this stays true; only the timeout/maximumAge were kept from that attempt.
     navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: false,
+      enableHighAccuracy: true,
       timeout: 15000,
       maximumAge: 60000,
     });
