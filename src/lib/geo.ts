@@ -14,11 +14,28 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
       reject(new Error("Geolocation is not available in this browser"));
       return;
     }
+    // City-level detection only needs network/Wi-Fi-based positioning (a few km of accuracy,
+    // matching the 50-80km MAJOR_CITIES radii below) — enableHighAccuracy forces GPS-grade
+    // positioning, which has no hardware to serve it on most laptops and either times out or
+    // fails outright, even with location permission granted.
     navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 10000,
+      enableHighAccuracy: false,
+      timeout: 15000,
+      maximumAge: 60000,
     });
   });
+}
+
+/** Turns a GeolocationPositionError (not a real Error instance) into a message worth showing. */
+export function describeGeolocationError(err: unknown): string {
+  if (err && typeof err === "object" && "code" in err) {
+    const code = (err as { code: number }).code;
+    if (code === 1) return "Location permission was denied. Enable it in your browser's site settings and try again.";
+    if (code === 2) return "Couldn't determine your position right now. Try again in a moment.";
+    if (code === 3) return "Location request timed out. Try again.";
+  }
+  if (err instanceof Error) return err.message;
+  return "Could not detect your location";
 }
 
 export function slugify(s: string): string {

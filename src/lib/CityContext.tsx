@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { getCurrentPosition, reverseGeocodeCity } from "./geo";
+import { getCurrentPosition, reverseGeocodeCity, describeGeolocationError } from "./geo";
 import { ensureCitySites } from "./sites";
 import { db, wikiImageByTitle } from "./api";
 import { track } from "./analytics";
@@ -103,7 +103,7 @@ export function CityProvider({ children }: { children: ReactNode }) {
       track("City Auto-Detected", { city: next.name, method: "geocoded" });
       await loadSitesFor(next);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not detect your location";
+      const message = describeGeolocationError(err);
       setError(message);
       setStatus("error");
       track("Location Permission Denied", { reason: message });
