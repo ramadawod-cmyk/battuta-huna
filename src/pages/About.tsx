@@ -33,12 +33,12 @@ function SectionCard({ section, expanded }: { section: (typeof SECTIONS)[number]
   return (
     <div className="absolute inset-0 p-5 flex flex-col justify-end overflow-hidden">
       <p className="font-heading font-semibold text-white text-xl leading-snug">{section.title}</p>
-      <p
-        className="mt-3 text-white/85 text-base leading-relaxed transition-opacity duration-300"
-        style={{ opacity: expanded ? 1 : 0 }}
+      <div
+        className="overflow-hidden transition-[max-height,opacity] duration-300 ease-out"
+        style={{ maxHeight: expanded ? 400 : 0, opacity: expanded ? 1 : 0 }}
       >
-        {section.body}
-      </p>
+        <p className="mt-3 text-white/85 text-base leading-relaxed">{section.body}</p>
+      </div>
     </div>
   );
 }
