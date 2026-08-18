@@ -31,7 +31,7 @@ const SECTIONS = [
 
 function SectionCard({ section, expanded }: { section: (typeof SECTIONS)[number]; expanded: boolean }) {
   return (
-    <div className="absolute inset-0 p-5 flex flex-col overflow-hidden">
+    <div className="absolute inset-0 p-5 flex flex-col justify-end overflow-hidden">
       <p className="font-heading font-semibold text-white text-xl leading-snug">{section.title}</p>
       <p
         className="mt-3 text-white/85 text-base leading-relaxed transition-opacity duration-300"
@@ -56,7 +56,7 @@ function SectionsAccordion() {
           onMouseEnter={() => setHovered(i)}
           onMouseLeave={() => setHovered(null)}
         >
-          <div className="absolute inset-0 bg-black/25" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
           <SectionCard section={section} expanded={hovered === i} />
         </div>
       ))}
