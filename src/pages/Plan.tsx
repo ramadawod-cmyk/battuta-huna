@@ -23,7 +23,7 @@ import {
 } from "../lib/planFlow";
 import type { Site } from "../lib/types";
 
-const SUGGESTIONS = ["5 days in Amman", "Weekend in Rome", "Family trip to Cairo", "Solo history tour"];
+const SUGGESTIONS = ["Umrah Trip", "Flying Solo", "Family Vacation", "Couples Getaway"];
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
