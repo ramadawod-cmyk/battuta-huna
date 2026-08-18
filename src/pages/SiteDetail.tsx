@@ -78,12 +78,12 @@ export default function SiteDetail() {
   }, [activePhoto?.url]);
 
   if (loading) {
-    return <div className="px-[48px] py-[40px] text-text-secondary">Loading…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">Loading…</div>;
   }
 
   if (!site) {
     return (
-      <div className="px-[48px] py-[40px]">
+      <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
         <p className="text-text-primary">Couldn't find "{name}".</p>
         <button className="mt-[16px] font-medium text-[13px] text-text-secondary" onClick={() => navigate(-1)}>
           ← Back
@@ -93,14 +93,14 @@ export default function SiteDetail() {
   }
 
   return (
-    <div className="px-[48px] py-[40px] max-w-[1180px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px] mx-auto">
       <button className="font-medium text-[13px] text-text-secondary" onClick={() => navigate(-1)}>
         ← Back to Explore
       </button>
 
-      <div className="flex gap-[48px] mt-[32px] items-start flex-wrap">
-        <div>
-          <div className="bg-surface-lavender rounded-[24px] size-[640px] max-w-full overflow-hidden relative">
+      <div className="flex gap-[32px] lg:gap-[48px] mt-[32px] items-start flex-wrap">
+        <div className="w-full lg:w-auto">
+          <div className="bg-surface-lavender rounded-[24px] w-full lg:w-[640px] aspect-square overflow-hidden relative">
             {activePhoto && !photoFailed ? (
               <img
                 src={activePhoto.url}

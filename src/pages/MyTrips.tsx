@@ -64,7 +64,7 @@ export default function MyTrips() {
   }, [authLoading, session?.user?.id]);
 
   return (
-    <div className="px-[48px] py-[40px] max-w-[1180px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px] mx-auto">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">My Trips</h1>
 
       {loading && <p className="text-text-secondary text-[14px] mt-[28px]">Loading your trips…</p>}

@@ -11,7 +11,7 @@ export default function TripCard({ city, meta, tags, className = "", imageUrl, o
   return (
     <button
       onClick={onClick}
-      className={`text-left bg-white border border-secondary-purple rounded-[20px] w-[358px] overflow-hidden ${className}`}
+      className={`text-left bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full overflow-hidden ${className}`}
     >
       <div className="bg-surface-lavender h-[140px]">
         {imageUrl && (

@@ -22,7 +22,7 @@ export default function PoiCard({
 }: PoiCardProps) {
   const [imgFailed, setImgFailed] = useState(false);
   return (
-    <div className={`bg-white border border-secondary-purple rounded-[20px] w-[358px] p-[19px] ${className}`}>
+    <div className={`bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full p-[19px] ${className}`}>
       <div className="flex justify-between gap-4">
         <button className="text-left" onClick={onClick}>
           <p className="font-heading font-semibold text-[17px] text-text-primary">{name}</p>

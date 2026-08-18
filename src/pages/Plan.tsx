@@ -219,11 +219,11 @@ export default function Plan() {
 
   if (phase === "landing") {
     return (
-      <div className="relative px-[80px] py-[140px] max-w-[1180px]">
+      <div className="relative px-4 sm:px-10 md:px-16 lg:px-[80px] py-16 sm:py-24 md:py-32 lg:py-[140px] max-w-[1180px] mx-auto">
         <img src={heroIllustration} alt="" className="hidden lg:block absolute right-[80px] top-[140px] w-[203px]" />
 
         <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">YOUR TRAVEL AI AGENT</p>
-        <h1 className="font-heading font-semibold text-[48px] leading-[1.15] text-text-primary mt-[16px] max-w-[600px]">
+        <h1 className="font-heading font-semibold text-[32px] sm:text-[40px] md:text-[48px] leading-[1.15] text-text-primary mt-[16px] max-w-[600px]">
           Where do you want to explore?
         </h1>
         <p className="text-[16px] leading-[1.5] text-text-secondary mt-[16px] max-w-[560px]">
@@ -243,12 +243,12 @@ export default function Plan() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder='Try "Plan a 5-day cultural trip to Amman for two"'
-            className="w-full h-[76px] rounded-[24px] border-[1.5px] border-secondary-purple shadow-[0px_16px_40px_0px_rgba(48,48,48,0.12)] pl-[26px] pr-[80px] text-[16px] text-text-primary placeholder:text-text-secondary outline-none"
+            className="w-full h-[64px] sm:h-[76px] rounded-[24px] border-[1.5px] border-secondary-purple shadow-[0px_16px_40px_0px_rgba(48,48,48,0.12)] pl-[20px] sm:pl-[26px] pr-[70px] sm:pr-[80px] text-[15px] sm:text-[16px] text-text-primary placeholder:text-text-secondary outline-none"
           />
           <button
             type="submit"
             aria-label="Send"
-            className="absolute right-[12px] top-1/2 -translate-y-1/2 size-[52px] rounded-full bg-primary-orange flex items-center justify-center"
+            className="absolute right-[10px] sm:right-[12px] top-1/2 -translate-y-1/2 size-[44px] sm:size-[52px] rounded-full bg-primary-orange flex items-center justify-center"
           >
             <img src={sendArrow} alt="" className="size-[12px]" />
           </button>
@@ -271,13 +271,13 @@ export default function Plan() {
 
   if (phase === "chat") {
     return (
-      <div className="px-[80px] py-[60px] max-w-[760px] flex flex-col min-h-[calc(100vh-120px)]">
+      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] mx-auto flex flex-col min-h-[calc(100vh-120px)]">
         <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">YOUR TRAVEL AI AGENT</p>
         <div className="flex flex-col gap-[16px] mt-[24px] flex-1">
           {messages.map((m, i) => (
             <div
               key={i}
-              className={`max-w-[480px] rounded-[20px] px-[20px] py-[14px] text-[15px] leading-[1.5] ${
+              className={`max-w-[85%] sm:max-w-[480px] rounded-[20px] px-[20px] py-[14px] text-[15px] leading-[1.5] ${
                 m.role === "user"
                   ? "self-end bg-secondary-purple text-white"
                   : "self-start bg-surface-lavender text-text-primary"
@@ -318,7 +318,7 @@ export default function Plan() {
 
   // selecting / building
   return (
-    <div className="px-[48px] py-[40px] max-w-[1180px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px] mx-auto">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">
         Planning {partial?.city}
       </h1>
@@ -375,7 +375,7 @@ export default function Plan() {
 
         <Button
           variant="orange"
-          className="!w-[280px]"
+          className="!w-full sm:!w-[280px]"
           disabled={phase === "building" || selectedPlaces.size === 0}
           onClick={buildTrip}
         >

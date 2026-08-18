@@ -59,12 +59,12 @@ export default function CustomiseTrip() {
   }
 
   if (loading) {
-    return <div className="px-[48px] py-[32px] text-text-secondary">Loading…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] text-text-secondary">Loading…</div>;
   }
 
   if (error && !trip) {
     return (
-      <div className="px-[48px] py-[32px]">
+      <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
         <p className="text-text-primary">{error}</p>
         <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary mt-[16px] inline-block">
           ← Back to My Trips
@@ -74,7 +74,7 @@ export default function CustomiseTrip() {
   }
 
   return (
-    <div className="px-[48px] py-[32px] max-w-[1180px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] max-w-[1180px] mx-auto">
       <Link to={`/trip/${tripId}`} className="font-medium text-[13px] text-text-secondary hover:text-text-primary">
         ← Back to Trip
       </Link>
@@ -100,7 +100,7 @@ export default function CustomiseTrip() {
 
       {error && <p className="text-primary-orange text-[13px] mt-[24px]">{error}</p>}
 
-      <Button variant="orange" className="!w-[300px] !h-[52px] mt-[40px]" disabled={saving} onClick={handleSave}>
+      <Button variant="orange" className="!w-full sm:!w-[300px] !h-[52px] mt-[40px]" disabled={saving} onClick={handleSave}>
         {saving ? "SAVING…" : "SAVE CHANGES"}
       </Button>
     </div>

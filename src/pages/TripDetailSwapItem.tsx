@@ -145,12 +145,12 @@ export default function TripDetailSwapItem() {
   }
 
   if (loading) {
-    return <div className="px-[48px] py-[32px] text-text-secondary">Loading…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] text-text-secondary">Loading…</div>;
   }
 
   if (error && !trip) {
     return (
-      <div className="px-[48px] py-[32px]">
+      <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
         <p className="text-text-primary">{error}</p>
         <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary mt-[16px] inline-block">
           ← Back to My Trips
@@ -168,21 +168,21 @@ export default function TripDetailSwapItem() {
   ].filter(Boolean);
 
   return (
-    <div className="px-[48px] py-[32px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
       <Link to={`/trip/${tripId}`} className="text-[13px] font-medium text-text-secondary">
         ← Back to Trip
       </Link>
 
-      <div className="relative mt-[24px] h-[240px] rounded-[24px] bg-secondary-purple overflow-hidden">
+      <div className="relative mt-[24px] h-[200px] sm:h-[240px] rounded-[24px] bg-secondary-purple overflow-hidden">
         <div className="absolute inset-y-0 left-0 w-[358px] bg-gradient-to-b from-black/50 to-transparent" />
-        <div className="absolute left-[24px] bottom-[40px]">
-          <p className="font-heading font-semibold text-[24px] text-white">{trip.city}</p>
+        <div className="absolute left-[16px] sm:left-[24px] bottom-[24px] sm:bottom-[40px] right-[16px]">
+          <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-white truncate">{trip.city}</p>
           <p className="font-medium text-[10px] text-white/72 tracking-[1px] mt-[8px]">{metaParts.join(" · ")}</p>
         </div>
         <Button
           variant="outline"
           onClick={() => navigate(`/trip/${tripId}/customise`)}
-          className="!w-[140px] !h-[44px] !border-white !text-white absolute right-[24px] top-[24px]"
+          className="!w-[110px] sm:!w-[140px] !h-[36px] sm:!h-[44px] !border-white !text-white absolute right-[12px] sm:right-[24px] top-[12px] sm:top-[24px]"
         >
           EDIT TRIP
         </Button>
@@ -190,7 +190,7 @@ export default function TripDetailSwapItem() {
 
       {error && <p className="text-primary-orange text-[13px] mt-[16px]">{error}</p>}
 
-      <div className="flex gap-[48px] mt-[32px] items-start flex-wrap">
+      <div className="flex gap-[32px] lg:gap-[48px] mt-[32px] items-start flex-wrap">
         <div className="flex-1 min-w-0 max-w-[680px] flex flex-col gap-[28px]">
           {trip.days.map((day) => (
             <div key={day.day}>
@@ -216,7 +216,7 @@ export default function TripDetailSwapItem() {
                         >
                           {slot.time}
                         </p>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p
                             className={`font-heading font-semibold text-[16px] ${
                               isSwapping ? "text-white" : "text-text-primary"

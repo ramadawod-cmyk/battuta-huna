@@ -14,7 +14,7 @@ type StatBoxProps = {
 
 function StatBox({ value, label }: StatBoxProps) {
   return (
-    <div className="bg-surface-lavender rounded-[16px] w-[220px] h-[90px] flex flex-col items-center justify-center text-center">
+    <div className="bg-surface-lavender rounded-[16px] w-[160px] sm:w-[220px] h-[90px] flex flex-col items-center justify-center text-center">
       <p className="font-heading font-semibold text-[24px] text-secondary-purple">{value}</p>
       <p className="text-[12px] text-text-secondary mt-[4px]">{label}</p>
     </div>
@@ -83,12 +83,12 @@ export default function Settings() {
   }
 
   return (
-    <div className="px-[48px] py-[40px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px] mx-auto">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">Settings</h1>
 
-      <div className="flex flex-wrap gap-x-[100px] gap-y-[48px] mt-[64px]">
+      <div className="flex flex-wrap gap-x-[60px] lg:gap-x-[100px] gap-y-[48px] mt-[40px] md:mt-[64px]">
         {/* Left column */}
-        <div className="flex-1 min-w-[300px] max-w-[560px] flex flex-col gap-[36px]">
+        <div className="flex-1 min-w-[260px] max-w-[560px] flex flex-col gap-[36px]">
           <div className="flex flex-col gap-[16px]">
             <SectionLabel>Account</SectionLabel>
             <Row
@@ -145,7 +145,7 @@ export default function Settings() {
         </div>
 
         {/* Right column */}
-        <div className="flex-1 min-w-[300px] max-w-[560px] flex flex-col gap-[36px]">
+        <div className="flex-1 min-w-[260px] max-w-[560px] flex flex-col gap-[36px]">
           <div className="flex flex-col gap-[16px]">
             <SectionLabel>Your Journey</SectionLabel>
             <div className="flex gap-[20px] flex-wrap">

@@ -87,12 +87,12 @@ export default function TripMapBuilder() {
   }, [mapEl, slots, selectedSlot]);
 
   if (loading) {
-    return <div className="px-[48px] py-[40px] text-text-secondary">Loading map…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">Loading map…</div>;
   }
 
   if (error || !trip) {
     return (
-      <div className="px-[48px] py-[40px]">
+      <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
         <p className="text-text-primary">{error || "Trip not found."}</p>
         <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary mt-[16px] inline-block">
           ← Back to My Trips
@@ -108,7 +108,7 @@ export default function TripMapBuilder() {
   ].filter(Boolean);
 
   return (
-    <div className="px-[48px] py-[40px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
       <Link to={`/trip/${tripId}`} className="text-[13px] font-medium text-text-secondary">
         ← Back to Trip
       </Link>
@@ -138,8 +138,8 @@ export default function TripMapBuilder() {
         </div>
       </div>
 
-      <div className="flex gap-[40px] items-start mt-[24px] flex-wrap">
-        <div className="flex-1 min-w-[320px]">
+      <div className="flex gap-[24px] lg:gap-[40px] items-start mt-[24px] flex-wrap">
+        <div className="flex-1 min-w-0 w-full sm:min-w-[320px]">
           {slots.length === 0 && (
             <p className="text-text-secondary text-[14px]">No located stops for this day.</p>
           )}
@@ -170,7 +170,7 @@ export default function TripMapBuilder() {
         </div>
 
         <div className="w-[524px] max-w-full shrink-0">
-          <div ref={mapContainerRef} className="rounded-[24px] overflow-hidden h-[500px] border border-secondary-purple" />
+          <div ref={mapContainerRef} className="rounded-[24px] overflow-hidden h-[320px] sm:h-[500px] border border-secondary-purple" />
           {selectedSlot && (
             <div className="bg-white border border-secondary-purple rounded-[20px] p-[19px] mt-[16px]">
               <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px]">

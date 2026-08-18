@@ -66,12 +66,12 @@ export default function TripDetail() {
   }, [authLoading, session?.user?.id, tripId]);
 
   if (loading) {
-    return <div className="px-[48px] py-[40px] text-text-secondary">Loading trip…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">Loading trip…</div>;
   }
 
   if (error || !trip) {
     return (
-      <div className="px-[48px] py-[40px]">
+      <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
         <p className="text-text-primary">{error || "Trip not found."}</p>
         <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary mt-[16px] inline-block">
           ← Back to My Trips
@@ -89,12 +89,12 @@ export default function TripDetail() {
   const guideEntries = Object.entries(tips || {}).filter(([, value]) => value);
 
   return (
-    <div className="px-[48px] py-[32px]">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
       <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary">
         ← Back to My Trips
       </Link>
 
-      <div className="relative mt-[32px] bg-secondary-purple rounded-[24px] w-full h-[240px] overflow-hidden">
+      <div className="relative mt-[24px] sm:mt-[32px] bg-secondary-purple rounded-[24px] w-full h-[200px] sm:h-[240px] overflow-hidden">
         {heroImageUrl && !heroImageFailed && (
           <img
             src={heroImageUrl}
@@ -104,31 +104,33 @@ export default function TripDetail() {
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent" />
-        <div className="absolute left-[24px] bottom-[40px]">
-          <p className="font-heading font-semibold text-[24px] text-white">{trip.city}</p>
+        <div className="absolute left-[16px] sm:left-[24px] bottom-[24px] sm:bottom-[40px] right-[16px]">
+          <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-white truncate">{trip.city}</p>
           <p className="font-medium text-[10px] text-white/72 tracking-[1px] mt-[2px]">{metaParts.join(" · ")}</p>
         </div>
-        <Link
-          to={`/trip/${tripId}/map`}
-          onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail" })}
-          className="absolute right-[192px] top-[24px] h-[44px] w-[100px] rounded-[14px] border-[1.5px] border-white bg-transparent flex items-center justify-center font-bold text-[14px] tracking-[0.56px] text-white transition-opacity hover:opacity-90"
-        >
-          MAP
-        </Link>
-        <Link
-          to={`/trip/${tripId}/customise`}
-          onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
-          className="absolute right-[40px] top-[24px] h-[44px] w-[140px] rounded-[14px] border-[1.5px] border-text-primary bg-transparent flex items-center justify-center font-bold text-[14px] tracking-[0.56px] text-text-secondary transition-opacity hover:opacity-90"
-        >
-          EDIT TRIP
-        </Link>
+        <div className="absolute right-[12px] sm:right-[24px] top-[12px] sm:top-[24px] flex gap-[8px] sm:gap-[16px]">
+          <Link
+            to={`/trip/${tripId}/map`}
+            onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail" })}
+            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[100px] rounded-[14px] border-[1.5px] border-white bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-white transition-opacity hover:opacity-90"
+          >
+            MAP
+          </Link>
+          <Link
+            to={`/trip/${tripId}/customise`}
+            onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
+            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-text-primary bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-text-secondary transition-opacity hover:opacity-90 whitespace-nowrap"
+          >
+            EDIT TRIP
+          </Link>
+        </div>
       </div>
 
       {trip.weather_tip && (
         <p className="text-[13px] text-text-secondary mt-[16px]">{trip.weather_tip}</p>
       )}
 
-      <div className="flex gap-[48px] mt-[32px] items-start flex-wrap">
+      <div className="flex gap-[32px] lg:gap-[48px] mt-[32px] items-start flex-wrap">
         <div className="flex-1 min-w-0 max-w-[680px]">
           <div className="flex flex-col gap-[24px]">
             {trip.days
@@ -170,7 +172,7 @@ export default function TripDetail() {
           </div>
         </div>
 
-        <div className="w-[356px] shrink-0">
+        <div className="w-full sm:w-[356px] shrink-0">
           <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px]">TRAVEL GUIDE</p>
           <div className="flex flex-col gap-[16px] mt-[16px]">
             {guideEntries.length === 0 && (
