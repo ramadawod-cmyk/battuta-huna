@@ -35,11 +35,22 @@ function ProfileIcon({ className }: { className?: string }) {
   );
 }
 
+function InfoIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="11" cy="11" r="8.25" stroke="currentColor" strokeWidth="1.375" />
+      <path d="M11 10.083V15.583" stroke="currentColor" strokeWidth="1.375" strokeLinecap="round" />
+      <path d="M11 7.333H11.01" stroke="currentColor" strokeWidth="1.833" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS = [
   { label: "Explore", path: "/explore", Icon: HomeIcon },
   { label: "Plan", path: "/plan", Icon: HeartIcon },
   { label: "My Trips", path: "/my-trips", Icon: BookingsIcon },
   { label: "Settings", path: "/settings", Icon: ProfileIcon },
+  { label: "About", path: "/about", Icon: InfoIcon },
 ];
 
 export default function Sidebar() {
