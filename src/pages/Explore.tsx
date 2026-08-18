@@ -38,7 +38,6 @@ function PoiCardWithImage({
       category={site.category.toUpperCase()}
       description={site.description}
       imageUrl={site.image_url || imageUrl}
-      mapUrl={site.map_url}
       onClick={onClick}
     />
   );

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { track } from "../lib/analytics";
 import ImagePlaceholder from "./ImagePlaceholder";
 
 type PoiCardProps = {
@@ -9,7 +8,6 @@ type PoiCardProps = {
   description: string;
   className?: string;
   imageUrl?: string | null;
-  mapUrl?: string | null;
   onClick?: () => void;
 };
 
@@ -20,7 +18,6 @@ export default function PoiCard({
   description,
   className = "",
   imageUrl,
-  mapUrl,
   onClick,
 }: PoiCardProps) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -46,18 +43,6 @@ export default function PoiCard({
         </div>
       </div>
       <p className="text-[13px] leading-[1.5] text-text-primary mt-[16px]">{description}</p>
-      <div className="h-px bg-text-primary/20 mt-[16px]" />
-      <div className="flex justify-end mt-[16px]">
-        <a
-          href={mapUrl || "#"}
-          target="_blank"
-          rel="noreferrer"
-          onClick={() => track("Map Link Clicked", { name, source: "poi_card" })}
-          className="bg-primary-orange text-white font-bold text-[13px] rounded-[14px] h-[42px] w-[140px] flex items-center justify-center"
-        >
-          View on Map
-        </a>
-      </div>
     </div>
   );
 }
