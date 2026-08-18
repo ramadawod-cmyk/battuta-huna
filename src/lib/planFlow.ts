@@ -38,10 +38,16 @@ export type ItineraryResult = {
   days: TripDay[];
 };
 
-export function buildItinerarySystemPrompt(params: {
+// Netlify Functions on this project's plan hard-cap execution at ~10s regardless of the
+// 30s configured in netlify.toml (a paid-plan-only setting) — a single call asking Claude
+// to build every day of a multi-day trip in one JSON response reliably exceeds that, so each
+// day is generated as its own parallel call instead (mirrors the fix already applied to the
+// analogous POI-generation timeout).
+export function buildDayItinerarySystemPrompt(params: {
   city: string;
   dates: string | null;
   duration: number;
+  day: number;
   groupType: string;
   pace: string;
   interests: string[];
@@ -58,33 +64,36 @@ export function buildItinerarySystemPrompt(params: {
     })),
   );
 
-  return `You are Battuta, a travel-planning assistant. Build a day-by-day itinerary for a trip to ${params.city} using ONLY the places provided below — do not invent new places. Duration: ${params.duration} days. Dates: ${params.dates || "flexible"}. Group type: ${params.groupType}. Pace: ${params.pace}. Interests: ${params.interests.join(", ") || "general"}.
+  return `You are Battuta, a travel-planning assistant. Build ONLY day ${params.day} of ${params.duration} for a trip to ${params.city} using ONLY the places provided below — do not invent new places. Dates: ${params.dates || "flexible"}. Group type: ${params.groupType}. Pace: ${params.pace}. Interests: ${params.interests.join(", ") || "general"}.
 
-Available places (choose the best subset, don't force every place in, avoid repeating a place across days):
+Available places (choose the best subset for this single day, don't force every place in):
 ${placesJson}
 
-Output ONLY valid JSON in [ITINERARY] tags, no other text:
-[ITINERARY]{"city":"${params.city}","dates":"${params.dates || ""}","duration":${params.duration},"groupType":"${params.groupType}","pace":"${params.pace}","days":[{"day":1,"label":"Day 1 — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Category","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}]}[/ITINERARY]`;
+Output ONLY valid JSON in [DAY] tags, no other text:
+[DAY]{"day":${params.day},"label":"Day ${params.day} — Title","slots":[{"time":"9:00 AM","name":"Name","description":"Short.","category":"Category","tags":["Tag"],"lat":0,"lng":0,"mapUrl":"https://maps.google.com/?q=Name"}]}[/DAY]`;
 }
 
-export function parseItinerary(text: string): ItineraryResult | null {
-  const match = text.match(/\[ITINERARY\]([\s\S]*?)\[\/ITINERARY\]/);
+export function parseDayItinerary(text: string): TripDay | null {
+  const match = text.match(/\[DAY\]([\s\S]*?)\[\/DAY\]/);
   if (!match) return null;
   try {
-    const parsed = JSON.parse(match[1].trim()) as ItineraryResult;
-    // De-dup safety net: drop repeated place names across days, mirroring the legacy PWA.
-    const seen = new Set<string>();
-    for (const day of parsed.days) {
-      day.slots = day.slots.filter((slot) => {
-        if (seen.has(slot.name)) return false;
-        seen.add(slot.name);
-        return true;
-      });
-    }
-    return parsed;
+    return JSON.parse(match[1].trim()) as TripDay;
   } catch {
     return null;
   }
+}
+
+/** De-dup safety net: drop repeated place names across days, mirroring the legacy PWA. */
+export function dedupeDaysByPlace(days: TripDay[]): TripDay[] {
+  const seen = new Set<string>();
+  for (const day of days) {
+    day.slots = day.slots.filter((slot) => {
+      if (seen.has(slot.name)) return false;
+      seen.add(slot.name);
+      return true;
+    });
+  }
+  return days;
 }
 
 export const GROUP_TYPES = ["Solo", "Couple", "Family", "Friends"];

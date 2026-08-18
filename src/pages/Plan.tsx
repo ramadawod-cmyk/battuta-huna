@@ -15,13 +15,15 @@ import {
   GATHER_SYSTEM_PROMPT,
   parsePartial,
   type PlanPartial,
-  buildItinerarySystemPrompt,
-  parseItinerary,
+  buildDayItinerarySystemPrompt,
+  parseDayItinerary,
+  dedupeDaysByPlace,
+  type ItineraryResult,
   GROUP_TYPES,
   PACE_OPTIONS,
   INTEREST_TAGS,
 } from "../lib/planFlow";
-import type { Site } from "../lib/types";
+import type { Site, TripDay } from "../lib/types";
 
 const SUGGESTIONS = ["Umrah Trip", "Flying Solo", "Family Vacation", "Couples Getaway"];
 
@@ -153,21 +155,35 @@ export default function Plan() {
     });
     track("Itinerary Build Started", { place_count: chosen.length, duration: partial.duration, pace });
     try {
-      const system = buildItinerarySystemPrompt({
-        city: partial.city,
-        dates: partial.dates || null,
-        duration: partial.duration || 3,
-        groupType,
-        pace,
-        interests,
-        places: chosen,
-      });
-      const reply = await planAgent(system, [{ role: "user", content: "Build the itinerary now." }]);
-      const itinerary = parseItinerary(reply);
-      if (!itinerary) {
+      const duration = partial.duration || 3;
+      const dayResults = await Promise.allSettled(
+        Array.from({ length: duration }, (_, i) =>
+          planAgent(
+            buildDayItinerarySystemPrompt({
+              city: partial.city,
+              dates: partial.dates || null,
+              duration,
+              day: i + 1,
+              groupType,
+              pace,
+              interests,
+              places: chosen,
+            }),
+            [{ role: "user", content: "Build this day now." }],
+          ),
+        ),
+      );
+      const days = dedupeDaysByPlace(
+        dayResults
+          .map((r) => (r.status === "fulfilled" ? parseDayItinerary(r.value) : null))
+          .filter((d): d is TripDay => d !== null)
+          .sort((a, b) => a.day - b.day),
+      );
+      if (days.length === 0) {
         track("Itinerary Build Failed", { reason: "no_days_returned" });
         throw new Error("Couldn't build the itinerary — try again.");
       }
+      const itinerary: ItineraryResult = { city: partial.city, dates: partial.dates || null, duration, groupType, pace, days };
       track("Itinerary Build Completed", { day_count: itinerary.days.length, duration: itinerary.duration, pace });
 
       const draft = await db("createDraftTrip", {
