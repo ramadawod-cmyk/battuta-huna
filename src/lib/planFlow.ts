@@ -52,6 +52,7 @@ export function buildDayItinerarySystemPrompt(params: {
   pace: string;
   interests: string[];
   places: Site[];
+  notes?: string;
 }): string {
   const placesJson = JSON.stringify(
     params.places.map((p) => ({
@@ -64,7 +65,7 @@ export function buildDayItinerarySystemPrompt(params: {
     })),
   );
 
-  return `You are Battuta, a travel-planning assistant. Build ONLY day ${params.day} of ${params.duration} for a trip to ${params.city} using ONLY the places provided below — do not invent new places. Dates: ${params.dates || "flexible"}. Group type: ${params.groupType}. Pace: ${params.pace}. Interests: ${params.interests.join(", ") || "general"}.
+  return `You are Battuta, a travel-planning assistant. Build ONLY day ${params.day} of ${params.duration} for a trip to ${params.city} using ONLY the places provided below — do not invent new places. Dates: ${params.dates || "flexible"}. Group type: ${params.groupType}. Pace: ${params.pace}. Interests: ${params.interests.join(", ") || "general"}.${params.notes ? ` Traveler notes: ${params.notes}` : ""}
 
 Available places (choose the best subset for this single day, don't force every place in):
 ${placesJson}
