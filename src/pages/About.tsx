@@ -29,11 +29,16 @@ const SECTIONS = [
   },
 ];
 
-function SectionCard({ section }: { section: (typeof SECTIONS)[number] }) {
+function SectionCard({ section, expanded }: { section: (typeof SECTIONS)[number]; expanded: boolean }) {
   return (
     <div className="absolute inset-0 p-5 flex flex-col overflow-hidden">
       <p className="font-heading font-semibold text-white text-base leading-snug">{section.title}</p>
-      <p className="mt-3 text-white/85 text-[13px] leading-relaxed">{section.body}</p>
+      <p
+        className="mt-3 text-white/85 text-[13px] leading-relaxed transition-opacity duration-300"
+        style={{ opacity: expanded ? 1 : 0 }}
+      >
+        {section.body}
+      </p>
     </div>
   );
 }
@@ -51,8 +56,8 @@ function SectionsAccordion() {
           onMouseEnter={() => setHovered(i)}
           onMouseLeave={() => setHovered(null)}
         >
-          <div className="absolute inset-0 bg-black/45" />
-          <SectionCard section={section} />
+          <div className="absolute inset-0 bg-black/25" />
+          <SectionCard section={section} expanded={hovered === i} />
         </div>
       ))}
     </div>
@@ -64,7 +69,7 @@ function SectionsStack() {
     <div className="md:hidden flex flex-col gap-3">
       {SECTIONS.map((section) => (
         <div key={section.title} className="relative rounded-[20px] overflow-hidden p-5 bg-cover bg-center" style={{ backgroundImage: `url(${section.image})` }}>
-          <div className="absolute inset-0 bg-black/45" />
+          <div className="absolute inset-0 bg-black/25" />
           <div className="relative">
             <p className="font-heading font-semibold text-white text-base leading-snug">{section.title}</p>
             <p className="mt-3 text-white/85 text-[13px] leading-relaxed">{section.body}</p>
