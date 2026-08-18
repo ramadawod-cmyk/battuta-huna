@@ -101,7 +101,10 @@ export default function Plan() {
     setError(null);
     setPhase("chat");
     try {
-      const reply = await planAgent(GATHER_SYSTEM_PROMPT, nextMessages);
+      const reply = await planAgent(
+        GATHER_SYSTEM_PROMPT,
+        nextMessages.map(({ role, content }) => ({ role, content })),
+      );
       const { partial: parsed, cleanText } = parsePartial(reply);
       setMessages([...nextMessages, { role: "assistant", content: cleanText || reply, time: nowLabel() }]);
       if (parsed && parsed.city && parsed.duration) {
