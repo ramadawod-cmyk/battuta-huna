@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { label: "My Trips", path: "/my-trips" },
   { label: "Settings", path: "/settings" },
   { label: "About", path: "/about" },
+  { label: "Blog", path: "/blog" },
 ];
 
 function BrandMark({ color, size = 28 }: { color: string; size?: number }) {

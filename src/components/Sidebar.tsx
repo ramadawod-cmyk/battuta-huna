@@ -56,12 +56,24 @@ function InfoIcon({ className }: { className?: string }) {
   );
 }
 
+function BlogIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4.583 2.75H14.667L18.333 6.417V19.25H4.583V2.75Z" stroke="currentColor" strokeWidth="1.375" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.25 10.083H14.667" stroke="currentColor" strokeWidth="1.375" strokeLinecap="round" />
+      <path d="M8.25 13.75H14.667" stroke="currentColor" strokeWidth="1.375" strokeLinecap="round" />
+      <path d="M8.25 17.417H11.917" stroke="currentColor" strokeWidth="1.375" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS = [
   { label: "Explore", path: "/explore", Icon: HomeIcon },
   { label: "Plan", path: "/plan", Icon: HeartIcon },
   { label: "My Trips", path: "/my-trips", Icon: BookingsIcon },
   { label: "Settings", path: "/settings", Icon: ProfileIcon },
   { label: "About", path: "/about", Icon: InfoIcon },
+  { label: "Blog", path: "/blog", Icon: BlogIcon },
 ];
 
 export default function Sidebar() {
