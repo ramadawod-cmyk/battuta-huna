@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import heroIllustration from "../assets/plan/hero-illustration.svg";
 import sendArrow from "../assets/plan/send-arrow.svg";
 import TagPill from "../components/TagPill";
 import Button from "../components/Button";
+import BrandMark from "../components/BrandMark";
 import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { slugify } from "../lib/geo";
@@ -27,8 +28,12 @@ import type { Site, TripDay } from "../lib/types";
 
 const SUGGESTIONS = ["Umrah Trip", "Flying Solo", "Family Vacation", "Couples Getaway"];
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
+
+function nowLabel() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onClick: () => void }) {
   const imageUrl = useWikiThumbnail(site.name);
@@ -76,15 +81,20 @@ export default function Plan() {
   const [pace, setPace] = useState(PACE_OPTIONS[0]);
   const [interests, setInterests] = useState<string[]>([]);
   const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set());
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useTrackScreen("plan");
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, sending]);
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
     if (phase === "landing") track("Plan Started");
     track("Plan Message Sent", { stage: phase });
-    const nextMessages = [...messages, { role: "user" as const, content: trimmed }];
+    const nextMessages = [...messages, { role: "user" as const, content: trimmed, time: nowLabel() }];
     setMessages(nextMessages);
     setInput("");
     setSending(true);
@@ -93,7 +103,7 @@ export default function Plan() {
     try {
       const reply = await planAgent(GATHER_SYSTEM_PROMPT, nextMessages);
       const { partial: parsed, cleanText } = parsePartial(reply);
-      setMessages([...nextMessages, { role: "assistant", content: cleanText || reply }]);
+      setMessages([...nextMessages, { role: "assistant", content: cleanText || reply, time: nowLabel() }]);
       if (parsed && parsed.city && parsed.duration) {
         setPartial(parsed);
         track("Plan Details Extracted", { city: parsed.city, dates: parsed.dates, duration: parsed.duration });
@@ -271,47 +281,80 @@ export default function Plan() {
 
   if (phase === "chat") {
     return (
-      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col min-h-[calc(100vh-120px)]">
-        <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">YOUR TRAVEL AI AGENT</p>
-        <div className="flex flex-col gap-[16px] mt-[24px] flex-1">
-          {messages.map((m, i) => (
-            <div
-              key={i}
-              className={`max-w-[85%] sm:max-w-[480px] rounded-[20px] px-[20px] py-[14px] text-[15px] leading-[1.5] ${
-                m.role === "user"
-                  ? "self-end bg-secondary-purple text-white"
-                  : "self-start bg-surface-lavender text-text-primary"
-              }`}
-            >
-              {m.content}
+      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col h-[calc(100vh-60px)] md:h-[calc(100vh-120px)]">
+        <div className="flex flex-col flex-1 min-h-0 rounded-[24px] border border-secondary-purple/25 bg-white shadow-[0px_16px_40px_0px_rgba(48,48,48,0.06)] overflow-hidden">
+          <div className="flex items-center gap-[12px] px-[20px] sm:px-[24px] h-[68px] shrink-0 border-b border-text-primary/10">
+            <div className="size-[38px] rounded-full bg-secondary-purple flex items-center justify-center shrink-0">
+              <BrandMark className="text-white" size={20} />
             </div>
-          ))}
-          {sending && <p className="text-text-secondary text-[13px]">Battuta is thinking…</p>}
-          {error && <p className="text-primary-orange text-[13px]">{error}</p>}
-        </div>
+            <div>
+              <p className="font-heading font-semibold text-[15px] text-text-primary leading-tight">Battuta</p>
+              <p className="font-medium text-[11px] text-primary-orange tracking-[0.9px]">YOUR TRAVEL AI AGENT</p>
+            </div>
+          </div>
 
-        <form
-          className="relative mt-[24px] w-full"
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage(input);
-          }}
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Reply to Battuta…"
-            className="w-full h-[60px] rounded-[20px] border-[1.5px] border-secondary-purple pl-[24px] pr-[70px] text-[15px] text-text-primary outline-none"
-          />
-          <button
-            type="submit"
-            aria-label="Send"
-            className="absolute right-[10px] top-1/2 -translate-y-1/2 size-[42px] rounded-full bg-primary-orange flex items-center justify-center"
+          <div className="flex flex-col gap-[16px] flex-1 min-h-0 overflow-y-auto px-[20px] sm:px-[24px] py-[24px]">
+            {messages.map((m, i) =>
+              m.role === "assistant" ? (
+                <div key={i} className="flex items-start gap-[10px]">
+                  <div className="size-[32px] rounded-full bg-secondary-purple flex items-center justify-center shrink-0">
+                    <BrandMark className="text-white" size={16} />
+                  </div>
+                  <div className="flex flex-col gap-[4px] max-w-[85%] sm:max-w-[480px]">
+                    <div className="rounded-[20px] rounded-bl-[6px] px-[20px] py-[14px] text-[15px] leading-[1.5] bg-surface-lavender text-text-primary">
+                      {m.content}
+                    </div>
+                    <span className="text-[11px] text-text-secondary pl-[4px]">{m.time}</span>
+                  </div>
+                </div>
+              ) : (
+                <div key={i} className="self-end flex flex-col items-end gap-[4px] max-w-[85%] sm:max-w-[480px]">
+                  <div className="rounded-[20px] rounded-br-[6px] px-[20px] py-[14px] text-[15px] leading-[1.5] bg-secondary-purple text-white">
+                    {m.content}
+                  </div>
+                  <span className="text-[11px] text-text-secondary pr-[4px]">{m.time}</span>
+                </div>
+              ),
+            )}
+            {sending && (
+              <div className="flex items-center gap-[10px]">
+                <div className="size-[32px] rounded-full bg-secondary-purple flex items-center justify-center shrink-0">
+                  <BrandMark className="text-white" size={16} />
+                </div>
+                <div className="rounded-[20px] rounded-bl-[6px] px-[20px] py-[16px] bg-surface-lavender flex items-center gap-[5px]">
+                  <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce" />
+                </div>
+              </div>
+            )}
+            {error && <p className="text-primary-orange text-[13px]">{error}</p>}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form
+            className="relative shrink-0 px-[20px] sm:px-[24px] py-[16px] border-t border-text-primary/10"
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendMessage(input);
+            }}
           >
-            <img src={sendArrow} alt="" className="size-[11px]" />
-          </button>
-        </form>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Reply to Battuta…"
+              className="w-full h-[52px] rounded-[18px] bg-surface-lavender pl-[20px] pr-[64px] text-[15px] text-text-primary placeholder:text-text-secondary outline-none"
+            />
+            <button
+              type="submit"
+              aria-label="Send"
+              className="absolute right-[28px] top-1/2 -translate-y-1/2 size-[38px] rounded-full bg-primary-orange flex items-center justify-center"
+            >
+              <img src={sendArrow} alt="" className="size-[11px]" />
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
