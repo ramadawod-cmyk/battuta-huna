@@ -443,6 +443,12 @@ export default function Plan() {
     const showTextInput = step === "city" || step === "followup";
     return (
       <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col h-[calc(100vh-60px)] md:h-[calc(100vh-120px)]">
+        {step === "dates" && partial && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4">
+            <PlanDatePicker duration={partial.duration || 1} onConfirm={confirmDates} />
+          </div>
+        )}
+
         <div className="flex flex-col flex-1 min-h-0 rounded-[24px] border border-secondary-purple/25 bg-white shadow-[0px_16px_40px_0px_rgba(48,48,48,0.06)] overflow-hidden">
           <div className="flex items-center gap-[12px] px-[20px] sm:px-[24px] h-[68px] shrink-0 border-b border-text-primary/10">
             <div className="size-[38px] rounded-full bg-secondary-purple flex items-center justify-center shrink-0">
@@ -482,12 +488,6 @@ export default function Plan() {
                   <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce [animation-delay:-0.15s]" />
                   <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce" />
                 </div>
-              </BotRow>
-            )}
-
-            {!sending && step === "dates" && partial && (
-              <BotRow>
-                <PlanDatePicker duration={partial.duration || 1} onConfirm={confirmDates} />
               </BotRow>
             )}
 
