@@ -56,13 +56,20 @@ function isNearDuplicate(poi: { lat: number; lng: number }, against: { lat: numb
 
 /** `avoid` lets a top-up generation skip places the city already has cached, by name and by location. */
 async function generatePois(cityName: string, countryName: string, avoid: Site[] = []): Promise<GeneratedPoi[]> {
-  // At least 30% hidden gems overall, regardless of how BATCH_COUNT is tuned.
-  const hiddenGemBatches = Math.ceil(BATCH_COUNT * 0.4);
+  // Independent batches told only "focus on best-known highlights" converge hard on the same
+  // handful of iconic landmarks (verified: 3 separate asks for "top Paris spots" came back nearly
+  // identical) -- that's how the same place ends up generated twice under two different batches.
+  // Scoping each batch to one category removes that collision path structurally: two batches can
+  // only produce the same place if they're assigned the same category, not any of the 12.
   const batches = Array.from({ length: BATCH_COUNT }, (_, i) => {
-    const focus =
-      i < BATCH_COUNT - hiddenGemBatches
-        ? "Focus on the best-known, must-see highlights."
-        : "Focus on lesser-known \"hidden gem\" spots locals love, not tourist staples.";
+    const category = CATEGORIES[i % CATEGORIES.length];
+    // A category's second occurrence leans hidden-gem so it doesn't just double down on the same
+    // obvious pick as its first occurrence -- keeps the "at least 30% hidden gems" intent without
+    // a separate quota calculation (4 of 8 categories repeat once in 12 batches = 4/12 ≈ 33%).
+    const isRepeat = i >= CATEGORIES.length;
+    const focus = isRepeat
+      ? `Focus specifically on the "${category}" category. Favor lesser-known "hidden gem" spots locals love, not tourist staples.`
+      : `Focus specifically on the "${category}" category, on the best-known, must-see highlights.`;
     return generatePoiBatch(cityName, countryName, focus, BATCH_SIZE);
   });
 
