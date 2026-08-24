@@ -40,7 +40,21 @@ export function describeGeolocationError(err: unknown): string {
 }
 
 export function slugify(s: string): string {
-  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const COMBINING_MARKS = /[̀-ͯ]/g;
+  const base = s
+    .normalize("NFD")
+    .replace(COMBINING_MARKS, "") // strip accents (e.g. é -> e, ú -> u) so "Málaga" doesn't get mangled
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  if (base) return base;
+  // Non-Latin scripts (Arabic, CJK, etc.) have no ASCII left after accent-stripping, which used to
+  // produce an empty id and silently corrupt the row it was saved under. Fall back to a short,
+  // stable hash of the original string so every city name maps to a real, non-empty id.
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
+  return "city-" + Math.abs(hash).toString(36);
 }
 
 export type ReverseGeocodeResult = {

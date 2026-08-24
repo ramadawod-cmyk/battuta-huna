@@ -102,9 +102,9 @@ exports.handler = async function(event) {
     // ── GET CITY TIPS ────────────────────────────────
     if (action === 'getCityTips') {
       const { cityId } = data;
-      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=tips`);
+      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=tips,country_id`);
       const rows = res.body;
-      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0]?.tips || null) };
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
     }
 
     // ── SAVE CITY TIPS ───────────────────────────────

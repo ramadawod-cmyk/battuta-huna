@@ -5,23 +5,24 @@ import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { slugify } from "../lib/geo";
 import { formatDuration } from "../lib/categories";
+import { ensureCityTips, type CityTips } from "../lib/cityTips";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Trip } from "../lib/types";
 
-type CityTips = Record<string, string>;
-
+// Keys match what ensureCityTips generates (src/lib/cityTips.ts) and what's already stored for
+// the handful of cities seeded before that existed -- both use the same key set, so every city's
+// guide renders with a proper icon/title instead of falling back to a generic pin + raw key name.
 const GUIDE_LABELS: Record<string, { emoji: string; title: string }> = {
-  getting_around: { emoji: "🚕", title: "Getting around" },
-  what_to_wear: { emoji: "👗", title: "What to wear" },
-  local_culture: { emoji: "🤝", title: "Local culture" },
-  language_basics: { emoji: "🗣️", title: "Language basics" },
-  money: { emoji: "💳", title: "Money & payments" },
-  make_sure_you_have: { emoji: "🎒", title: "Make sure you have" },
   safety: { emoji: "🛡️", title: "Safety" },
-  best_time_of_day: { emoji: "🕐", title: "Best time of day" },
+  what_to_have: { emoji: "🎒", title: "What to have" },
   where_to_eat: { emoji: "🍽️", title: "Where to eat" },
+  local_culture: { emoji: "🤝", title: "Local culture" },
+  getting_around: { emoji: "🚕", title: "Getting around" },
+  money_payments: { emoji: "💳", title: "Money & payments" },
+  language_basics: { emoji: "🗣️", title: "Language basics" },
+  best_time_of_day: { emoji: "🕐", title: "Best time of day" },
 };
 
 export default function TripDetail() {
@@ -58,7 +59,7 @@ export default function TripDetail() {
           status: found.status,
           day_count: found.days?.length || 0,
         });
-        db("getCityTips", { cityId: slugify(found.city) })
+        ensureCityTips(slugify(found.city), found.city)
           .then(setTips)
           .catch(() => {});
       })
