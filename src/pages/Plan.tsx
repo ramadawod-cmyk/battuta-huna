@@ -9,6 +9,8 @@ import PlanDatePicker from "../components/PlanDatePicker";
 import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { slugify } from "../lib/geo";
+import { CATEGORIES } from "../lib/categories";
+import { planItinerary } from "../lib/itineraryPlanner";
 import { useAuth } from "../lib/AuthContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
@@ -17,15 +19,14 @@ import {
   GATHER_SYSTEM_PROMPT,
   parsePartial,
   type PlanPartial,
-  buildDayItinerarySystemPrompt,
-  parseDayItinerary,
-  dedupeDaysByPlace,
+  buildDayLabelsSystemPrompt,
+  parseDayLabels,
   type ItineraryResult,
   GROUP_TYPES,
   PACE_OPTIONS,
   INTEREST_TAGS,
 } from "../lib/planFlow";
-import type { Site, TripDay } from "../lib/types";
+import type { Site } from "../lib/types";
 
 const SUGGESTIONS = ["Umrah Trip", "Flying Solo", "Family Vacation", "Couples Getaway"];
 
@@ -58,12 +59,35 @@ function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onC
         )}
       </div>
       <div className="p-[16px]">
-        <p className="font-heading font-semibold text-[14px] text-text-primary">{site.name}</p>
+        <div className="flex items-center gap-[8px]">
+          <p className="font-heading font-semibold text-[14px] text-text-primary">{site.name}</p>
+          {site.must_see && (
+            <span className="shrink-0 rounded-[8px] bg-primary-orange/15 text-primary-orange text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
+              MUST-SEE
+            </span>
+          )}
+        </div>
         <p className="text-[11px] text-secondary-purple font-medium mt-[2px]">{site.category}</p>
         <p className="text-[12px] text-text-secondary mt-[6px] line-clamp-2">{site.description}</p>
       </div>
     </button>
   );
+}
+
+/**
+ * Ranks places matching the traveller's chosen interests (or all places, if none chosen) ahead of
+ * the rest, with must-see places bypassing the interest filter entirely so they're never crowded
+ * out of the default selection just because their category wasn't picked.
+ */
+function pickDefaultPlaces(sites: Site[], interests: string[]): Set<string> {
+  const CAP = 14;
+  const ranked = [...sites].sort((a, b) => {
+    const aMatch = !!a.must_see || interests.length === 0 || interests.includes(a.category);
+    const bMatch = !!b.must_see || interests.length === 0 || interests.includes(b.category);
+    if (aMatch !== bMatch) return aMatch ? -1 : 1;
+    return Number(!!b.must_see) - Number(!!a.must_see);
+  });
+  return new Set(ranked.slice(0, CAP).map((s) => s.name));
 }
 
 function BotRow({ children }: { children: ReactNode }) {
@@ -172,14 +196,24 @@ export default function Plan() {
   const [pace, setPace] = useState(PACE_OPTIONS[0]);
   const [interests, setInterests] = useState<string[]>([]);
   const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set());
+  const [placeFilters, setPlaceFilters] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const sitesPromiseRef = useRef<Promise<void> | null>(null);
+  const userTouchedPlacesRef = useRef(false);
 
   useTrackScreen("plan");
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: "end" });
   }, [messages, sending, step]);
+
+  // Places load before interests are known (loadSites fires right after the city step), so the
+  // default selection is re-ranked here once interests are set — but only until the user starts
+  // manually toggling places themselves.
+  useEffect(() => {
+    if (sites.length === 0 || userTouchedPlacesRef.current) return;
+    setSelectedPlaces(pickDefaultPlaces(sites, interests));
+  }, [sites, interests]);
 
   function askStep(next: Step, question: string) {
     setStep(next);
@@ -266,6 +300,7 @@ export default function Plan() {
 
   async function chooseBrowse() {
     setMessages((prev) => [...prev, { role: "user", content: "I'll pick the places myself.", time: nowLabel() }]);
+    setPlaceFilters(interests);
     setPhase("selecting");
   }
 
@@ -284,7 +319,6 @@ export default function Plan() {
       const cityId = slugify(p.city);
       const result = await ensureCitySites(cityId, p.city, p.country_id, p.country);
       setSites(result);
-      setSelectedPlaces(new Set(result.slice(0, 10).map((s) => s.name)));
       track("Places Suggested", { count: result.length, duration: p.duration });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Couldn't load places for this city.";
@@ -299,7 +333,12 @@ export default function Plan() {
     setInterests((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
+  function togglePlaceFilter(tag: string) {
+    setPlaceFilters((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  }
+
   function togglePlace(name: string) {
+    userTouchedPlacesRef.current = true;
     setSelectedPlaces((prev) => {
       const next = new Set(prev);
       const selected = !next.has(name);
@@ -325,34 +364,26 @@ export default function Plan() {
     track("Itinerary Build Started", { place_count: chosen.length, duration: partial.duration, pace });
     try {
       const duration = partial.duration || 3;
-      const dayResults = await Promise.allSettled(
-        Array.from({ length: duration }, (_, i) =>
-          planAgent(
-            buildDayItinerarySystemPrompt({
-              city: partial.city,
-              dates: partial.dates || null,
-              duration,
-              day: i + 1,
-              groupType,
-              pace,
-              interests,
-              places: chosen,
-              notes: followupNotes || undefined,
-            }),
-            [{ role: "user", content: "Build this day now." }],
-          ),
-        ),
-      );
-      const days = dedupeDaysByPlace(
-        dayResults
-          .map((r) => (r.status === "fulfilled" ? parseDayItinerary(r.value) : null))
-          .filter((d): d is TripDay => d !== null)
-          .sort((a, b) => a.day - b.day),
-      );
-      if (days.length === 0) {
-        track("Itinerary Build Failed", { reason: "no_days_returned" });
+      const days = planItinerary(chosen, duration, pace);
+      if (days.every((d) => d.slots.length === 0)) {
+        track("Itinerary Build Failed", { reason: "no_places_fit" });
         throw new Error("Couldn't build the itinerary — try again.");
       }
+
+      try {
+        const labelText = await planAgent(buildDayLabelsSystemPrompt(partial.city, days, followupNotes || undefined), [
+          { role: "user", content: "Write the day titles now." },
+        ]);
+        const labels = parseDayLabels(labelText);
+        if (labels && labels.length === days.length) {
+          days.forEach((day, i) => {
+            day.label = `Day ${day.day} — ${labels[i]}`;
+          });
+        }
+      } catch {
+        // Fall back to the planner's plain "Day N" labels — titles are cosmetic, not worth failing the build over.
+      }
+
       const itinerary: ItineraryResult = { city: partial.city, dates: partial.dates || null, duration, groupType, pace, days };
       track("Itinerary Build Completed", { day_count: itinerary.days.length, duration: itinerary.duration, pace });
 
@@ -561,16 +592,23 @@ export default function Plan() {
           <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] uppercase">
             Places ({selectedPlaces.size} selected)
           </p>
+          <div className="flex flex-wrap gap-[8px] mt-[12px]">
+            {CATEGORIES.map((tag) => (
+              <TagPill key={tag} label={tag} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
+            ))}
+          </div>
           {loadingSites && <p className="text-text-secondary text-[14px] mt-[12px]">Finding places in {partial?.city}…</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px] mt-[12px]">
-            {sites.map((site) => (
-              <PlaceCard
-                key={site.id}
-                site={site}
-                active={selectedPlaces.has(site.name)}
-                onClick={() => togglePlace(site.name)}
-              />
-            ))}
+            {sites
+              .filter((site) => placeFilters.length === 0 || site.must_see || placeFilters.includes(site.category))
+              .map((site) => (
+                <PlaceCard
+                  key={site.id}
+                  site={site}
+                  active={selectedPlaces.has(site.name)}
+                  onClick={() => togglePlace(site.name)}
+                />
+              ))}
           </div>
         </div>
 

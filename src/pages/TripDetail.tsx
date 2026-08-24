@@ -4,6 +4,7 @@ import swapIcon from "../assets/trip-detail/swap-icon.svg";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { slugify } from "../lib/geo";
+import { formatDuration } from "../lib/categories";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
@@ -145,9 +146,14 @@ export default function TripDetail() {
                       .filter((slot) => !slot._removed)
                       .map((slot) => (
                         <div key={`${day.day}-${slot.name}`} className="flex items-start gap-[16px] py-[10px]">
-                          <p className="w-[70px] shrink-0 text-[12px] font-medium text-text-secondary mt-[2px]">
-                            {slot.time}
-                          </p>
+                          <div className="w-[70px] shrink-0 mt-[2px]">
+                            <p className="text-[12px] font-medium text-text-secondary">{slot.time}</p>
+                            {slot.durationMinutes && (
+                              <p className="text-[11px] text-text-secondary/70 mt-[2px]">
+                                {formatDuration(slot.durationMinutes)}
+                              </p>
+                            )}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
                             <p className="text-[13px] leading-[1.4] text-text-secondary mt-[6px]">

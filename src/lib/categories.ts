@@ -33,3 +33,26 @@ export function normalizeCategory(raw: string | null | undefined): string {
   }
   return "Sightseeing";
 }
+
+/** Typical time (minutes) a traveller spends at a place of this category, used when a site has no AI-estimated duration_minutes of its own. */
+export const CATEGORY_DURATION_MINUTES: Record<string, number> = {
+  "Sightseeing": 60,
+  "History": 75,
+  "Art & Culture": 90,
+  "Spiritual": 30,
+  "Food & Market": 60,
+  "Nature": 90,
+  "Neighbourhood": 60,
+  "Architecture": 30,
+};
+
+export function getDurationMinutes(site: { duration_minutes?: number | null; category: string }): number {
+  return site.duration_minutes ?? CATEGORY_DURATION_MINUTES[normalizeCategory(site.category)] ?? 60;
+}
+
+export function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h <= 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}

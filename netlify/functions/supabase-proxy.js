@@ -84,6 +84,13 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 
+    // ── SAVE SITE META (must-see / visit duration backfill) ──
+    if (action === 'saveSiteMeta') {
+      const { name, cityId, mustSee, durationMinutes } = data;
+      const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { must_see: mustSee, duration_minutes: durationMinutes });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
     // ── GET CITY HERO ────────────────────────────────
     if (action === 'getCityHero') {
       const { cityId } = data;

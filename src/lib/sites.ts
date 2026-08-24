@@ -11,6 +11,8 @@ type GeneratedPoi = {
   description: string;
   lat: number;
   lng: number;
+  mustSee?: boolean;
+  durationMinutes?: number;
 };
 
 function extractJsonArray(text: string): unknown[] {
@@ -31,7 +33,7 @@ const BATCH_SIZE = 4;
 const BATCH_COUNT = 5;
 
 async function generatePoiBatch(cityName: string, countryName: string, focus: string, count: number): Promise<GeneratedPoi[]> {
-  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (10-14 words, warm editorial tone, no markdown), "lat": number, "lng": number}.`;
+  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (10-14 words, warm editorial tone, no markdown), "lat": number, "lng": number, "mustSee": boolean (true only for iconic, unmissable landmarks a first-time visitor shouldn't skip), "durationMinutes": number (typical time a visitor spends here, in minutes)}.`;
 
   const text = await planAgent(system, [
     { role: "user", content: `Generate ${count} points of interest for ${cityName}, ${countryName}.` },
@@ -79,6 +81,7 @@ export async function ensureCitySites(
 ): Promise<Site[]> {
   const existing: Site[] = await db("getSites", { cityId });
   if (existing && existing.length >= 5) {
+    backfillSiteMeta(cityId, cityName, existing);
     // Normalize category for display/filtering only — don't rewrite existing DB rows just for this.
     return existing.map((site) => ({ ...site, category: normalizeCategory(site.category) }));
   }
@@ -100,6 +103,8 @@ export async function ensureCitySites(
       map_url: `https://maps.google.com/?q=${encodeURIComponent(poi.name + ", " + cityName)}`,
       source: "ai",
       review_status: "ai_complete",
+      must_see: poi.mustSee ?? false,
+      duration_minutes: poi.durationMinutes ?? null,
     }));
 
     await db("upsertSites", { sites });
@@ -114,4 +119,42 @@ export async function ensureCitySites(
     });
     throw err;
   }
+}
+
+type SiteMeta = { name: string; mustSee: boolean; durationMinutes: number };
+
+const META_BATCH_SIZE = 8;
+
+async function classifySiteMetaBatch(cityName: string, sites: Site[]): Promise<SiteMeta[]> {
+  const system = `You are a travel research assistant. For each place below (in ${cityName}), decide: is it an iconic, unmissable "must-see" landmark for a first-time visitor (true/false), and how many minutes does a typical visitor spend there. Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string (must match input exactly), "mustSee": boolean, "durationMinutes": number}.`;
+  const places = sites.map((s) => ({ name: s.name, category: s.category, description: s.description }));
+  const text = await planAgent(system, [{ role: "user", content: `Places: ${JSON.stringify(places)}` }]);
+  return extractJsonArray(text) as SiteMeta[];
+}
+
+/**
+ * Best-effort, fire-and-forget classification for sites cached before must_see/duration_minutes
+ * existed. Never awaited by callers — failures are swallowed, same as SiteDetail's long-description
+ * backfill, since the UI already has sensible fallback defaults (getDurationMinutes) in the meantime.
+ */
+async function backfillSiteMeta(cityId: string, cityName: string, sites: Site[]): Promise<void> {
+  const stale = sites.filter((s) => s.duration_minutes == null);
+  if (stale.length === 0) return;
+
+  const batches: Site[][] = [];
+  for (let i = 0; i < stale.length; i += META_BATCH_SIZE) batches.push(stale.slice(i, i + META_BATCH_SIZE));
+
+  const results = await Promise.allSettled(batches.map((batch) => classifySiteMetaBatch(cityName, batch)));
+  const patches: Promise<unknown>[] = [];
+  for (const result of results) {
+    if (result.status !== "fulfilled") continue;
+    for (const meta of result.value) {
+      patches.push(
+        db("saveSiteMeta", { name: meta.name, cityId, mustSee: !!meta.mustSee, durationMinutes: meta.durationMinutes }).catch(
+          () => {},
+        ),
+      );
+    }
+  }
+  await Promise.allSettled(patches);
 }

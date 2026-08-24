@@ -8,7 +8,7 @@ import closeIcon from "../assets/trip-swap/close-icon.svg";
 import askAiArrow from "../assets/trip-swap/ask-ai-arrow.svg";
 import { db, planAgent } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
-import { normalizeCategory } from "../lib/categories";
+import { normalizeCategory, getDurationMinutes, formatDuration } from "../lib/categories";
 import { slugify } from "../lib/geo";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Site, Trip, TripSlot } from "../lib/types";
@@ -130,6 +130,7 @@ export default function TripDetailSwapItem() {
         lat: site.lat,
         lng: site.lng,
         mapUrl: site.map_url || `https://maps.google.com/?q=${encodeURIComponent(site.name)}`,
+        durationMinutes: getDurationMinutes(site),
       };
       const updatedDays = trip.days.map((day) =>
         day.day !== dayNumber
@@ -209,13 +210,16 @@ export default function TripDetailSwapItem() {
                           isSwapping ? "bg-secondary-purple" : ""
                         }`}
                       >
-                        <p
-                          className={`w-[70px] shrink-0 mt-[2px] font-medium text-[12px] ${
-                            isSwapping ? "text-white/80" : "text-text-secondary"
-                          }`}
-                        >
-                          {slot.time}
-                        </p>
+                        <div className="w-[70px] shrink-0 mt-[2px]">
+                          <p className={`font-medium text-[12px] ${isSwapping ? "text-white/80" : "text-text-secondary"}`}>
+                            {slot.time}
+                          </p>
+                          {slot.durationMinutes && (
+                            <p className={`text-[11px] mt-[2px] ${isSwapping ? "text-white/60" : "text-text-secondary/70"}`}>
+                              {formatDuration(slot.durationMinutes)}
+                            </p>
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p
                             className={`font-heading font-semibold text-[16px] ${

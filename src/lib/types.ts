@@ -24,6 +24,8 @@ export type Site = {
   image_url?: string | null;
   review_status?: string;
   source?: string;
+  must_see?: boolean | null;
+  duration_minutes?: number | null;
 };
 
 export type TripSlot = {
@@ -35,6 +37,7 @@ export type TripSlot = {
   lat: number;
   lng: number;
   mapUrl: string;
+  durationMinutes?: number;
   _removed?: boolean;
 };
 
