@@ -79,8 +79,11 @@ function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onC
  * the rest, with must-see places bypassing the interest filter entirely so they're never crowded
  * out of the default selection just because their category wasn't picked.
  */
-function pickDefaultPlaces(sites: Site[], interests: string[]): Set<string> {
-  const CAP = 14;
+function pickDefaultPlaces(sites: Site[], interests: string[], duration: number): Set<string> {
+  // Scale with trip length -- a fixed cap starves later days of candidates once the scheduler
+  // works through it, leaving them sparse or empty on longer trips (~6/day gives the scheduler
+  // enough options to fill every day without forcing in a bad geographic fit).
+  const CAP = Math.max(14, duration * 6);
   const ranked = [...sites].sort((a, b) => {
     const aMatch = !!a.must_see || interests.length === 0 || interests.includes(a.category);
     const bMatch = !!b.must_see || interests.length === 0 || interests.includes(b.category);
@@ -212,8 +215,8 @@ export default function Plan() {
   // manually toggling places themselves.
   useEffect(() => {
     if (sites.length === 0 || userTouchedPlacesRef.current) return;
-    setSelectedPlaces(pickDefaultPlaces(sites, interests));
-  }, [sites, interests]);
+    setSelectedPlaces(pickDefaultPlaces(sites, interests, partial?.duration || 3));
+  }, [sites, interests, partial?.duration]);
 
   function askStep(next: Step, question: string) {
     setStep(next);

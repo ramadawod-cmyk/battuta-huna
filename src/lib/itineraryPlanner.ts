@@ -152,7 +152,15 @@ export function planItinerary(sites: Site[], duration: number, pace: string): Tr
           bestCandidate = candidate;
         }
       }
-      if (!bestCandidate || bestDist > MAX_STOP_DISTANCE_METERS) break;
+      if (!bestCandidate) break;
+
+      // The proximity cap keeps a well-filled day tight, but a day that's still mostly empty
+      // should reach past it rather than quit early — otherwise a day can end at midday just
+      // because the nearest leftover site is a few hundred meters past the cap, even though
+      // there's nothing closer and hours of budget left (rule 4 only excuses a lone far stop
+      // when the day has nothing better to do, not when it's simply under-filled).
+      const dayIsWellFilled = usedMinutes >= budgetMinutes * 0.6;
+      if (dayIsWellFilled && bestDist > MAX_STOP_DISTANCE_METERS) break;
 
       const candidateMinutes = getDurationMinutes(bestCandidate) + TRANSIT_BUFFER_MINUTES;
       if (usedMinutes + candidateMinutes > budgetMinutes) break;
