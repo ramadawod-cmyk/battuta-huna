@@ -32,7 +32,7 @@ const SUGGESTIONS = ["Umrah Trip", "Flying Solo", "Family Vacation", "Couples Ge
 
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
-type Step = "city" | "followup" | "dates" | "party" | "interests" | "pace" | "mode";
+type Step = "city" | "dates" | "followup" | "party" | "interests" | "pace" | "mode";
 
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -251,10 +251,7 @@ export default function Plan() {
         setPartial(parsed);
         track("Plan Details Extracted", { city: parsed.city, dates: parsed.dates, duration: parsed.duration });
         sitesPromiseRef.current = loadSites(parsed);
-        askStep(
-          "followup",
-          `Will you only be exploring ${parsed.city}, or are you interested in nearby cities too? And is there anything specific you don't want to miss?`,
-        );
+        askStep("dates", "Great — when are you planning to go?");
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
@@ -272,14 +269,18 @@ export default function Plan() {
     setInput("");
     answerStep(
       trimmed || "Just this city, nothing specific in mind.",
-      "dates",
-      "Perfect. Do you have specific travel dates in mind?",
+      "party",
+      "Who's this trip for — just you, or are you bringing company?",
     );
   }
 
   function confirmDates(label: string) {
     setPartial((prev) => (prev ? { ...prev, dates: label } : prev));
-    answerStep(label, "party", "Who's this trip for — just you, or are you bringing company?");
+    answerStep(
+      label,
+      "followup",
+      `Will you only be exploring ${partial?.city}, or are you interested in nearby cities too? And is there anything specific you don't want to miss?`,
+    );
   }
 
   function selectParty(g: string) {
