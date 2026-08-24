@@ -10,6 +10,12 @@ const DINNER_START = 19 * 60; // 7:00 PM
 const DINNER_MINUTES = 90;
 const TRANSIT_BUFFER_MINUTES = 15;
 const MAX_STOP_DISTANCE_METERS = 3000;
+// An under-filled day is allowed to reach past MAX_STOP_DISTANCE_METERS rather than quit early,
+// but both bounds below keep that reach from turning into a citywide crawl that vacuums up
+// candidates other, later days needed too (which visually collapses a trip: TripDetail hides
+// days with zero stops, so a starved day just disappears instead of showing empty).
+const RELAXED_MAX_DISTANCE_METERS = 8000;
+const MAX_RELAXED_STOPS_PER_DAY = 2;
 
 const PACE_BUDGET_MULTIPLIER: Record<string, number> = {
   Relaxed: 0.8,
@@ -140,6 +146,11 @@ export function planItinerary(sites: Site[], duration: number, pace: string): Tr
 
     const group: Site[] = [seed];
     let usedMinutes = getDurationMinutes(seed);
+    let relaxedStops = 0;
+    // Fair share of what's left, spread over this day and whatever days remain after it — caps
+    // how much of the pool a single day can claim so later days aren't left with nothing.
+    const daysLeftIncludingThis = days - dayIndex;
+    const targetStops = Math.max(1, Math.ceil((remaining.size + 1) / daysLeftIncludingThis));
 
     for (;;) {
       const center = centroid(group);
@@ -154,16 +165,20 @@ export function planItinerary(sites: Site[], duration: number, pace: string): Tr
       }
       if (!bestCandidate) break;
 
-      // The proximity cap keeps a well-filled day tight, but a day that's still mostly empty
-      // should reach past it rather than quit early — otherwise a day can end at midday just
-      // because the nearest leftover site is a few hundred meters past the cap, even though
-      // there's nothing closer and hours of budget left (rule 4 only excuses a lone far stop
-      // when the day has nothing better to do, not when it's simply under-filled).
-      const dayIsWellFilled = usedMinutes >= budgetMinutes * 0.6;
-      if (dayIsWellFilled && bestDist > MAX_STOP_DISTANCE_METERS) break;
-
       const candidateMinutes = getDurationMinutes(bestCandidate) + TRANSIT_BUFFER_MINUTES;
       if (usedMinutes + candidateMinutes > budgetMinutes) break;
+
+      // Within the proximity cap, always accept — that's the normal dense-cluster case and is
+      // self-limiting (only so much exists within range). Beyond the cap, only reach for it while
+      // the day still needs its fair share and hasn't already used its limited "reach" allowance —
+      // otherwise a day with only short-duration stops could keep leapfrogging across the whole
+      // city well past 60% of its time budget, claiming candidates later days needed.
+      if (bestDist > MAX_STOP_DISTANCE_METERS) {
+        const hasFairShare = group.length >= targetStops;
+        const outOfReaches = relaxedStops >= MAX_RELAXED_STOPS_PER_DAY;
+        if (hasFairShare || outOfReaches || bestDist > RELAXED_MAX_DISTANCE_METERS) break;
+        relaxedStops++;
+      }
 
       remaining.delete(bestCandidate);
       group.push(bestCandidate);
