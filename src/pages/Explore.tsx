@@ -5,7 +5,7 @@ import SiteDetailModal from "../components/SiteDetailModal";
 import { useCity } from "../lib/CityContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { haversineMeters, getCurrentPosition } from "../lib/geo";
-import { CATEGORIES as SITE_CATEGORIES } from "../lib/categories";
+import { CATEGORIES as SITE_CATEGORIES, CATEGORY_ACCENTS } from "../lib/categories";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Site } from "../lib/types";
@@ -160,6 +160,7 @@ export default function Explore() {
             key={cat}
             label={cat}
             active={activeCategory === cat}
+            accent={CATEGORY_ACCENTS[cat]}
             onClick={() => {
               track("Site Filter Toggled", { tag: cat, active: activeCategory !== cat, view: "nearby" });
               setActiveCategory(cat);

@@ -9,6 +9,21 @@ export const CATEGORIES = [
   "Architecture",
 ];
 
+// Same 4-color accent set used for the trip travel guide icons (src/lib/guideMeta.ts) -- cycled
+// across the 8 site categories so filter pills are visually distinguishable at a glance.
+export type CategoryAccent = "purple" | "orange" | "coral" | "teal";
+
+export const CATEGORY_ACCENTS: Record<string, CategoryAccent> = {
+  "Sightseeing": "purple",
+  "History": "orange",
+  "Art & Culture": "coral",
+  "Spiritual": "teal",
+  "Food & Market": "purple",
+  "Nature": "orange",
+  "Neighbourhood": "coral",
+  "Architecture": "teal",
+};
+
 const CATEGORY_KEYWORDS: [string, RegExp][] = [
   ["History", /histor|ancient|ruin|monument|fort|castle|archaeolog|roman|heritage site|tomb/i],
   ["Spiritual", /mosque|church|temple|cathedral|shrine|religious|synagogue|basilica|monaster/i],
