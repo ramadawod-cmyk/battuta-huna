@@ -111,7 +111,30 @@ export default function TripDetail() {
         ← Back to My Trips
       </Link>
 
-      <div className="relative mt-[24px] sm:mt-[32px] bg-secondary-purple rounded-[24px] w-full h-[200px] sm:h-[240px] overflow-hidden">
+      <div className="flex items-start justify-between gap-[16px] mt-[24px] sm:mt-[32px]">
+        <div className="min-w-0">
+          <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-text-primary truncate">{trip.city}</p>
+          <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{metaParts.join(" · ")}</p>
+        </div>
+        <div className="flex gap-[8px] sm:gap-[16px] shrink-0">
+          <Link
+            to={`/trip/${tripId}/map`}
+            onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail" })}
+            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[100px] rounded-[14px] border-[1.5px] border-secondary-purple bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-secondary-purple transition-opacity hover:opacity-90"
+          >
+            MAP
+          </Link>
+          <Link
+            to={`/trip/${tripId}/customise`}
+            onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
+            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-text-primary bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-text-secondary transition-opacity hover:opacity-90 whitespace-nowrap"
+          >
+            EDIT TRIP
+          </Link>
+        </div>
+      </div>
+
+      <div className="relative mt-[16px] bg-secondary-purple rounded-[24px] w-full h-[200px] sm:h-[240px] overflow-hidden">
         {heroImageUrl && !heroImageFailed && (
           <img
             src={heroImageUrl}
@@ -120,27 +143,6 @@ export default function TripDetail() {
             className="absolute inset-0 size-full object-cover"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/60" />
-        <div className="absolute left-[16px] sm:left-[24px] bottom-[24px] sm:bottom-[40px] right-[16px]">
-          <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-white truncate">{trip.city}</p>
-          <p className="font-medium text-[10px] text-white/72 tracking-[1px] mt-[2px]">{metaParts.join(" · ")}</p>
-        </div>
-        <div className="absolute right-[12px] sm:right-[24px] top-[12px] sm:top-[24px] flex gap-[8px] sm:gap-[16px]">
-          <Link
-            to={`/trip/${tripId}/map`}
-            onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail" })}
-            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[100px] rounded-[14px] border-[1.5px] border-white bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-white transition-opacity hover:opacity-90"
-          >
-            MAP
-          </Link>
-          <Link
-            to={`/trip/${tripId}/customise`}
-            onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
-            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-white bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-white transition-opacity hover:opacity-90 whitespace-nowrap"
-          >
-            EDIT TRIP
-          </Link>
-        </div>
       </div>
 
       {trip.weather_tip && (
