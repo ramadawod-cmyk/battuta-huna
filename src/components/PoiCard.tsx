@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ImagePlaceholder from "./ImagePlaceholder";
+import type { CategoryAccent } from "../lib/categories";
 
 type PoiCardProps = {
   name: string;
@@ -8,7 +9,15 @@ type PoiCardProps = {
   description: string;
   className?: string;
   imageUrl?: string | null;
+  categoryAccent?: CategoryAccent;
   onClick?: () => void;
+};
+
+const CATEGORY_TEXT_CLASSES: Record<CategoryAccent, string> = {
+  purple: "text-secondary-purple",
+  orange: "text-primary-orange",
+  coral: "text-error",
+  teal: "text-tertiary-teal",
 };
 
 export default function PoiCard({
@@ -18,6 +27,7 @@ export default function PoiCard({
   description,
   className = "",
   imageUrl,
+  categoryAccent = "purple",
   onClick,
 }: PoiCardProps) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -27,7 +37,9 @@ export default function PoiCard({
         <button className="text-left" onClick={onClick}>
           <p className="font-heading font-semibold text-[17px] text-text-primary">{name}</p>
           <p className="font-medium text-[10px] text-text-secondary tracking-[0.4px] mt-[5px]">{distance}</p>
-          <p className="font-medium text-[11px] text-secondary-purple tracking-[0.44px] mt-[3px]">{category}</p>
+          <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
+            {category}
+          </p>
         </button>
         <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
           {imageUrl && !imgFailed ? (

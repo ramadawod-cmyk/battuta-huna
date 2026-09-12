@@ -5,7 +5,7 @@ import SiteDetailModal from "../components/SiteDetailModal";
 import { useCity } from "../lib/CityContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { haversineMeters, getCurrentPosition } from "../lib/geo";
-import { CATEGORIES as SITE_CATEGORIES, CATEGORY_ACCENTS } from "../lib/categories";
+import { CATEGORIES as SITE_CATEGORIES, CATEGORY_ACCENTS, normalizeCategory } from "../lib/categories";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Site } from "../lib/types";
@@ -38,6 +38,7 @@ function PoiCardWithImage({
       category={site.category.toUpperCase()}
       description={site.description}
       imageUrl={site.image_url || imageUrl}
+      categoryAccent={CATEGORY_ACCENTS[normalizeCategory(site.category)]}
       onClick={onClick}
     />
   );
