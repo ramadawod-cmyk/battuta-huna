@@ -62,10 +62,11 @@ const NAV_ITEMS = [
   { label: "Explore", path: "/explore", Icon: HomeIcon },
   { label: "Plan", path: "/plan", Icon: HeartIcon },
   { label: "My Trips", path: "/my-trips", Icon: BookingsIcon },
-  { label: "Settings", path: "/settings", Icon: ProfileIcon },
   { label: "About", path: "/about", Icon: InfoIcon },
   { label: "Blog", path: "/blog", Icon: BlogIcon },
 ];
+
+const SETTINGS_ITEM = { label: "Settings", path: "/settings", Icon: ProfileIcon };
 
 function DesktopSidebar() {
   const { pathname } = useLocation();
@@ -98,10 +99,21 @@ function DesktopSidebar() {
       </nav>
 
       <div className="mt-auto px-[16px] lg:px-[20px] pb-[40px]">
-        <div className="bg-surface-lavender rounded-[20px] h-[40px] flex items-center gap-[8px] px-[16px]">
-          <span className="size-[7px] rounded-full bg-secondary-purple" />
-          <span className="text-[12px] font-medium text-secondary-purple">Exploring</span>
-        </div>
+        <Link
+          to={SETTINGS_ITEM.path}
+          className={`h-[44px] rounded-[12px] flex items-center gap-[12px] px-[16px] ${
+            pathname === SETTINGS_ITEM.path ? "bg-secondary-purple/10" : ""
+          }`}
+        >
+          <SETTINGS_ITEM.Icon className={pathname === SETTINGS_ITEM.path ? "text-secondary-purple" : "text-text-secondary"} />
+          <span
+            className={`text-[14px] ${
+              pathname === SETTINGS_ITEM.path ? "font-medium text-text-primary" : "text-text-secondary"
+            }`}
+          >
+            {SETTINGS_ITEM.label}
+          </span>
+        </Link>
       </div>
     </aside>
   );
@@ -154,7 +166,7 @@ function MobileHeader() {
         }`}
       >
         <nav className="px-[20px] py-[24px] flex flex-col gap-[6px]">
-          {NAV_ITEMS.map((item) => {
+          {[...NAV_ITEMS, SETTINGS_ITEM].map((item) => {
             const active = pathname === item.path;
             return (
               <Link
