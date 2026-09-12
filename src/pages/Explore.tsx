@@ -87,29 +87,25 @@ export default function Explore() {
 
   return (
     <div className="px-4 sm:px-6 md:px-8 lg:px-[32px] py-6 md:py-[32px] max-w-[1260px]">
-      <p className="text-[16px] text-text-primary">Cultural Discovery{city ? ` · ${city.name}` : ""}</p>
+      <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-text-primary">
+        {city?.name || "Locating…"}
+      </p>
+      <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">CULTURAL DISCOVERY</p>
 
-      <div className="relative bg-secondary-purple rounded-[24px] w-full h-[320px] overflow-hidden mt-[36px]">
+      <div className="relative bg-secondary-purple rounded-[24px] w-full h-[320px] overflow-hidden mt-[16px]">
         {heroImageUrl && !heroImageFailed ? (
-          <>
-            <img
-              src={heroImageUrl}
-              alt={city?.name || ""}
-              onError={() => {
-                setHeroImageFailed(true);
-                track("Hero Image Broken", { city_id: city?.id, recovered: false });
-              }}
-              className="absolute inset-0 size-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-          </>
+          <img
+            src={heroImageUrl}
+            alt={city?.name || ""}
+            onError={() => {
+              setHeroImageFailed(true);
+              track("Hero Image Broken", { city_id: city?.id, recovered: false });
+            }}
+            className="absolute inset-0 size-full object-cover"
+          />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-r from-[#2d2a5c] to-secondary-purple" />
         )}
-        <div className="absolute left-[24px] bottom-[24px]">
-          <p className="font-heading font-semibold text-[24px] text-white">{city?.name || "Locating…"}</p>
-          <p className="font-medium text-[10px] text-white/72 tracking-[1px] mt-[2px]">CULTURAL DISCOVERY</p>
-        </div>
       </div>
 
       <div className="bg-surface-lavender rounded-[16px] mt-[24px] px-[24px] py-[14px]">

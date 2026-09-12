@@ -111,9 +111,35 @@ export function CityProvider({ children }: { children: ReactNode }) {
   }, [loadSitesFor]);
 
   useEffect(() => {
-    if (city) {
-      loadSitesFor(city);
-    }
+    if (!city) return;
+    loadSitesFor(city);
+
+    // The cached city renders immediately above for a fast paint, but it can go stale --
+    // previously it was never re-checked, so a user who last opened the app in one city and now
+    // opens it in another (e.g. after traveling) would be stuck seeing the old city indefinitely,
+    // with no visible sign anything was wrong. Silently re-resolve the city from a fresh position
+    // in the background and correct it if the user has actually moved.
+    (async () => {
+      try {
+        const pos = await getCurrentPosition();
+        const geo = await reverseGeocodeCity(pos.coords.latitude, pos.coords.longitude);
+        if (geo.cityId === city.id) return;
+        const next: CurrentCity = {
+          id: geo.cityId,
+          name: geo.cityName,
+          countryId: geo.countryId,
+          countryName: geo.countryName,
+          locality: geo.locality,
+        };
+        setCity(next);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        track("City Auto-Detected", { city: next.name, method: "geocoded-revalidation" });
+        await loadSitesFor(next);
+      } catch {
+        // Keep showing the cached city if a fresh position isn't available right now (permission
+        // revoked, offline, timed out) -- the explicit "Try again" error flow covers that case.
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
