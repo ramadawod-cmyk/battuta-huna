@@ -42,7 +42,15 @@ export default function PoiCard({
           )}
         </div>
       </div>
-      <p className="text-[13px] leading-[1.5] text-text-primary mt-[16px]">{description}</p>
+      <p className="text-[13px] leading-[1.5] text-text-primary mt-[16px] line-clamp-2">{description}</p>
+      <div className="flex justify-end mt-[8px]">
+        <button
+          onClick={onClick}
+          className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
+        >
+          View more
+        </button>
+      </div>
     </div>
   );
 }
