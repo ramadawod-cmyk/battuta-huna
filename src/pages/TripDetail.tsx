@@ -175,10 +175,10 @@ export default function TripDetail() {
                   <Link
                     to={`/trip/${tripId}/map?day=${day.day}`}
                     onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail", day: day.day })}
-                    aria-label={`View ${day.label || `Day ${day.day}`} on the map`}
-                    className="text-secondary-purple hover:opacity-70 transition-opacity"
+                    className="flex items-center gap-[4px] text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
                   >
-                    <Map size={15} strokeWidth={2} />
+                    <Map size={13} strokeWidth={2} />
+                    Map view
                   </Link>
                 </div>
                 <div className="flex flex-col mt-[16px]">
