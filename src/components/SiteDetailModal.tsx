@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Button from "./Button";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { db, planAgent, type WikiImage, wikiImagesBySearch } from "../lib/api";
@@ -112,15 +112,32 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                   <ImagePlaceholder />
                 )}
                 {photos.length > 1 && (
-                  <div className="absolute bottom-[16px] left-1/2 -translate-x-1/2 flex gap-[6px]">
-                    {photos.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setPhotoIndex(i)}
-                        className={`size-[8px] rounded-full ${i === photoIndex ? "bg-secondary-purple" : "bg-white/70"}`}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <button
+                      onClick={() => setPhotoIndex((i) => (i - 1 + photos.length) % photos.length)}
+                      aria-label="Previous photo"
+                      className="absolute left-[12px] top-1/2 -translate-y-1/2 size-[36px] rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    <button
+                      onClick={() => setPhotoIndex((i) => (i + 1) % photos.length)}
+                      aria-label="Next photo"
+                      className="absolute right-[12px] top-1/2 -translate-y-1/2 size-[36px] rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                    <div className="absolute bottom-[16px] left-1/2 -translate-x-1/2 flex gap-[6px]">
+                      {photos.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setPhotoIndex(i)}
+                          aria-label={`Go to photo ${i + 1}`}
+                          className={`size-[8px] rounded-full ${i === photoIndex ? "bg-secondary-purple" : "bg-white/70"}`}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -136,9 +153,17 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
 
               <div className="h-px bg-text-primary/20 mt-[14px]" />
 
-              <p className="text-[15px] leading-[1.65] text-text-primary mt-[24px]">
-                {longDescription || site.description}
-              </p>
+              {longDescription ? (
+                <p className="text-[15px] leading-[1.65] text-text-primary mt-[24px]">{longDescription}</p>
+              ) : generatingDescription ? (
+                <div className="mt-[24px] flex flex-col gap-[10px]">
+                  <div className="h-[14px] rounded-full bg-surface-lavender animate-pulse" />
+                  <div className="h-[14px] rounded-full bg-surface-lavender animate-pulse" />
+                  <div className="h-[14px] w-2/3 rounded-full bg-surface-lavender animate-pulse" />
+                </div>
+              ) : (
+                <p className="text-[15px] leading-[1.65] text-text-primary mt-[24px]">{site.description}</p>
+              )}
 
               <Button
                 variant="orange"
