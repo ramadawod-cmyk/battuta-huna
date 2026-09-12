@@ -14,7 +14,6 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import TripDetail from "./pages/TripDetail";
 import CustomiseTrip from "./pages/CustomiseTrip";
-import TripDetailSwapItem from "./pages/TripDetailSwapItem";
 import { useProximityNotifications } from "./lib/useProximityNotifications";
 
 export default function App() {
@@ -37,7 +36,6 @@ export default function App() {
       <Route path="/trip/:tripId" element={<Layout><TripDetail /></Layout>} />
       <Route path="/trip/:tripId/map" element={<Layout><TripMapBuilder /></Layout>} />
       <Route path="/trip/:tripId/customise" element={<Layout><CustomiseTrip /></Layout>} />
-      <Route path="/trip/:tripId/swap" element={<Layout><TripDetailSwapItem /></Layout>} />
     </Routes>
   );
 }
