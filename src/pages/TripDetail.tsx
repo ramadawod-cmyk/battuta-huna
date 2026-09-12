@@ -1,29 +1,41 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import swapIcon from "../assets/trip-detail/swap-icon.svg";
+import SwapPanel from "../components/SwapPanel";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { slugify } from "../lib/geo";
 import { formatDuration } from "../lib/categories";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
+import { GUIDE_ACCENT_CLASSES, GUIDE_META } from "../lib/guideMeta";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
-import type { Trip } from "../lib/types";
+import type { Trip, TripDay, TripSlot } from "../lib/types";
 
-// Keys match what ensureCityTips generates (src/lib/cityTips.ts) and what's already stored for
-// the handful of cities seeded before that existed -- both use the same key set, so every city's
-// guide renders with a proper icon/title instead of falling back to a generic pin + raw key name.
-const GUIDE_LABELS: Record<string, { emoji: string; title: string }> = {
-  safety: { emoji: "🛡️", title: "Safety" },
-  what_to_have: { emoji: "🎒", title: "What to have" },
-  where_to_eat: { emoji: "🍽️", title: "Where to eat" },
-  local_culture: { emoji: "🤝", title: "Local culture" },
-  getting_around: { emoji: "🚕", title: "Getting around" },
-  money_payments: { emoji: "💳", title: "Money & payments" },
-  language_basics: { emoji: "🗣️", title: "Language basics" },
-  best_time_of_day: { emoji: "🕐", title: "Best time of day" },
-};
+function ItinerarySlotRow({ slot, onSwap }: { slot: TripSlot; onSwap: () => void }) {
+  const imageUrl = useWikiThumbnail(slot.name);
+  return (
+    <div className="flex items-start gap-[16px] py-[10px]">
+      <div className="w-[80px] shrink-0 mt-[2px]">
+        <p className="text-[12px] font-medium text-text-secondary">{slot.time}</p>
+        {slot.durationMinutes && (
+          <p className="text-[11px] text-text-secondary/70 mt-[2px]">{formatDuration(slot.durationMinutes)}</p>
+        )}
+      </div>
+      <div className="size-[56px] shrink-0 rounded-[12px] bg-surface-lavender overflow-hidden">
+        {imageUrl && <img src={imageUrl} alt="" className="size-full object-cover" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
+        <p className="text-[13px] leading-[1.4] text-text-secondary mt-[6px]">{slot.description}</p>
+      </div>
+      <button onClick={onSwap} aria-label={`Swap ${slot.name}`} className="shrink-0 size-[32px]">
+        <img src={swapIcon} alt="" className="size-full" />
+      </button>
+    </div>
+  );
+}
 
 export default function TripDetail() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -34,6 +46,9 @@ export default function TripDetail() {
   const [error, setError] = useState<string | null>(null);
   const heroImageUrl = useWikiThumbnail(trip?.city);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
+  const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
+  const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
+  const [swapTarget, setSwapTarget] = useState<{ day: number; slotName: string } | null>(null);
 
   useTrackScreen("trip_detail");
 
@@ -132,74 +147,112 @@ export default function TripDetail() {
         <p className="text-[13px] text-text-secondary mt-[16px]">{trip.weather_tip}</p>
       )}
 
-      <div className="flex gap-[32px] lg:gap-[48px] mt-[32px] items-start flex-wrap">
-        <div className="flex-1 min-w-0 max-w-[680px]">
-          <div className="flex flex-col gap-[24px]">
-            {trip.days
-              .filter((day) => day.slots.some((s) => !s._removed))
-              .map((day) => (
-                <div key={day.day}>
-                  <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
-                    {day.label || `DAY ${day.day}`}
-                  </p>
-                  <div className="flex flex-col mt-[16px]">
-                    {day.slots
-                      .filter((slot) => !slot._removed)
-                      .map((slot) => (
-                        <div key={`${day.day}-${slot.name}`} className="flex items-start gap-[16px] py-[10px]">
-                          <div className="w-[70px] shrink-0 mt-[2px]">
-                            <p className="text-[12px] font-medium text-text-secondary">{slot.time}</p>
-                            {slot.durationMinutes && (
-                              <p className="text-[11px] text-text-secondary/70 mt-[2px]">
-                                {formatDuration(slot.durationMinutes)}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
-                            <p className="text-[13px] leading-[1.4] text-text-secondary mt-[6px]">
-                              {slot.description}
-                            </p>
-                          </div>
-                          <Link
-                            to={`/trip/${tripId}/swap?day=${day.day}&slot=${encodeURIComponent(slot.name)}`}
-                            aria-label={`Swap ${slot.name}`}
-                            className="shrink-0 size-[32px]"
-                          >
-                            <img src={swapIcon} alt="" className="size-full" />
-                          </Link>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ))}
-            {trip.days.length === 0 && (
-              <p className="text-text-secondary text-[14px]">This trip doesn't have an itinerary yet.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="w-full sm:w-[356px] shrink-0">
-          <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px]">TRAVEL GUIDE</p>
-          <div className="flex flex-col gap-[16px] mt-[16px]">
-            {guideEntries.length === 0 && (
-              <p className="text-text-secondary text-[13px]">No local tips yet for {trip.city}.</p>
-            )}
-            {guideEntries.map(([key, value]) => {
-              const meta = GUIDE_LABELS[key] || { emoji: "📌", title: key };
-              return (
-                <div key={key} className="bg-white border border-secondary-purple rounded-[16px] p-[15px] flex gap-[12px]">
-                  <p className="text-[18px] leading-[24px] shrink-0">{meta.emoji}</p>
-                  <div>
-                    <p className="font-heading font-semibold text-[14px] text-text-primary">{meta.title}</p>
-                    <p className="text-[12px] leading-[1.4] text-text-secondary mt-[6px]">{value}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <div className="flex gap-[12px] mt-[32px]">
+        <button
+          onClick={() => setActiveTab("itinerary")}
+          className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
+            activeTab === "itinerary" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
+          }`}
+        >
+          Itinerary
+        </button>
+        <button
+          onClick={() => setActiveTab("guide")}
+          className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
+            activeTab === "guide" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
+          }`}
+        >
+          Travel Guide
+        </button>
       </div>
+
+      {activeTab === "itinerary" && (
+        <div className="flex flex-col gap-[24px] mt-[32px]">
+          {trip.days
+            .filter((day) => day.slots.some((s) => !s._removed))
+            .map((day) => (
+              <div key={day.day}>
+                <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
+                  {day.label || `DAY ${day.day}`}
+                </p>
+                <div className="flex flex-col mt-[16px]">
+                  {day.slots
+                    .filter((slot) => !slot._removed)
+                    .map((slot) => (
+                      <ItinerarySlotRow
+                        key={`${day.day}-${slot.name}`}
+                        slot={slot}
+                        onSwap={() => setSwapTarget({ day: day.day, slotName: slot.name })}
+                      />
+                    ))}
+                </div>
+              </div>
+            ))}
+          {trip.days.length === 0 && (
+            <p className="text-text-secondary text-[14px]">This trip doesn't have an itinerary yet.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "guide" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px] mt-[32px]">
+          {guideEntries.length === 0 && (
+            <p className="text-text-secondary text-[13px]">No local tips yet for {trip.city}.</p>
+          )}
+          {guideEntries.map(([key, value]) => {
+            const meta = GUIDE_META[key];
+            const title = meta?.title || key;
+            const Icon = meta?.icon;
+            const accentClasses = GUIDE_ACCENT_CLASSES[meta?.accent || "purple"];
+            const isExpanded = expandedGuideKeys.has(key);
+            const isLong = value.length > 100;
+            return (
+              <div key={key} className="bg-white border border-border rounded-[16px] p-[16px]">
+                <div className="flex items-center gap-[10px]">
+                  <div className={`size-[36px] rounded-full flex items-center justify-center shrink-0 ${accentClasses.bg}`}>
+                    {Icon && <Icon className={`size-[18px] ${accentClasses.text}`} strokeWidth={2} />}
+                  </div>
+                  <p className="font-heading font-semibold text-[14px] text-text-primary">{title}</p>
+                </div>
+                <p
+                  className={`text-[12px] leading-[1.4] text-text-secondary mt-[10px] ${isExpanded ? "" : "line-clamp-2"}`}
+                >
+                  {value}
+                </p>
+                {isLong && (
+                  <button
+                    onClick={() =>
+                      setExpandedGuideKeys((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(key)) next.delete(key);
+                        else next.add(key);
+                        return next;
+                      })
+                    }
+                    className="text-[12px] font-medium text-secondary-purple mt-[6px]"
+                  >
+                    {isExpanded ? "Show less" : "Read more"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {swapTarget && (
+        <SwapPanel
+          trip={trip}
+          tripId={trip.id}
+          day={swapTarget.day}
+          slotName={swapTarget.slotName}
+          onClose={() => setSwapTarget(null)}
+          onSwapped={(updatedDays: TripDay[]) => {
+            setTrip({ ...trip, days: updatedDays });
+            setSwapTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }

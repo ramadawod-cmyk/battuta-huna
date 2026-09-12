@@ -8,6 +8,9 @@
   --color-surface-lavender: #e0ddf5;
   --color-surface-white: #ffffff;
   --color-primary-orange: #fe9c5e;
+  --color-tertiary-teal: #3ec8bc;
+  --color-error: #f77777;
+  --color-border: #d8d8d8;
 
   --font-heading: "Poppins", sans-serif;
   --font-body: "Rubik", sans-serif;

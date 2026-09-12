@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
+    "lucide-react": "^1.45.0",
     "mixpanel-browser": "^2.82.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
