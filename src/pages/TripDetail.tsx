@@ -120,7 +120,7 @@ export default function TripDetail() {
             className="absolute inset-0 size-full object-cover"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/60" />
         <div className="absolute left-[16px] sm:left-[24px] bottom-[24px] sm:bottom-[40px] right-[16px]">
           <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-white truncate">{trip.city}</p>
           <p className="font-medium text-[10px] text-white/72 tracking-[1px] mt-[2px]">{metaParts.join(" · ")}</p>
@@ -136,7 +136,7 @@ export default function TripDetail() {
           <Link
             to={`/trip/${tripId}/customise`}
             onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
-            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-text-primary bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-text-secondary transition-opacity hover:opacity-90 whitespace-nowrap"
+            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-white bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-white transition-opacity hover:opacity-90 whitespace-nowrap"
           >
             EDIT TRIP
           </Link>
