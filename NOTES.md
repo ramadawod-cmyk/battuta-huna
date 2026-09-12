@@ -9,6 +9,35 @@ its own later.
 
 ---
 
+## 2026-09-12 — Added an automated test suite as a deploy gate
+
+Set up [Vitest](https://vitest.dev) for unit tests, scoped to pure logic only (no
+DOM/browser tests yet — see the tradeoff note below). Wired into `package.json`'s
+`build` script as `vitest run && tsc -b && vite build`, so a failing test blocks the
+build — and since Netlify's build command *is* `npm run build`, a failing test blocks
+deploy too, with no separate CI system needed.
+
+- Config: `vitest.config.ts` (kept separate from `vite.config.ts` on purpose — these
+  tests don't need the React/Tailwind/PWA plugins).
+- First tests: `src/lib/geo.test.ts`, `src/lib/categories.test.ts` — covering
+  `slugify`, `haversineMeters`, `describeGeolocationError`, `normalizeCategory`,
+  `getDurationMinutes`, `formatDuration`. Several of these are exactly the functions
+  behind real bugs earlier this session (the non-Latin `slugify` fallback, category
+  normalization mismatches), which is why they were the starting point.
+- **Verified the gate actually works**, not just that tests pass: deliberately broke
+  one assertion and confirmed `npm run build` failed before ever reaching `tsc`/`vite
+  build`, then restored it and confirmed a clean build.
+- Scripts: `npm test` (run once), `npm run test:watch` (re-run on change).
+- See the README's "Testing" section for how to add more.
+
+**Deliberately out of scope for now**: end-to-end/browser tests (e.g. Playwright
+driving Explore → open a trip → swap a stop). Would catch more, but this app leans on
+real external services (Supabase, Anthropic, Wikipedia) that would need mocking to
+test reliably without flakiness or cost — worth layering on later, not a blocker for
+having *some* automated safety net now.
+
+---
+
 ## 2026-09-12 — Trip Detail / Explore redesign, staging → main launch
 
 ### Repo state going into this session
