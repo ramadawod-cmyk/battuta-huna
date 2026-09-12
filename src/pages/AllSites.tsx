@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import TagPill from "../components/TagPill";
 import AllSitesListItem from "../components/AllSitesListItem";
+import SiteDetailModal from "../components/SiteDetailModal";
 import { useCity } from "../lib/CityContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { CATEGORIES as SITE_CATEGORIES } from "../lib/categories";
@@ -32,7 +32,7 @@ export default function AllSites() {
   const { city, sites, status } = useCity();
   const [activeCategory, setActiveCategory] = useState("All");
   const [query, setQuery] = useState("");
-  const navigate = useNavigate();
+  const [selectedSiteName, setSelectedSiteName] = useState<string | null>(null);
 
   useTrackScreen("all_sites");
 
@@ -88,10 +88,7 @@ export default function AllSites() {
           <AllSitesListItemWithImage
             key={site.id}
             site={site}
-            onClick={() => {
-              track("Site Viewed", { name: site.name, category: site.category, source: "all_sites" });
-              navigate(`/site/${encodeURIComponent(site.name)}`);
-            }}
+            onClick={() => setSelectedSiteName(site.name)}
           />
         ))}
         {status === "ready" && filteredSites.length === 0 && (
@@ -101,6 +98,16 @@ export default function AllSites() {
           <p className="text-text-secondary text-[14px] col-span-full">Loading sites…</p>
         )}
       </div>
+
+      {selectedSiteName && city && (
+        <SiteDetailModal
+          siteName={selectedSiteName}
+          cityId={city.id}
+          cityName={city.name}
+          source="all_sites"
+          onClose={() => setSelectedSiteName(null)}
+        />
+      )}
     </div>
   );
 }

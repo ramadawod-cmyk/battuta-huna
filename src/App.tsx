@@ -6,7 +6,6 @@ import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Plan from "./pages/Plan";
 import Explore from "./pages/Explore";
-import SiteDetail from "./pages/SiteDetail";
 import TripMapBuilder from "./pages/TripMapBuilder";
 import AllSites from "./pages/AllSites";
 import MyTrips from "./pages/MyTrips";
@@ -29,7 +28,6 @@ export default function App() {
       <Route path="/blog/:slug" element={<Layout><BlogPost /></Layout>} />
       <Route path="/plan" element={<Layout><Plan /></Layout>} />
       <Route path="/explore" element={<Layout><Explore /></Layout>} />
-      <Route path="/site/:siteName" element={<Layout><SiteDetail /></Layout>} />
       <Route path="/all-sites" element={<Layout><AllSites /></Layout>} />
       <Route path="/my-trips" element={<Layout><MyTrips /></Layout>} />
       <Route path="/settings" element={<Layout><Settings /></Layout>} />

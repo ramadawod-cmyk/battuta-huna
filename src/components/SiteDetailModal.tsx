@@ -123,9 +123,6 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                   </div>
                 )}
               </div>
-              {activePhoto?.attribution && (
-                <p className="text-[11px] text-text-secondary mt-[16px]">Photo: {activePhoto.attribution}</p>
-              )}
             </div>
 
             <div className="w-[360px] max-w-full">
