@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Map } from "lucide-react";
 import swapIcon from "../assets/trip-detail/swap-icon.svg";
 import SwapPanel from "../components/SwapPanel";
 import { db } from "../lib/api";
@@ -118,13 +119,6 @@ export default function TripDetail() {
         </div>
         <div className="flex gap-[8px] sm:gap-[16px] shrink-0">
           <Link
-            to={`/trip/${tripId}/map`}
-            onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail" })}
-            className="h-[36px] sm:h-[44px] px-[14px] sm:w-[100px] rounded-[14px] border-[1.5px] border-secondary-purple bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-secondary-purple transition-opacity hover:opacity-90"
-          >
-            MAP
-          </Link>
-          <Link
             to={`/trip/${tripId}/customise`}
             onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
             className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-text-primary bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-text-secondary transition-opacity hover:opacity-90 whitespace-nowrap"
@@ -174,9 +168,19 @@ export default function TripDetail() {
             .filter((day) => day.slots.some((s) => !s._removed))
             .map((day) => (
               <div key={day.day}>
-                <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
-                  {day.label || `DAY ${day.day}`}
-                </p>
+                <div className="flex items-center gap-[8px]">
+                  <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
+                    {day.label || `DAY ${day.day}`}
+                  </p>
+                  <Link
+                    to={`/trip/${tripId}/map?day=${day.day}`}
+                    onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail", day: day.day })}
+                    aria-label={`View ${day.label || `Day ${day.day}`} on the map`}
+                    className="text-secondary-purple hover:opacity-70 transition-opacity"
+                  >
+                    <Map size={15} strokeWidth={2} />
+                  </Link>
+                </div>
                 <div className="flex flex-col mt-[16px]">
                   {day.slots
                     .filter((slot) => !slot._removed)

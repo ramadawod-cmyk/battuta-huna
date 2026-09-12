@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { db } from "../lib/api";
@@ -20,6 +20,7 @@ function markerIcon(index: number, selected: boolean) {
 
 export default function TripMapBuilder() {
   const { tripId } = useParams<{ tripId: string }>();
+  const [searchParams] = useSearchParams();
   const { session, loading: authLoading } = useAuth();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,10 +43,19 @@ export default function TripMapBuilder() {
       .then((trips: Trip[]) => {
         const found = (trips || []).find((t) => t.id === tripId) || null;
         setTrip(found);
-        if (!found) setError("Trip not found.");
+        if (!found) {
+          setError("Trip not found.");
+          return;
+        }
+        const requestedDay = Number(searchParams.get("day"));
+        const dayIndex = found.days.findIndex((d) => d.day === requestedDay);
+        if (dayIndex !== -1) setActiveDayIndex(dayIndex);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load trip"))
       .finally(() => setLoading(false));
+    // Only re-run for a new trip/session -- searchParams is read once on load so switching
+    // days via the tabs below doesn't get stomped by this effect re-running.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session?.user?.id, tripId]);
 
   const activeDay = trip?.days?.[activeDayIndex];
