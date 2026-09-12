@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Map } from "lucide-react";
 import swapIcon from "../assets/trip-detail/swap-icon.svg";
+import SiteDetailModal from "../components/SiteDetailModal";
 import SwapPanel from "../components/SwapPanel";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
@@ -14,7 +15,15 @@ import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Trip, TripDay, TripSlot } from "../lib/types";
 
-function ItinerarySlotRow({ slot, onSwap }: { slot: TripSlot; onSwap: () => void }) {
+function ItinerarySlotRow({
+  slot,
+  onSwap,
+  onViewDetails,
+}: {
+  slot: TripSlot;
+  onSwap: () => void;
+  onViewDetails: () => void;
+}) {
   const imageUrl = useWikiThumbnail(slot.name);
   return (
     <div className="flex items-start gap-[16px] py-[10px]">
@@ -24,13 +33,15 @@ function ItinerarySlotRow({ slot, onSwap }: { slot: TripSlot; onSwap: () => void
           <p className="text-[11px] text-text-secondary/70 mt-[2px]">{formatDuration(slot.durationMinutes)}</p>
         )}
       </div>
-      <div className="size-[56px] shrink-0 rounded-[12px] bg-surface-lavender overflow-hidden">
-        {imageUrl && <img src={imageUrl} alt="" className="size-full object-cover" />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
-        <p className="text-[13px] leading-[1.4] text-text-secondary mt-[6px]">{slot.description}</p>
-      </div>
+      <button onClick={onViewDetails} className="flex items-start gap-[16px] flex-1 min-w-0 text-left">
+        <div className="size-[56px] shrink-0 rounded-[12px] bg-surface-lavender overflow-hidden">
+          {imageUrl && <img src={imageUrl} alt="" className="size-full object-cover" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
+          <p className="text-[13px] leading-[1.4] text-text-secondary mt-[6px]">{slot.description}</p>
+        </div>
+      </button>
       <button onClick={onSwap} aria-label={`Swap ${slot.name}`} className="shrink-0 size-[32px]">
         <img src={swapIcon} alt="" className="size-full" />
       </button>
@@ -50,6 +61,7 @@ export default function TripDetail() {
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
   const [swapTarget, setSwapTarget] = useState<{ day: number; slotName: string } | null>(null);
+  const [selectedSiteName, setSelectedSiteName] = useState<string | null>(null);
 
   useTrackScreen("trip_detail");
 
@@ -189,6 +201,7 @@ export default function TripDetail() {
                         key={`${day.day}-${slot.name}`}
                         slot={slot}
                         onSwap={() => setSwapTarget({ day: day.day, slotName: slot.name })}
+                        onViewDetails={() => setSelectedSiteName(slot.name)}
                       />
                     ))}
                 </div>
@@ -257,6 +270,16 @@ export default function TripDetail() {
             setTrip({ ...trip, days: updatedDays });
             setSwapTarget(null);
           }}
+        />
+      )}
+
+      {selectedSiteName && (
+        <SiteDetailModal
+          siteName={selectedSiteName}
+          cityId={slugify(trip.city)}
+          cityName={trip.city}
+          source="trip_detail"
+          onClose={() => setSelectedSiteName(null)}
         />
       )}
     </div>
