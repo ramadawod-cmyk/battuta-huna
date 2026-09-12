@@ -84,6 +84,13 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 
+    // ── SAVE SITE META (must-see / visit duration backfill) ──
+    if (action === 'saveSiteMeta') {
+      const { name, cityId, mustSee, durationMinutes } = data;
+      const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { must_see: mustSee, duration_minutes: durationMinutes });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
     // ── GET CITY HERO ────────────────────────────────
     if (action === 'getCityHero') {
       const { cityId } = data;
@@ -95,9 +102,9 @@ exports.handler = async function(event) {
     // ── GET CITY TIPS ────────────────────────────────
     if (action === 'getCityTips') {
       const { cityId } = data;
-      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=tips`);
+      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=tips,country_id`);
       const rows = res.body;
-      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0]?.tips || null) };
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
     }
 
     // ── SAVE CITY TIPS ───────────────────────────────
@@ -164,9 +171,11 @@ exports.handler = async function(event) {
 
     // ── UPDATE TRIP STATUS ───────────────────────────
     if (action === 'updateTripStatus') {
-      const { tripId, status, days } = data;
+      const { tripId, status, days, groupType, pace } = data;
       const patch = { status };
       if (days) patch.days = days;
+      if (groupType) patch.group_type = groupType;
+      if (pace) patch.pace = pace;
       const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}&user_id=eq.${deviceId}`, patch);
       return { statusCode: 200, headers, body: JSON.stringify({ updated: true }) };
     }

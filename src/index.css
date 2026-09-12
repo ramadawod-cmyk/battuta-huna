@@ -1,0 +1,24 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Rubik:wght@400;500;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-text-primary: #313131;
+  --color-text-secondary: #636363;
+  --color-secondary-purple: #6155cc;
+  --color-surface-lavender: #e0ddf5;
+  --color-surface-white: #ffffff;
+  --color-primary-orange: #fe9c5e;
+  --color-tertiary-teal: #3ec8bc;
+  --color-error: #f77777;
+  --color-border: #d8d8d8;
+
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Rubik", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-white);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+}
