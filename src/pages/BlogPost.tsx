@@ -1,4 +1,5 @@
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import BackLink from "../components/BackLink";
 import Button from "../components/Button";
 import { getBlogPost } from "../lib/blogPosts";
 
@@ -18,9 +19,7 @@ export default function BlogPost() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-[720px] px-6 pt-16 sm:pt-20">
-        <Link to="/blog" className="text-[14px] font-medium text-secondary-purple">
-          ← Back to Blog
-        </Link>
+        <BackLink to="/blog" labelKey="common.backToBlog" className="text-[14px] font-medium text-secondary-purple" />
 
         <div className="mt-6 flex items-center gap-2 text-[13px] text-secondary-purple font-medium">
           <span>{post.tag}</span>

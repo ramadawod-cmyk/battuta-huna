@@ -5,6 +5,19 @@
 const en = {
   "settings.language": "Language",
   "settings.languageDescription": "Choose the app's display language",
+
+  "sidebar.explore": "Explore",
+  "sidebar.plan": "Plan",
+  "sidebar.myTrips": "My Trips",
+  "sidebar.about": "About",
+  "sidebar.blog": "Blog",
+  "sidebar.settings": "Settings",
+  "sidebar.openMenu": "Open menu",
+  "sidebar.closeMenu": "Close menu",
+
+  "common.backToMyTrips": "Back to My Trips",
+  "common.backToTrip": "Back to Trip",
+  "common.backToBlog": "Back to Blog",
 };
 
 export default en;

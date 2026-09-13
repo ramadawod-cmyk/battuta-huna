@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import BackLink from "../components/BackLink";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useTrackScreen } from "../lib/useTrackScreen";
@@ -105,9 +106,7 @@ export default function TripMapBuilder() {
     return (
       <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
         <p className="text-text-primary">{error || "Trip not found."}</p>
-        <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary mt-[16px] inline-block">
-          ← Back to My Trips
-        </Link>
+        <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary mt-[16px]" />
       </div>
     );
   }
@@ -121,9 +120,7 @@ export default function TripMapBuilder() {
 
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
-      <Link to={`/trip/${tripId}`} className="text-[13px] font-medium text-text-secondary">
-        ← Back to Trip
-      </Link>
+      <BackLink to={`/trip/${tripId}`} labelKey="common.backToTrip" className="text-[13px] font-medium text-text-secondary" />
 
       <div className="mt-[16px]">
         <h1 className="font-heading font-semibold text-[30px] text-text-primary">{destinationsLabel(trip)}</h1>

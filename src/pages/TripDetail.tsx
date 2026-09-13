@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import BackLink from "../components/BackLink";
 import SiteDetailModal from "../components/SiteDetailModal";
 import SwapPanel from "../components/SwapPanel";
 import { TripGuide, TripItinerary } from "../components/TripContent";
@@ -78,9 +79,7 @@ export default function TripDetail() {
     return (
       <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
         <p className="text-text-primary">{error || "Trip not found."}</p>
-        <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary mt-[16px] inline-block">
-          ← Back to My Trips
-        </Link>
+        <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary mt-[16px]" />
       </div>
     );
   }
@@ -130,9 +129,7 @@ export default function TripDetail() {
 
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
-      <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary">
-        ← Back to My Trips
-      </Link>
+      <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary" />
 
       <div className="flex items-start justify-between gap-[16px] mt-[24px] sm:mt-[32px]">
         <div className="min-w-0">
