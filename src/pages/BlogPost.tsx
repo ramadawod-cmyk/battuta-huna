@@ -1,16 +1,24 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import BackLink from "../components/BackLink";
 import Button from "../components/Button";
+import { useTranslation } from "../lib/LanguageContext";
 import { getBlogPost } from "../lib/blogPosts";
+import type { Language } from "../lib/i18n/translate";
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+function formatDate(date: string, language: Language) {
+  return new Date(date).toLocaleDateString(language === "ar" ? "ar-u-nu-latn" : "en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function BlogPost() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
   const post = slug ? getBlogPost(slug) : undefined;
+  const { t, language } = useTranslation();
+  const isAr = language === "ar";
 
   if (!post) {
     return <Navigate to="/blog" replace />;
@@ -22,15 +30,15 @@ export default function BlogPost() {
         <BackLink to="/blog" labelKey="common.backToBlog" className="text-[14px] font-medium text-secondary-purple" />
 
         <div className="mt-6 flex items-center gap-2 text-[13px] text-secondary-purple font-medium">
-          <span>{post.tag}</span>
+          <span>{isAr ? post.tagAr : post.tag}</span>
           <span className="text-text-secondary/50">·</span>
-          <span className="text-text-secondary">{formatDate(post.date)}</span>
+          <span className="text-text-secondary">{formatDate(post.date, language)}</span>
           <span className="text-text-secondary/50">·</span>
-          <span className="text-text-secondary">{post.readMinutes} min read</span>
+          <span className="text-text-secondary">{t("blog.minRead", { count: post.readMinutes })}</span>
         </div>
 
         <h1 className="mt-3 font-heading font-semibold text-3xl sm:text-4xl leading-tight text-text-primary">
-          {post.title}
+          {isAr ? post.titleAr : post.title}
         </h1>
 
         <div
@@ -39,7 +47,7 @@ export default function BlogPost() {
         />
 
         <div className="mt-8 flex flex-col gap-5 text-[15px] sm:text-base leading-relaxed text-text-secondary">
-          {post.paragraphs.map((paragraph, i) => (
+          {(isAr ? post.paragraphsAr : post.paragraphs).map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
         </div>
@@ -48,7 +56,7 @@ export default function BlogPost() {
       <div className="max-w-[680px] px-6 pt-16 pb-16 sm:pb-20">
         <div className="flex justify-start">
           <Button variant="orange" onClick={() => navigate("/plan")}>
-            Start Planning your Trip
+            {t("landing.startPlanning")}
           </Button>
         </div>
       </div>

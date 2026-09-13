@@ -9,6 +9,55 @@ its own later.
 
 ---
 
+## 2026-09-14 — Arabic localization: full RTL mirror + bilingual content, 8 phases
+
+Full plan in `ARABIC-LOCALIZATION-PLAN.md`; conventions summary in `README.md`. Scoped
+from the start as UI + database content (not just UI strings) with a full RTL mirror, plus
+a bilingual chat — expanded partway through Phase 0 planning after the user asked for the
+chat and DB content to go bilingual too, with an explicit tone calibration round (real
+example translations reviewed and approved before any content generation started) rather
+than guessing at voice and generating potentially hundreds of records wrong.
+
+Key architectural bets, all of which held up by Phase 7:
+- **Same-call bilingual generation** (decision 6): every AI call that produces content
+  asks for English and Arabic together (`nameAr`/`descriptionAr`/`labelAr` fields), not a
+  second translation pass. Keeps AI call count flat.
+- **Snapshotted, not looked-up**: a built trip's slot/day bilingual fields are copied onto
+  the `TripSlot`/`TripDay` at build time. This is what makes `/shared` links "just work" in
+  Phase 7 with zero extra code — a stranger viewing the page in Arabic sees Arabic slot
+  names even if the trip was built in English, because the Arabic text was already sitting
+  on the slot, not fetched live based on who's viewing.
+- **Opportunistic backfill, not migration**: content cached before bilingual generation
+  existed gets translated on next view, fire-and-forget, same shape as the pre-existing
+  `backfillSiteMeta`. A city nobody revisits stays English-only forever — accepted, not a
+  bug.
+- **Tailwind logical properties over `rtl:` variant pairs** (discovered mid-Phase-1, not
+  planned upfront): CSS flexbox's `flex-start`/`flex-end` are already direction-aware, and
+  Tailwind's logical utilities (`ps-`/`pe-`, `border-s`/`border-e`) flip with `dir` for
+  free. This meaningfully reduced the `rtl:`-pairing originally scoped for every phase.
+
+Two real bugs caught by phases actually rendering the content, not by inspection:
+- **Windows/Git-Bash shell encoding, not a product bug**: verifying Phase 2 live by POSTing
+  Arabic JSON to the Netlify functions via `curl -d '{...}'` came back as literal `?????`
+  garbage from Supabase. Long detour before realizing curl.exe never saw real UTF-8 — Git
+  Bash mangles non-ASCII characters passed as command-line arguments on Windows. Fixed by
+  writing the JSON payload to a file and using `curl --data-binary @file` instead. Lesson:
+  if a live-verification round-trip of Arabic (or any non-ASCII) text comes back mangled,
+  suspect the *shell*, not the API, database, or encoding declared in the HTTP headers —
+  especially on Windows.
+- **`TripGuide` double-rendering every tip category** (Phase 7): `tipsByCity` is a flat
+  object where Phase 2 stores each Arabic translation as a sibling `"<key>_ar"` entry
+  (`safety` + `safety_ar` in the same object, see `cityTips.ts`). `TripGuide` iterated it
+  with `Object.entries()`, so once `_ar` siblings existed, every category rendered twice —
+  once correctly, once under the raw `"safety_ar"` key with no matching `GUIDE_META` entry
+  (ugly fallback title, no icon). This bug shipped with Phase 2 but had zero visible surface
+  until Phase 7 actually rendered the guide tab with real bilingual data — a reminder that
+  "the data model supports both languages" and "every renderer of that data model was
+  written with that in mind" are different claims, and only live end-to-end testing catches
+  the gap between them.
+
+---
+
 ## 2026-09-13 — Trip sharing: read-only public link, no voting/discovery
 
 Full plan in `TRIP-SHARING-PLAN.md`. Lightweight version of "social," scoped down deliberately:

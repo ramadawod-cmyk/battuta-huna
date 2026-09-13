@@ -199,6 +199,21 @@ const en = {
   "swap.noAlternatives": "No alternatives found for {city}.",
   "swap.swapFailed": "Couldn't swap this stop.",
   "swap.askAiAria": "Ask Battuta AI",
+
+  "myTrips.title": "My Trips",
+  "myTrips.loading": "Loading your trips…",
+  "myTrips.empty": "No trips yet — head to Plan to build your first itinerary.",
+  "myTrips.loadFailed": "Failed to load trips",
+  "myTrips.planning": "PLANNING…",
+
+  "about.title": "About Battuta",
+  "about.intro1": "Travel is more than a list of places to visit. It's the stories, discoveries, and unexpected moments that make a trip worth remembering.",
+  "about.intro2": "Battuta was built around a simple idea: help people experience more of a place without making travel feel like work.",
+  "about.intro3": "Planning a trip can mean hours of searching, saving places, building maps, and trying to figure out what's actually worth your time. Then, once you arrive, it's easy to walk right past something fascinating because you didn't know it was there.",
+
+  "blog.title": "The Battuta Blog",
+  "blog.subtitle": "Stories, history, and ideas for travelers who want more than a list of landmarks.",
+  "blog.minRead": "{count} min read",
 };
 
 export default en;
