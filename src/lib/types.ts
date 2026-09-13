@@ -96,4 +96,7 @@ export type Trip = {
   status: "planning" | "ready";
   weather_tip?: string | null;
   created_at: string;
+  // Absent/false on every trip created before sharing existed -- treat as private. See
+  // TRIP-SHARING-PLAN.md: the trip's own id doubles as the share token once this is true.
+  is_public?: boolean | null;
 };
