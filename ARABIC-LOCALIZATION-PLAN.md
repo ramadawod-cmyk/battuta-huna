@@ -160,18 +160,27 @@ non-blocking, best-effort shape as the existing must-see/duration backfill.
 - `<BackLink>` component (decision 3); migrate all 7 literal arrow strings.
 - **Manual**: full RTL sanity pass on the sidebar/nav alone before repeating the pattern everywhere.
 
-### Phase 2 — Bilingual content infrastructure (not surfaced in UI yet)
+### Phase 2 — Bilingual content infrastructure (not surfaced in UI yet) — DONE
 - SQL for `sites.name_ar/description_ar/long_description_ar`, `activities.name_ar/description_ar`
-  on **both** Supabase projects.
+  on **both** Supabase projects. Run by the user on both.
 - `src/lib/arabicVoice.ts` (decision 7).
 - Extend `generatePoiBatch`, `generateActivityBatch`, `generateTipCategory` JSON schemas with `_ar`
   fields; extend `Site`/`Activity`/`CityTips` types.
 - Backfill actions + fire-and-forget calls (decision 9).
-- Extend `TripDay`/`TripSlot` types with bilingual fields; `siteToSlot()` carries them through.
-- **Tests**: schema/type shape, backfill's "which rows need translation" filter logic (pure).
-- Manual: cold-start a new city, confirm `_ar` fields land in Supabase with the right voice; visit
-  an already-cached city, confirm the backfill top-up fills in its missing `_ar` fields over a
-  couple of loads without blocking the page.
+- Extend `TripDay`/`TripSlot` types with bilingual fields; `siteToSlot()` carries them through;
+  `SwapPanel`'s manually-constructed slot carries them through too.
+- **Tests**: `needsArabicTranslation` (sites.ts, activities.ts), `arabicKey` (cityTips.ts),
+  `activityToCandidate` carries `name_ar`/`description_ar` through. 104/104 passing.
+- Manual (verified live on staging, commit `c6647cf`): called `plan-agent` directly with the real
+  `generatePoiBatch` prompt for Sidon, Lebanon — real place names, correct JSON shape, calibrated
+  MSA voice (not cheesy, not colloquial). Seeded a disposable `test-city-qa-arabic` row via
+  `upsertSites` with one site missing `name_ar`/`description_ar`, confirmed `saveSiteTranslation`
+  patches it in place (backfill path). Same round-trip confirmed for city tips: `_ar` sibling key
+  missing → translated via `plan-agent` → merged and re-saved via `saveCityTips` → `getCityTips`
+  shows both languages. One non-bug caught during verification: Arabic text passed as a raw shell
+  `-d` argument through Git Bash/curl.exe on Windows gets mangled to `?` (a shell/codepage issue,
+  not a Supabase or proxy bug) — fixed by writing the JSON payload to a file and using
+  `--data-binary @file`, after which the Arabic round-tripped correctly end to end.
 
 ### Phase 3 — Bilingual chat
 - `buildGatherSystemPrompt(today, language)`, `buildDayLabelsSystemPrompt(..., language)`.
