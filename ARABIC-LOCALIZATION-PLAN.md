@@ -3,176 +3,232 @@
 Status: **scoped, not started**. Same format as the other `*-PLAN.md` docs — phases are
 independently shippable, verify (tests + manual check) before moving on.
 
-**Scope, as decided up front**: static UI (nav, buttons, labels, page copy) gets translated and the
-whole layout mirrors to RTL. AI-generated content — site/activity descriptions, travel guide tips,
-day titles, and the Battuta chat agent itself — **stays English for v1**. This is a real, visible
-tradeoff worth restating: an Arabic-speaking user gets Arabic buttons and navigation around an
-itinerary whose descriptions and travel guide are in English, and the planning chat still replies
-in English even once the person's browsed the whole rest of the site in Arabic. Not hidden, not
-accidental — full bilingual AI content is a large, separate follow-up (see "Not in scope").
+**Full scope, as decided**: static UI (nav, buttons, labels, page copy) translated with a full RTL
+layout mirror, **and** AI-generated content — site/activity descriptions, travel guide tips, day
+titles — stored bilingually, **and** the Battuta chat itself converses natively in Arabic when the
+UI language is Arabic. Nothing about the AI-driven experience stays English-only. This is
+meaningfully the largest feature scoped in this repo's `*-PLAN.md` history: it's simultaneously a
+full i18n/RTL project (mechanical, wide) and a content-generation redesign (every AI prompt in the
+app gets a language dimension) and a data-model change (every content table needs an Arabic
+column). Expect this across several sessions.
 
-This is meaningfully the largest single feature scoped in this repo's `*-PLAN.md` history — every
-page has strings to extract, and RTL touches layout, not just text. Expect this to run across
-several sessions, not one. Phases 0–1 are the foundation; Phases 2–6 are mechanical repetitions of
-the same translate-and-flip pattern across the rest of the app, batched by page group so each is
-independently reviewable and shippable.
+### The approved Arabic voice
+
+Locked in with real examples before any content generation starts (see commit history for the
+calibration round — worth reading if the tone ever needs re-deriving): **Modern Standard Arabic,
+not colloquial/dialectal** (no Levantine/Gulf/Egyptian colloquialisms — pan-Arab, everyone should
+read it as "proper" without it being stiff), **warm and direct, not bureaucratic** (second person,
+natural rhythm, avoid the heavy formal register of news broadcasts or government documents), **a
+little descriptive color, not travel-brochure purple prose** ("تنبض بالحياة" yes, exclamation-point
+enthusiasm no). This single description is the source of truth — every generation prompt that
+produces Arabic text references it, so the voice can't drift call-site to call-site. See decision
+7 for where it actually lives in code.
 
 ## What exists today (constraints this works within)
 
 | Piece | Today | Why it matters |
 |---|---|---|
-| `index.html` | `<html lang="en">`, no `dir` attribute | Where the language/direction toggle actually gets applied |
-| Tailwind v4 | Already in use, has native `rtl:`/`ltr:` variants keyed off an ancestor's `dir` attribute | The mechanism for flipping layout — no new dependency needed for RTL itself |
-| No existing i18n | Every string is hardcoded English JSX text across 15 pages, 16 components | The bulk of the work is mechanical: find every string, extract it, translate it |
-| Literal `"← Back to ..."` text | 4 files, 7 occurrences (`TripDetail`, `TripMapBuilder`, `CustomiseTrip`, `BlogPost`) | A raw arrow character baked into a text string can't be flipped by CSS the way an icon can — needs a small direction-aware component |
-| `PlanDatePicker`'s `ChevronIcon` | Already takes a `flip` boolean prop for its prev/next month chevrons | Existing precedent for direction-aware icons — the pattern to extend, not invent |
-| `CityContext` (`src/lib/CityContext.tsx`) | Detects + persists city to `localStorage` (`bh_current_city`), same shape this needs for language | Direct template for a new `LanguageContext` |
-| `PlanDatePicker`, `publicDateLabel` (`src/lib/tripSharing.ts`) | `toLocaleDateString("en-US", ...)` hardcoded | Needs a locale-aware variant, not a rewrite — `toLocaleDateString` already supports an `"ar"` locale argument |
-| Battuta chat, `ensureCitySites`/`ensureCityActivities`/`ensureCityTips` prompts | All English, all out of scope per the decision above | Nothing here changes in this plan |
+| `index.html` | `<html lang="en">`, no `dir` attribute | Where the language/direction toggle gets applied |
+| Tailwind v4 | Already in use, native `rtl:`/`ltr:` variants keyed off an ancestor's `dir` | The mechanism for flipping layout — no new dependency for RTL itself |
+| No existing i18n | Every UI string is hardcoded English JSX text across 15 pages, 16 components | The UI side is mechanical: find every string, extract it, translate it |
+| Literal `"← Back to ..."` text | 4 files, 7 occurrences | A raw arrow character in a string can't be flipped by CSS the way an icon can |
+| `PlanDatePicker`'s `ChevronIcon` | Already takes a `flip` boolean prop | Existing precedent for direction-aware icons |
+| `CityContext` | Detects + persists to `localStorage` (`bh_current_city`) | Direct template for a new `LanguageContext` |
+| `sites` table | `name, description, long_description` — English only | Needs `name_ar, description_ar, long_description_ar` |
+| `activities` table | `name, description` — English only | Needs `name_ar, description_ar` |
+| `cities.tips` (JSONB) | Flat keys per category, English values | No column change needed — just also write `{key}_ar` keys into the same JSON object |
+| `generatePoiBatch`/`generateActivityBatch`/`generateTipCategory` | One AI call per batch, English-only JSON schema | Each gets `_ar` fields added to its existing JSON schema — **one call still produces both languages**, not two calls |
+| `TripDay`/`TripSlot` (saved trip JSON) | Snapshots `name`/`description`/`category`/day `label` at build time, English only | Needs bilingual fields too, or an already-built trip (and any `/shared` link to it) can't render in Arabic regardless of the viewer's language |
+| `buildGatherSystemPrompt`/`buildDayLabelsSystemPrompt` (`planFlow.ts`) | English-only prompts; the `[PARTIAL]` JSON block's `city`/`country` fields are read by `slugify()` and used as Supabase keys | The chat's *visible reply* becomes language-aware; the `[PARTIAL]` block's machine-readable fields **stay English** regardless — they're internal keys, never shown to the user, and everything downstream (site lookups, cityId generation) depends on them being stable |
+| Existing cached content (many cities already generated this session — Amman, Beirut, Rome, Florence, etc.) | English only, already at/above the "enough cached" threshold | Won't get Arabic fields from the normal top-up path (`ensureCitySites` only generates more when a city is *under* its target count) — needs an explicit backfill pass, same shape as `backfillSiteMeta` |
 
 ## Key design decisions
 
-### 1. A lightweight custom i18n layer, not a library
+### 1. A lightweight custom i18n layer for UI strings, not a library
 
-`react-i18next` is the standard choice, but this app's own pattern throughout (`db()` instead of
-the Supabase SDK, a hand-rolled `track()` instead of an analytics SDK wrapper) favors a small,
-purpose-built solution over a general-purpose library for a bounded string count. New
-`src/lib/i18n/`:
-- `en.ts` / `ar.ts` — flat, namespaced dictionaries (`"sidebar.explore"`, `"plan.buildButton"`).
-- `useTranslation()` — returns `t(key, vars?)` with simple `{placeholder}` interpolation
-  (`t("plan.planningCity", { city })`), `language`, and `dir`.
-- `LanguageProvider` (`LanguageContext.tsx`) — detects `navigator.language` on first visit,
-  persists the choice to `localStorage` (`bh_language`, mirroring `bh_current_city`), and sets
-  `document.documentElement.lang`/`dir` in an effect. Wraps the app once in `App.tsx`.
-- A language switcher: an entry in `Settings`, plus a small toggle in `Sidebar`/`MobileHeader` for
-  quick access (exact placement decided when Phase 1 touches those files).
+Matches this app's existing preference for purpose-built solutions over general libraries (`db()`
+instead of the Supabase SDK, a hand-rolled `track()`). New `src/lib/i18n/`: `en.ts`/`ar.ts` flat
+namespaced dictionaries, `useTranslation()` returning `t(key, vars?)` with `{placeholder}`
+interpolation, `LanguageProvider` detecting `navigator.language` and persisting to `localStorage`
+(`bh_language`), setting `document.documentElement.lang`/`dir` reactively. A switcher in `Settings`
+plus a quick-access toggle in `Sidebar`/`MobileHeader`.
 
-### 2. RTL via Tailwind's native variants, not a mirrored stylesheet
+### 2. RTL via Tailwind's native variants
 
-Set `dir="rtl"` on `<html>` when Arabic is active; Tailwind v4's `rtl:`/`ltr:` variants key off
-that automatically (`ml-4 rtl:ml-0 rtl:mr-4`). No separate RTL stylesheet, no CSS-in-JS direction
-logic — every component that uses a directional utility (`ml-*`/`mr-*`, `pl-*`/`pr-*`, `left-*`/
-`right-*`, `text-left`/`text-right`, asymmetric `rounded-*` corners like the chat bubbles' `rounded-
-bl`/`rounded-br`) gets an `rtl:` counterpart added as it's translated, page by page.
+`dir="rtl"` on `<html>` when Arabic is active; Tailwind v4's `rtl:`/`ltr:` variants key off that
+automatically. Every directional utility (`ml-*`/`mr-*`, `pl-*`/`pr-*`, `left-*`/`right-*`,
+`text-left`/`text-right`, asymmetric `rounded-*` like the chat bubbles) gets an `rtl:` counterpart
+as each page is translated.
 
 ### 3. Direction-aware icons, one small component
 
-Extend `PlanDatePicker`'s existing `flip` prop pattern into a shared `<DirectionIcon>` (or extend
-lucide icons directly with `className="rtl:scale-x-[-1]"` where a single flip suffices — decide
-per-icon in Phase 1). The 7 literal `"← Back to ..."` strings become
-`<BackLink to={...} labelKey="..." />`, rendering an actual (flippable) chevron plus a translated
-label, instead of a Unicode arrow baked into text.
+The 7 literal `"← Back to ..."` strings become a `<BackLink>` rendering a flippable chevron plus a
+translated label. Other directional icons (carousel arrows, etc.) get `rtl:scale-x-[-1]` where a
+straight flip is correct — decided per-icon in Phase 1.
 
-### 4. Numerals stay Western (0–9), calendar stays Gregorian
+### 4. Numerals stay Western, calendar stays Gregorian
 
-Two decisions made now rather than left ambiguous mid-implementation:
-- **Numerals**: Western Arabic numerals (`0–9`), not Eastern Arabic-Indic (`٠–٩`) — the more common
-  convention on Gulf-region travel/tech products and universally read by every Arabic-speaking
-  market, avoiding a second regional-variant decision.
-- **Calendar**: Gregorian, with Arabic month/day names via `toLocaleDateString("ar", ...)` — not a
-  Hijri calendar. Travel booking dates are Gregorian everywhere regardless of UI language; Hijri
-  display is a distinct, separately-scoped feature if ever wanted.
+Western Arabic numerals (`0–9`), not Eastern Arabic-Indic (`٠–٩`) — the more common convention on
+Gulf-region travel/tech products, universally read everywhere. Gregorian calendar with Arabic
+month names via `toLocaleDateString("ar", ...)`, not Hijri — travel dates are Gregorian everywhere
+regardless of UI language.
 
 ### 5. No URL-based language routing in v1
 
-Language is a client-side toggle (`localStorage`, no `/ar/...` path prefix or subdomain). Simpler,
-ships faster, but means Arabic content isn't independently indexable by Google and a shared link
-doesn't carry language context (a shared trip link, or the site itself, always opens in whatever
-language the *recipient's* browser/stored preference resolves to). Given the organic/SEO-leaning
-growth strategy, proper URL-based i18n (`/ar/plan`, etc.) is a real, valuable follow-up once the
-base translation exists — deliberately deferred so this doesn't block on a routing redesign.
+Language is a client-side toggle (`localStorage`), no `/ar/...` prefix or subdomain. Means Arabic
+content isn't independently indexable by Google yet and a shared link doesn't carry language
+context — a real, valuable SEO follow-up given the organic-growth strategy, deliberately deferred
+so this doesn't also become a routing redesign.
 
-### 6. Not in scope for v1
+### 6. Bilingual content lives on the same row, generated in the same call
 
-- Any AI-generated content in Arabic (site/activity descriptions, travel guide, day titles, the
-  chat agent's replies) — see the framing at the top of this document.
+Per the table above: add `_ar` columns/keys rather than a second table, second set of rows, or a
+`language` column that fragments one physical place into two records. And generate both languages
+in the **same** AI call by extending the existing JSON schema (`{"name": ..., "name_ar": ...,
+"description": ..., "description_ar": ...}`) rather than a separate translation pass afterward.
+Reasoning: a second pass doubles AI calls (real cost at scale) and risks the Arabic describing a
+subtly different "fact" than the English if generated independently; one call reasoning about both
+at once stays consistent and costs only modestly more output tokens, not a second full request.
+
+This applies to sites, activities, and city tips. It does **not** apply to the live chat (decision
+8) or to day titles, which are generated fresh per trip build, not cached — day titles get their
+own bilingual JSON schema in `buildDayLabelsSystemPrompt`, same one-call principle.
+
+### 7. The tone lives in one shared prompt fragment, referenced everywhere
+
+`src/lib/arabicVoice.ts` (or similar): one exported constant holding the calibrated voice
+description from the top of this document, interpolated into every prompt that asks for Arabic
+output — `generatePoiBatch`, `generateActivityBatch`, `generateTipCategory`,
+`buildDayLabelsSystemPrompt`, `buildGatherSystemPrompt`'s Arabic branch, and the site
+long-description generator in `SiteDetailModal.tsx`. One source of truth; a future tone tweak
+means editing one file, not re-auditing six prompts for drift.
+
+### 8. The chat: Arabic replies, English `[PARTIAL]` keys
+
+`buildGatherSystemPrompt(today, language)` gets a language parameter. When `"ar"`: the system
+prompt instructs Claude to write its natural-language reply in Arabic (referencing decision 7's
+voice), while explicitly keeping the `[PARTIAL]{"legs":[{"city": "...", ...}]}` block's `city`/
+`country`/`country_id` values in **English** — those are never rendered to the user (the app
+already regex-strips the block from the visible reply), and everything downstream — `slugify()`,
+Supabase site/activity lookups, cached content matching — depends on them staying the stable
+English keys they are today. The model is entirely capable of writing an Arabic sentence and
+emitting an English-keyed JSON block in the same response; this is a prompt-clarity concern, not a
+technical limitation. `buildDayLabelsSystemPrompt` similarly takes a `language` and returns
+bilingual day titles regardless (decision 6), since a trip's language can't be known permanently at
+build time — the viewer's language might differ from the builder's, especially for `/shared` links.
+
+### 9. Backfilling existing cached content
+
+New Netlify actions mirroring `saveSiteMeta`: a batch job (fire-and-forget, same pattern as
+`backfillSiteMeta`) that finds sites/activities/tips missing `_ar` fields for a city already being
+viewed, translates them in the shared voice, and patches them in. Runs opportunistically whenever
+`ensureCitySites`/`ensureCityActivities`/`ensureCityTips` are called for a city that already has
+"enough" cached content (so it doesn't wait for a full cold-start regeneration) — same
+non-blocking, best-effort shape as the existing must-see/duration backfill.
+
+### 10. Not in scope for v1
+
 - Hijri calendar, Eastern Arabic-Indic numerals.
 - URL-based language routing (`/ar/...`) — see decision 5.
-- Per-account persisted language preference (server-side) — `localStorage` only, matching how
-  `bh_current_city` already works for guests and logged-in users alike.
-- Right-to-left support for any third-party embedded content (none currently exists).
+- Per-account persisted language preference (server-side) — `localStorage` only.
+- Translating a trip's `dates` label itself beyond month names (see decision 4) — no change to
+  `publicDateLabel`'s redaction logic, just its locale.
+- Retroactively backfilling *every* already-cached city eagerly — decision 9's backfill runs
+  opportunistically per city as it's visited, not as a one-time mass migration job.
 
 ## Execution phases
 
-Each phase: translate the page/component group's strings into `en.ts`/`ar.ts`, replace hardcoded
-text with `t()` calls, add `rtl:` variants to every directional class touched, manual QA in both
-languages before moving on.
-
 ### Phase 0 — i18n infrastructure (foundation, not yet visible)
 - `src/lib/i18n/en.ts`, `ar.ts`, `useTranslation.ts`, `LanguageContext.tsx`.
-- Wire `LanguageProvider` into `App.tsx`; set `lang`/`dir` on `<html>` reactively.
-- Language switcher in `Settings`.
-- **Tests**: `t()` interpolation (placeholder substitution, missing-key fallback to the key
-  itself rather than throwing), language detection logic (a pure function taking
-  `navigator.language` and returning `"en" | "ar"`).
-- Manual: switch language in Settings, confirm `<html dir>` flips, confirm the choice survives a
-  reload (localStorage).
+- Wire into `App.tsx`; set `lang`/`dir` on `<html>` reactively. Switcher in `Settings`.
+- **Tests**: `t()` interpolation + missing-key fallback; language-detection pure function.
+- Manual: switch language, confirm `<html dir>` flips and survives reload.
 
 ### Phase 1 — RTL foundation: Layout, Sidebar, direction-aware icons
-- Translate + RTL-fix `Layout.tsx`, `Sidebar.tsx` (desktop sidebar + mobile header) — the two
-  components present on every page, so this is the highest-leverage single phase.
-- Build the shared back-link/chevron pattern from decision 3; migrate all 7 literal arrow strings
-  to it.
-- **Manual**: full RTL sanity pass on the sidebar/nav alone — this is where most real RTL bugs
-  (flexbox order, icon flipping, spacing) will surface first, before repeating the pattern
-  everywhere else.
+- Translate + RTL-fix `Layout.tsx`, `Sidebar.tsx` (desktop + mobile) — present on every page.
+- `<BackLink>` component (decision 3); migrate all 7 literal arrow strings.
+- **Manual**: full RTL sanity pass on the sidebar/nav alone before repeating the pattern everywhere.
 
-### Phase 2 — Landing, Auth
-First-touch pages; small string count, good second RTL rep before the bigger pages.
+### Phase 2 — Bilingual content infrastructure (not surfaced in UI yet)
+- SQL for `sites.name_ar/description_ar/long_description_ar`, `activities.name_ar/description_ar`
+  on **both** Supabase projects.
+- `src/lib/arabicVoice.ts` (decision 7).
+- Extend `generatePoiBatch`, `generateActivityBatch`, `generateTipCategory` JSON schemas with `_ar`
+  fields; extend `Site`/`Activity`/`CityTips` types.
+- Backfill actions + fire-and-forget calls (decision 9).
+- Extend `TripDay`/`TripSlot` types with bilingual fields; `siteToSlot()` carries them through.
+- **Tests**: schema/type shape, backfill's "which rows need translation" filter logic (pure).
+- Manual: cold-start a new city, confirm `_ar` fields land in Supabase with the right voice; visit
+  an already-cached city, confirm the backfill top-up fills in its missing `_ar` fields over a
+  couple of loads without blocking the page.
 
-### Phase 3 — Plan flow (`Plan.tsx`)
-The single largest page in terms of strings (every chat prompt's UI chrome, all the step
-questions' static wrapper text — not the AI's own replies, which stay English per scope — button
-labels, placeholders, mode-choice copy). Flag explicitly during manual QA: the chat surface will
-visibly mix Arabic UI chrome with English AI replies — confirm that reads as acceptable rather
-than broken before shipping this phase.
+### Phase 3 — Bilingual chat
+- `buildGatherSystemPrompt(today, language)`, `buildDayLabelsSystemPrompt(..., language)`.
+- `Plan.tsx` passes the current UI language into both calls.
+- **Manual**: full conversation in Arabic — confirm the visible reply is in the calibrated voice,
+  the `[PARTIAL]` block still parses correctly with English `city`/`country_id`, multi-leg trips
+  still split correctly, and a built trip's day titles come back bilingual regardless of which
+  language the conversation happened in.
 
-### Phase 4 — Explore, AllSites, SiteDetailModal, PoiCard, TagPill
-Category names (`CATEGORIES`, `ACTIVITY_TYPES`) get Arabic display labels here too — the
-underlying English strings stay as-is everywhere they're used as data keys (Supabase category
-values, `normalizeCategory` matching, analytics); only what's *rendered* to the user changes.
+### Phase 4 — Landing, Auth
+First-touch pages; small string count, second RTL rep before the bigger pages.
 
-### Phase 5 — Trip pages (`TripDetail`, `TripContent`, `TripMapBuilder`, `CustomiseTrip`,
+### Phase 5 — Plan flow (`Plan.tsx`)
+UI chrome translation + RTL for the largest single page, now that Phase 3 means the chat itself is
+also fully Arabic when selected — no more "mixed language" caveat to test around.
+
+### Phase 6 — Explore, AllSites, SiteDetailModal, PoiCard, TagPill
+Renders the bilingual site/activity content from Phase 2 for the first time — confirm the language
+toggle actually switches which field (`name` vs `name_ar`) gets displayed, not just the UI chrome
+around it. Category names (`CATEGORIES`, `ACTIVITY_TYPES`) get Arabic display labels; the
+underlying English strings stay as data keys (Supabase values, `normalizeCategory`, analytics).
+
+### Phase 7 — Trip pages (`TripDetail`, `TripContent`, `TripMapBuilder`, `CustomiseTrip`,
 `SwapPanel`, `SharedTrip`)
-Largest single group after Plan. Note `SharedTrip` specifically: a stranger opening a share link
-should see the page in *their* detected/stored language, independent of the language the trip's
-owner used — confirm this during manual QA, don't assume it inherits anything from the owner.
+Renders bilingual itinerary content end to end. `SharedTrip` specifically: a stranger should see
+the page in *their* language, independent of the owner's — and since Phase 2 made day titles/slot
+content bilingual regardless of build language, this should just work; confirm it actually does.
 
-### Phase 6 — MyTrips, remaining pages (`About`, `Blog`, `BlogPost`), docs
-Closes out the remaining pages, then `NOTES.md` entry + README addendum covering the i18n
-conventions (key naming, where to add a new string, the RTL variant pattern) so future features
-don't accidentally ship English-only.
+### Phase 8 — MyTrips, remaining pages (`About`, `Blog`, `BlogPost`), docs
+Closes out remaining pages; `NOTES.md` entry + README addendum covering both the i18n/RTL
+conventions and the bilingual-content conventions (where `_ar` fields live, how the shared voice
+prompt is referenced) so future features don't ship English-only by default.
 
 ## Manual QA checklist (run after every phase, not just at the end)
 
-1. Toggle to Arabic → the whole page mirrors (not just text: flex/grid order, icon direction,
-   text alignment) with no leftover LTR-only spacing that now reads backwards.
-2. Toggle back to English → nothing about the English experience changed from before this project
-   started (a real regression risk once directional classes start growing `rtl:` siblings).
-3. Every icon that implies direction (chevrons, the back arrow, carousel arrows) points the
-   correct way in RTL.
+1. Toggle to Arabic → the whole page mirrors (flex/grid order, icon direction, text alignment),
+   not just text.
+2. Toggle back to English → nothing about the English experience regressed.
+3. Every directional icon points the correct way in RTL.
 4. No raw English string leaks into the Arabic UI (a missed `t()` call) and vice versa.
-5. Numbers and dates render in Western numerals / Gregorian-with-Arabic-month-names as decided,
-   not Eastern Arabic-Indic or a mixed muddle.
-6. Mobile width in both languages, both directions.
-7. A fresh visitor with an Arabic browser locale lands in Arabic automatically; an existing
-   visitor's manually-chosen language survives a reload and doesn't get silently overridden by
-   detection on a later visit.
+5. Site/activity/tip content actually switches to `_ar` fields in Arabic mode, not just surrounding
+   chrome (from Phase 6 onward).
+6. The Battuta chat replies in the calibrated Arabic voice, and the `[PARTIAL]` block still parses
+   (from Phase 3 onward) — check a single-city, a multi-leg, and a vague/suggestion-mode
+   conversation.
+7. Numbers/dates: Western numerals, Gregorian-with-Arabic-month-names.
+8. Mobile width in both languages, both directions.
+9. A fresh visitor with an Arabic browser locale lands in Arabic automatically; a manual choice
+   survives reload and isn't silently overridden later.
+10. A trip built while the UI was set to English still shows correctly if later viewed (or shared)
+    in Arabic, and vice versa — bilingual snapshotting (decision 6/Phase 2) is what makes this
+    possible; it's the one thing most likely to quietly regress if a future itinerary-building
+    change forgets to populate both language fields.
 
 ## Risks & open questions
 
-- **Scale of the mechanical work.** Realistically 150–300+ distinct strings across the app plus a
-  directional-class audit on every page that has one. This is the actual bottleneck, not any
-  single hard technical problem — budget the time accordingly rather than expecting a fast pass.
-- **Mixed-language chat UX (Phase 3).** Explicitly flagged above — worth a real look with fresh
-  eyes once it's in front of you, not just assumed fine because it was decided in the abstract.
-- **RTL regressions in components not yet touched.** Because this ships phase by phase, a shared
-  component fixed for RTL in an earlier phase could still be used un-fixed in a later page before
-  its own phase lands — the QA checklist's item 2 (English regression check) partially covers
-  this, but watch for it specifically when a component appears in multiple phases.
-- **Open question**: should Arabic ever be auto-selected by *detected city* (MENA IP → Arabic)
-  rather than only by browser language? Proposal: browser language only for v1 — simpler, and a
-  MENA-based user with an English-set browser very plausibly wants the English UI anyway.
-- **Open question**: once this ships, is full bilingual AI content (the explicitly-deferred
-  follow-up) actually worth prioritizing next, or does UI-only satisfy the real need? Worth
-  revisiting with real usage data once this is live rather than deciding now.
+- **Scale.** Still the dominant risk — now compounded by a genuine content/data-model change on
+  top of the UI/RTL mechanical work. Budget across several sessions.
+- **AI generation cost.** Both languages in one call keeps this to roughly the same call *count*
+  as today, but longer responses (more output tokens) per call — worth a quick before/after cost
+  check once Phase 2 ships, not just an assumption.
+- **Backfill coverage.** Decision 9's opportunistic backfill means a city nobody revisits keeps
+  showing English-only content indefinitely. Acceptable for v1 (matches how `backfillSiteMeta`
+  already works), but worth knowing this isn't a guarantee, just an eventual-consistency behavior.
+- **RTL regressions in components not yet touched**, and **English-string leaks** as more of the
+  app is migrated — both covered by the QA checklist, but worth specific attention whenever a
+  shared component (already fixed in an earlier phase) shows up again in a later one.
+- **Open question**: should Arabic ever be auto-selected by detected city/IP rather than only
+  browser language? Proposal unchanged: browser language only for v1.
+- **Open question**: once the whole thing ships, is a per-account (not just `localStorage`)
+  language preference worth adding? Revisit with real usage rather than deciding now.
