@@ -7,6 +7,7 @@ import { useAuth } from "../lib/AuthContext";
 import { GROUP_TYPES, PACE_OPTIONS } from "../lib/planFlow";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
+import { destinationsLabel } from "../lib/trips";
 import type { Trip } from "../lib/types";
 
 export default function CustomiseTrip() {
@@ -81,7 +82,7 @@ export default function CustomiseTrip() {
 
       <h1 className="font-heading font-semibold text-[28px] text-text-primary mt-[16px]">Customise your trip</h1>
       <p className="text-[14px] text-text-secondary mt-[6px]">
-        {trip?.duration ? `${trip.duration} days in ${trip.city}` : trip?.city}
+        {trip && (trip.duration ? `${trip.duration} days in ${destinationsLabel(trip)}` : destinationsLabel(trip))}
       </p>
 
       <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] mt-[32px]">GROUP TYPE</p>

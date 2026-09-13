@@ -6,6 +6,7 @@ import { useAuth } from "../lib/AuthContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
+import { destinationsLabel } from "../lib/trips";
 import type { Trip } from "../lib/types";
 
 function tripMeta(trip: Trip): string {
@@ -32,7 +33,7 @@ function TripCardWithImage({ trip, onClick }: { trip: Trip; onClick: () => void 
   const imageUrl = useWikiThumbnail(trip.city);
   return (
     <TripCard
-      city={trip.city}
+      city={destinationsLabel(trip)}
       meta={tripMeta(trip)}
       tags={tripTags(trip)}
       imageUrl={imageUrl}

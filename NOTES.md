@@ -54,7 +54,27 @@ it's one continuous effort):
   built 6 days split 3/3 with the right city on each and no empty days. Trip Detail renders both
   without errors — still as one flat day list with the first leg's city as the hero (that's
   Phase 5's job, not touched yet).
-- ⬜ Phase 5 — Trip Detail / cards / map / customise show multiple destinations.
+- ✅ Phase 5 — Trip Detail, map, cards, and customise all show multiple destinations now, using
+  the Phase 0 helpers (`tripDestinations`, `destinationsLabel`, `legsFromDays`): hero title,
+  map hero, `MyTrips` cards, and `CustomiseTrip`'s subtitle all show "Rome · Florence" instead of
+  just the first city; the itinerary gets a city heading wherever the destination changes
+  (`legsFromDays` groups the already-filtered day list); the Travel Guide tab now fetches and
+  renders tips **per destination** (`ensureCityTips` called once per leg, kept in a
+  `Record<cityId, CityTips>`) with a section heading per city; map day tabs read "Day 4 ·
+  Florence". All of this is gated on `tripDestinations(trip).length > 1` so a single-city trip
+  renders with zero extra headings -- verified byte-for-byte via Puppeteer (hero shows just
+  "Amman", zero itinerary headings, exactly 8 guide cards, same as before this phase).
+  **Real bug caught and fixed**: `SwapPanel` and `SiteDetailModal` were still scoped to
+  `trip.city` (the first leg) — swapping or viewing details on a *later* leg's stop would have
+  offered Rome alternatives for a Florence stop, and shown "Rome" as the city on a Florence site's
+  detail modal. Fixed by resolving the specific day's `city`/`cityId` (falling back to `trip.city`
+  when the day has none, i.e. every pre-multi-destination trip) and threading that through instead
+  of the trip-wide value. Also fixed a subtler one: `selectedSiteName` only stored the clicked
+  site's *name*, so two legs with a same-named stop would collide; now stores `{day, slotName}`
+  like `swapTarget` already did, and resolves the city from that specific day.
+  Verified live: built a fresh Rome+Florence trip and confirmed swapping "Ponte Vecchio" (a
+  Florence stop) offered only Florence alternatives (Uffizi, Piazzale Michelangelo, etc, zero Rome
+  places), and its site-detail modal showed "Florence", not "Rome".
 - ⬜ Phase 6 — docs.
 
 ---
