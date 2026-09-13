@@ -45,6 +45,12 @@ export type TripDay = {
   day: number;
   label: string;
   slots: TripSlot[];
+  // Which leg of a multi-destination trip this day belongs to. Optional and absent on every
+  // trip created before multi-destination support existed -- callers should treat a day with
+  // no city as belonging to the trip's single (only) destination, trip.city.
+  city?: string;
+  cityId?: string;
+  country?: string;
 };
 
 export type Trip = {
