@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { parsePartial } from "./planFlow";
+import { ACTIVITY_TYPES } from "./activityTypes";
+import { CATEGORIES } from "./categories";
+import { INTEREST_TAGS, parsePartial } from "./planFlow";
+
+describe("INTEREST_TAGS", () => {
+  it("spans both site categories and activity types, so either can be picked as an interest", () => {
+    for (const category of CATEGORIES) expect(INTEREST_TAGS).toContain(category);
+    for (const type of ACTIVITY_TYPES) expect(INTEREST_TAGS).toContain(type);
+  });
+});
 
 function wrap(json: string): string {
   return `Great, planning that now.\n[PARTIAL]${json}[/PARTIAL]`;

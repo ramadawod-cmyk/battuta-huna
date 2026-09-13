@@ -10,7 +10,6 @@ import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { activityToCandidate, ensureCityActivities } from "../lib/activities";
 import { slugify } from "../lib/geo";
-import { CATEGORIES } from "../lib/categories";
 import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlanner";
 import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
 import { useAuth } from "../lib/AuthContext";
@@ -68,6 +67,11 @@ function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onC
       <div className="p-[16px]">
         <div className="flex items-center gap-[8px]">
           <p className="font-heading font-semibold text-[14px] text-text-primary">{site.name}</p>
+          {site.kind === "activity" && (
+            <span className="shrink-0 rounded-[8px] bg-secondary-purple/15 text-secondary-purple text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
+              ACTIVITY
+            </span>
+          )}
           {site.must_see && (
             <span className="shrink-0 rounded-[8px] bg-primary-orange/15 text-primary-orange text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
               MUST-SEE
@@ -634,7 +638,7 @@ export default function Plan() {
             Places ({selectedPlaces.size} selected)
           </p>
           <div className="flex flex-wrap gap-[8px] mt-[12px]">
-            {CATEGORIES.map((tag) => (
+            {INTEREST_TAGS.map((tag) => (
               <TagPill key={tag} label={tag} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
             ))}
           </div>
