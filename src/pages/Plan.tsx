@@ -247,9 +247,14 @@ export default function Plan() {
       );
       const { partial: parsed, cleanText } = parsePartial(reply);
       setMessages([...nextMessages, { role: "assistant", content: cleanText || reply, time: nowLabel() }]);
-      if (parsed && parsed.city && parsed.duration) {
+      if (parsed) {
         setPartial(parsed);
-        track("Plan Details Extracted", { city: parsed.city, dates: parsed.dates, duration: parsed.duration });
+        track("Plan Details Extracted", {
+          city: parsed.legs[0].city,
+          leg_count: parsed.legs.length,
+          dates: parsed.dates,
+          duration: parsed.duration,
+        });
         sitesPromiseRef.current = loadSites(parsed);
         askStep("dates", "Great — when are you planning to go?");
       }
@@ -279,7 +284,7 @@ export default function Plan() {
     answerStep(
       label,
       "followup",
-      `Will you only be exploring ${partial?.city}, or are you interested in nearby cities too? And is there anything specific you don't want to miss?`,
+      `Will you only be exploring ${partial?.legs[0]?.city}, or are you interested in nearby cities too? And is there anything specific you don't want to miss?`,
     );
   }
 
@@ -318,10 +323,13 @@ export default function Plan() {
   }
 
   async function loadSites(p: PlanPartial) {
+    // Still the first (only, for now) leg -- loadSites doesn't yet fan out across multiple
+    // destinations. See MULTI-DESTINATION-PLAN.md Phase 4.
+    const leg = p.legs[0];
     setLoadingSites(true);
     try {
-      const cityId = slugify(p.city);
-      const result = await ensureCitySites(cityId, p.city, p.country_id, p.country);
+      const cityId = slugify(leg.city);
+      const result = await ensureCitySites(cityId, leg.city, leg.country_id, leg.country);
       setSites(result);
       track("Places Suggested", { count: result.length, duration: p.duration });
     } catch (err) {
@@ -362,7 +370,7 @@ export default function Plan() {
       group_type: groupType,
       interests,
       pace,
-      city: partial.city,
+      city: partial.legs[0].city,
       duration: partial.duration,
     });
     track("Itinerary Build Started", { place_count: chosen.length, duration: partial.duration, pace });
@@ -375,9 +383,10 @@ export default function Plan() {
       }
 
       try {
-        const labelText = await planAgent(buildDayLabelsSystemPrompt(partial.city, days, followupNotes || undefined), [
-          { role: "user", content: "Write the day titles now." },
-        ]);
+        const labelText = await planAgent(
+          buildDayLabelsSystemPrompt(partial.legs[0].city, days, followupNotes || undefined),
+          [{ role: "user", content: "Write the day titles now." }],
+        );
         const labels = parseDayLabels(labelText);
         if (labels && labels.length === days.length) {
           days.forEach((day, i) => {
@@ -388,7 +397,14 @@ export default function Plan() {
         // Fall back to the planner's plain "Day N" labels — titles are cosmetic, not worth failing the build over.
       }
 
-      const itinerary: ItineraryResult = { city: partial.city, dates: partial.dates || null, duration, groupType, pace, days };
+      const itinerary: ItineraryResult = {
+        city: partial.legs[0].city,
+        dates: partial.dates || null,
+        duration,
+        groupType,
+        pace,
+        days,
+      };
       track("Itinerary Build Completed", { day_count: itinerary.days.length, duration: itinerary.duration, pace });
 
       const draft = await db("createDraftTrip", {
@@ -417,7 +433,7 @@ export default function Plan() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong building your trip.";
       setError(message);
-      track("Trip Save Failed", { city: partial.city, message });
+      track("Trip Save Failed", { city: partial.legs[0].city, message });
       setPhase("selecting");
     }
   }
@@ -584,7 +600,7 @@ export default function Plan() {
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px]">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">
-        Planning {partial?.city}
+        Planning {partial?.legs[0]?.city}
       </h1>
       <p className="text-[13px] text-text-secondary mt-[6px]">
         {partial?.duration} days · {partial?.dates || "flexible dates"} · {groupType} · {pace}
@@ -601,7 +617,7 @@ export default function Plan() {
               <TagPill key={tag} label={tag} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
             ))}
           </div>
-          {loadingSites && <p className="text-text-secondary text-[14px] mt-[12px]">Finding places in {partial?.city}…</p>}
+          {loadingSites && <p className="text-text-secondary text-[14px] mt-[12px]">Finding places in {partial?.legs[0]?.city}…</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px] mt-[12px]">
             {sites
               .filter((site) => placeFilters.length === 0 || site.must_see || placeFilters.includes(site.category))
