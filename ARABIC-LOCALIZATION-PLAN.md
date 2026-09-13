@@ -303,10 +303,28 @@ content bilingual regardless of build language, this should just work; confirm i
   10 sampled Arabic strings across TripDetail, TripMapBuilder, CustomiseTrip, and SwapPanel shipped
   byte-correct.
 
-### Phase 8 — MyTrips, remaining pages (`About`, `Blog`, `BlogPost`), docs
+### Phase 8 — MyTrips, remaining pages (`About`, `Blog`, `BlogPost`), docs — DONE
 Closes out remaining pages; `NOTES.md` entry + README addendum covering both the i18n/RTL
 conventions and the bilingual-content conventions (where `_ar` fields live, how the shared voice
 prompt is referenced) so future features don't ship English-only by default.
+- `MyTrips.tsx`: trip cards' category tags now go through `categoryOrActivityLabelKey`; group/pace
+  meta line reuses `GROUP_LABEL_KEYS`/`PACE_LABEL_KEYS`.
+- `About.tsx`: full bilingual marketing copy — all 4 accordion sections (title + body) and the 3
+  intro paragraphs, calibrated to the same warm-not-cheesy MSA voice as everywhere else, even
+  though this is marketing prose rather than travel-guide content.
+- `Blog.tsx`/`BlogPost.tsx`: bilingual `title`/`excerpt`/`tag`/`paragraphs` added directly to each
+  `BLOG_POSTS` entry (3 posts × 4 paragraphs each, translated by hand, not AI-generated, since this
+  is fixed marketing/editorial content rather than per-city generated data). Date formatting now
+  uses `"ar-u-nu-latn"` in Arabic mode — Arabic month names with Western numerals, per the plan's
+  QA convention (never Eastern Arabic-Indic digits, never Hijri).
+- `TripCard.tsx`: `text-left` → `text-start`.
+- Added the README.md conventions section and NOTES.md rollout entry (see both for the full
+  write-up of what this effort settled on and why).
+- **Tests**: every `BLOG_POSTS` entry has non-empty Arabic fields, with the same paragraph count in
+  both languages. 123/123 passing.
+- Manual (verified live on staging, commit `b2f57ce`): downloaded the deployed bundle and confirmed
+  8 sampled strings — including full blog-post prose ("من هو ابن بطوطة", "في عام 1325...") and
+  About's section copy ("سافر بفضول أكبر") — shipped byte-correct.
 
 ## Manual QA checklist (run after every phase, not just at the end)
 
