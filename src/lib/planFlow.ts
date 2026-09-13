@@ -122,11 +122,13 @@ export type ItineraryResult = {
 // by planItinerary() in ./itineraryPlanner — proximity- and time-budget-aware, so days can no
 // longer come back overloaded or empty (the old per-day AI call couldn't see other days' picks).
 // The AI's only remaining job here is writing a short, evocative title per day.
-export function buildDayLabelsSystemPrompt(city: string, days: TripDay[], notes?: string): string {
+export function buildDayLabelsSystemPrompt(destination: string, days: TripDay[], notes?: string): string {
+  // Each day carries its own city for a multi-leg trip (see planMultiCityItinerary), so the model
+  // can title "Day 4" with Florence in mind even though the trip overall spans Rome and Florence.
   const daysJson = JSON.stringify(
-    days.map((d) => ({ day: d.day, stops: d.slots.map((s) => s.name) })),
+    days.map((d) => ({ day: d.day, city: d.city, stops: d.slots.map((s) => s.name) })),
   );
-  return `You are Battuta, a travel-planning assistant. For a trip to ${city}, write a short, evocative title (3-5 words, no "Day N" prefix) for each day below, based on its stops.${notes ? ` Traveler notes: ${notes}` : ""}
+  return `You are Battuta, a travel-planning assistant. For a trip to ${destination}, write a short, evocative title (3-5 words, no "Day N" prefix) for each day below, based on its stops and (if given) its city.${notes ? ` Traveler notes: ${notes}` : ""}
 
 Days: ${daysJson}
 

@@ -39,7 +39,21 @@ it's one continuous effort):
   worked example — re-tested and fixed. Lesson: when a prompt rule is scoped to one noun
   category (here "country"), explicitly test the adjacent categories (region, island, area) too,
   don't assume they're covered by the same wording.
-- ⬜ Phase 4 — Plan flow builds multi-leg trips.
+- ✅ Phase 4 — `Plan.tsx` now builds real multi-leg trips: `loadSites` fans `ensureCitySites` out
+  across every leg in parallel (a failed leg contributes no sites rather than failing the whole
+  trip); place selection is grouped per leg with `pickDefaultPlacesForLegs` (each leg gets its
+  own cap sized to its own day count, extracted to `src/lib/placeSelection.ts` so it's unit
+  tested); `buildTrip` now always calls `planMultiCityItinerary` (even for one leg — the wrapper
+  degrades to exactly `planItinerary`'s old behavior, verified by an "identical to direct call"
+  test), so every saved day now carries `city`/`cityId`/`country`, not just multi-leg ones. Day
+  titles (`buildDayLabelsSystemPrompt`) get each day's city so titles fit a leg the trip has
+  moved on to. `trips.city` stays the first leg's city, per the plan's data-model decision.
+  Verified end-to-end with a Puppeteer script driving the full chat flow (city → dates → party →
+  interests → pace → build) and inspecting the actual `updateTripStatus` payload: a single-city
+  Amman trip built 4 correctly-tagged days with no regression, and "Rome and Florence, 6 days"
+  built 6 days split 3/3 with the right city on each and no empty days. Trip Detail renders both
+  without errors — still as one flat day list with the first leg's city as the hero (that's
+  Phase 5's job, not touched yet).
 - ⬜ Phase 5 — Trip Detail / cards / map / customise show multiple destinations.
 - ⬜ Phase 6 — docs.
 

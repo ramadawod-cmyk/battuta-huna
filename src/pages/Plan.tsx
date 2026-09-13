@@ -10,7 +10,8 @@ import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { slugify } from "../lib/geo";
 import { CATEGORIES } from "../lib/categories";
-import { planItinerary } from "../lib/itineraryPlanner";
+import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlanner";
+import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
 import { useAuth } from "../lib/AuthContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
@@ -19,6 +20,7 @@ import {
   buildGatherSystemPrompt,
   parsePartial,
   type PlanPartial,
+  type PlanLeg,
   buildDayLabelsSystemPrompt,
   parseDayLabels,
   type ItineraryResult,
@@ -27,6 +29,10 @@ import {
   INTEREST_TAGS,
 } from "../lib/planFlow";
 import type { Site } from "../lib/types";
+
+function legsLabel(legs: PlanLeg[]): string {
+  return legs.map((l) => l.city).join(" · ");
+}
 
 const SUGGESTIONS = ["Umrah Trip", "Flying Solo", "Family Vacation", "Couples Getaway"];
 
@@ -72,25 +78,6 @@ function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onC
       </div>
     </button>
   );
-}
-
-/**
- * Ranks places matching the traveller's chosen interests (or all places, if none chosen) ahead of
- * the rest, with must-see places bypassing the interest filter entirely so they're never crowded
- * out of the default selection just because their category wasn't picked.
- */
-function pickDefaultPlaces(sites: Site[], interests: string[], duration: number): Set<string> {
-  // Scale with trip length -- a fixed cap starves later days of candidates once the scheduler
-  // works through it, leaving them sparse or empty on longer trips (~6/day gives the scheduler
-  // enough options to fill every day without forcing in a bad geographic fit).
-  const CAP = Math.max(14, duration * 6);
-  const ranked = [...sites].sort((a, b) => {
-    const aMatch = !!a.must_see || interests.length === 0 || interests.includes(a.category);
-    const bMatch = !!b.must_see || interests.length === 0 || interests.includes(b.category);
-    if (aMatch !== bMatch) return aMatch ? -1 : 1;
-    return Number(!!b.must_see) - Number(!!a.must_see);
-  });
-  return new Set(ranked.slice(0, CAP).map((s) => s.name));
 }
 
 function BotRow({ children }: { children: ReactNode }) {
@@ -215,8 +202,8 @@ export default function Plan() {
   // manually toggling places themselves.
   useEffect(() => {
     if (sites.length === 0 || userTouchedPlacesRef.current) return;
-    setSelectedPlaces(pickDefaultPlaces(sites, interests, partial?.duration || 3));
-  }, [sites, interests, partial?.duration]);
+    setSelectedPlaces(pickDefaultPlacesForLegs(sites, partial?.legs || [], interests));
+  }, [sites, interests, partial?.legs]);
 
   function askStep(next: Step, question: string) {
     setStep(next);
@@ -322,19 +309,28 @@ export default function Plan() {
   }
 
   async function loadSites(p: PlanPartial) {
-    // Still the first (only, for now) leg -- loadSites doesn't yet fan out across multiple
-    // destinations. See MULTI-DESTINATION-PLAN.md Phase 4.
-    const leg = p.legs[0];
     setLoadingSites(true);
     try {
-      const cityId = slugify(leg.city);
-      const result = await ensureCitySites(cityId, leg.city, leg.country_id, leg.country);
+      // Each leg fetches independently and in parallel; a failed leg (e.g. cold-start generation
+      // error) contributes no sites rather than failing the whole trip -- the traveller can still
+      // plan around whichever destinations did come back.
+      const perLeg = await Promise.all(
+        p.legs.map(async (leg) => {
+          try {
+            return await ensureCitySites(slugify(leg.city), leg.city, leg.country_id, leg.country);
+          } catch (err) {
+            track("Places Suggested Failed", { city: leg.city, message: err instanceof Error ? err.message : String(err) });
+            return [] as Site[];
+          }
+        }),
+      );
+      const result = perLeg.flat();
       setSites(result);
-      track("Places Suggested", { count: result.length, duration: p.duration });
+      track("Places Suggested", { count: result.length, duration: p.duration, leg_count: p.legs.length });
+      if (result.length === 0) setError("Couldn't load places for this trip.");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't load places for this city.";
+      const message = err instanceof Error ? err.message : "Couldn't load places for this trip.";
       setError(message);
-      track("Places Suggested Failed", { message });
     } finally {
       setLoadingSites(false);
     }
@@ -372,10 +368,20 @@ export default function Plan() {
       city: partial.legs[0].city,
       duration: partial.duration,
     });
-    track("Itinerary Build Started", { place_count: chosen.length, duration: partial.duration, pace });
+    track("Itinerary Build Started", { place_count: chosen.length, duration: partial.duration, pace, leg_count: partial.legs.length });
     try {
       const duration = partial.duration || 3;
-      const days = planItinerary(chosen, duration, pace);
+      const itineraryLegs: ItineraryLeg[] = partial.legs.map((leg) => {
+        const cityId = slugify(leg.city);
+        return {
+          city: leg.city,
+          cityId,
+          country: leg.country || undefined,
+          days: leg.days,
+          sites: chosen.filter((s) => s.city_id === cityId),
+        };
+      });
+      const days = planMultiCityItinerary(itineraryLegs, pace);
       if (days.every((d) => d.slots.length === 0)) {
         track("Itinerary Build Failed", { reason: "no_places_fit" });
         throw new Error("Couldn't build the itinerary — try again.");
@@ -383,7 +389,7 @@ export default function Plan() {
 
       try {
         const labelText = await planAgent(
-          buildDayLabelsSystemPrompt(partial.legs[0].city, days, followupNotes || undefined),
+          buildDayLabelsSystemPrompt(legsLabel(partial.legs), days, followupNotes || undefined),
           [{ role: "user", content: "Write the day titles now." }],
         );
         const labels = parseDayLabels(labelText);
@@ -424,6 +430,7 @@ export default function Plan() {
       track("Trip Saved", {
         trip_id: tripId,
         city: itinerary.city,
+        leg_count: partial.legs.length,
         day_count: itinerary.days.length,
         duration: itinerary.duration,
         logged_in: !!session,
@@ -599,7 +606,7 @@ export default function Plan() {
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px]">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">
-        Planning {partial?.legs[0]?.city}
+        Planning {partial && legsLabel(partial.legs)}
       </h1>
       <p className="text-[13px] text-text-secondary mt-[6px]">
         {partial?.duration} days · {partial?.dates || "flexible dates"} · {groupType} · {pace}
@@ -616,19 +623,39 @@ export default function Plan() {
               <TagPill key={tag} label={tag} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
             ))}
           </div>
-          {loadingSites && <p className="text-text-secondary text-[14px] mt-[12px]">Finding places in {partial?.legs[0]?.city}…</p>}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px] mt-[12px]">
-            {sites
-              .filter((site) => placeFilters.length === 0 || site.must_see || placeFilters.includes(site.category))
-              .map((site) => (
-                <PlaceCard
-                  key={site.id}
-                  site={site}
-                  active={selectedPlaces.has(site.name)}
-                  onClick={() => togglePlace(site.name)}
-                />
-              ))}
-          </div>
+          {loadingSites && (
+            <p className="text-text-secondary text-[14px] mt-[12px]">
+              Finding places in {partial && legsLabel(partial.legs)}…
+            </p>
+          )}
+          {partial?.legs.map((leg) => {
+            const cityId = slugify(leg.city);
+            const legSites = sites
+              .filter((site) => site.city_id === cityId)
+              .filter((site) => placeFilters.length === 0 || site.must_see || placeFilters.includes(site.category));
+            return (
+              <div key={cityId}>
+                {partial.legs.length > 1 && (
+                  <p className="font-heading font-semibold text-[15px] text-text-primary mt-[20px] mb-[4px]">
+                    {leg.city}{" "}
+                    <span className="text-text-secondary text-[12px] font-normal">
+                      · {leg.days} {leg.days === 1 ? "day" : "days"}
+                    </span>
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px] mt-[12px]">
+                  {legSites.map((site) => (
+                    <PlaceCard
+                      key={site.id}
+                      site={site}
+                      active={selectedPlaces.has(site.name)}
+                      onClick={() => togglePlace(site.name)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {error && <p className="text-primary-orange text-[13px]">{error}</p>}
