@@ -6,6 +6,8 @@ import SwapPanel from "../components/SwapPanel";
 import { TripGuide, TripItinerary } from "../components/TripContent";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
+import { useTranslation } from "../lib/LanguageContext";
+import { GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { slugify } from "../lib/geo";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
@@ -18,6 +20,7 @@ import type { Trip, TripDay } from "../lib/types";
 export default function TripDetail() {
   const { tripId } = useParams<{ tripId: string }>();
   const { session, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [tipsByCity, setTipsByCity] = useState<Record<string, CityTips>>({});
@@ -44,10 +47,10 @@ export default function TripDetail() {
     setError(null);
     db("getTrips", session?.user?.id ? { authUserId: session.user.id } : {})
       .then((trips: Trip[]) => {
-        const found = (trips || []).find((t) => t.id === tripId) || null;
+        const found = (trips || []).find((tr) => tr.id === tripId) || null;
         setTrip(found);
         if (!found) {
-          setError("Trip not found.");
+          setError(t("trip.notFound"));
           return;
         }
         const destinations = tripDestinations(found);
@@ -67,27 +70,27 @@ export default function TripDetail() {
             .catch(() => {});
         });
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load trip"))
+      .catch((err) => setError(err instanceof Error ? err.message : t("trip.loadFailed")))
       .finally(() => setLoading(false));
   }, [authLoading, session?.user?.id, tripId]);
 
   if (loading) {
-    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">Loading trip…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">{t("tripDetail.loading")}</div>;
   }
 
   if (error || !trip) {
     return (
       <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
-        <p className="text-text-primary">{error || "Trip not found."}</p>
+        <p className="text-text-primary">{error || t("trip.notFound")}</p>
         <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary mt-[16px]" />
       </div>
     );
   }
 
   const metaParts = [
-    trip.duration ? `${trip.duration} DAYS` : null,
-    trip.group_type?.toUpperCase(),
-    trip.pace?.toUpperCase(),
+    trip.duration ? t("trip.daysUnit", { count: trip.duration }) : null,
+    trip.group_type ? (GROUP_LABEL_KEYS[trip.group_type] ? t(GROUP_LABEL_KEYS[trip.group_type]) : trip.group_type).toUpperCase() : null,
+    trip.pace ? (PACE_LABEL_KEYS[trip.pace] ? t(PACE_LABEL_KEYS[trip.pace]) : trip.pace).toUpperCase() : null,
   ].filter(Boolean);
 
   async function copyShareLink(id: string) {
@@ -117,7 +120,7 @@ export default function TripDetail() {
       track(nextIsPublic ? "Trip Shared" : "Trip Unshared", { trip_id: trip.id });
       if (nextIsPublic) await copyShareLink(trip.id);
     } catch (err) {
-      setShareError(err instanceof Error ? err.message : "Couldn't update sharing.");
+      setShareError(err instanceof Error ? err.message : t("tripDetail.shareUpdateFailed"));
     } finally {
       setSharingBusy(false);
     }
@@ -145,11 +148,11 @@ export default function TripDetail() {
               disabled={sharingBusy}
               className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-secondary-purple bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-secondary-purple transition-opacity hover:opacity-90 whitespace-nowrap disabled:opacity-50"
             >
-              {trip.is_public ? "COPY LINK" : "SHARE"}
+              {trip.is_public ? t("tripDetail.copyLink") : t("tripDetail.share")}
             </button>
             {linkCopied && (
-              <p className="absolute top-full right-0 mt-[6px] text-[11px] text-secondary-purple whitespace-nowrap max-w-[260px] truncate">
-                {linkCopied.copied ? "Link copied!" : linkCopied.url}
+              <p className="absolute top-full end-0 mt-[6px] text-[11px] text-secondary-purple whitespace-nowrap max-w-[260px] truncate">
+                {linkCopied.copied ? t("tripDetail.linkCopied") : linkCopied.url}
               </p>
             )}
           </div>
@@ -158,16 +161,16 @@ export default function TripDetail() {
             onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
             className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-text-primary bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-text-secondary transition-opacity hover:opacity-90 whitespace-nowrap"
           >
-            EDIT TRIP
+            {t("tripDetail.editTrip")}
           </Link>
         </div>
       </div>
 
       {trip.is_public && (
         <p className="text-[11px] text-text-secondary mt-[8px]">
-          This trip is shareable —{" "}
+          {t("tripDetail.shareableNotice")}{" "}
           <button onClick={handleShareToggle} disabled={sharingBusy} className="underline hover:text-text-primary disabled:opacity-50">
-            stop sharing
+            {t("tripDetail.stopSharing")}
           </button>
         </p>
       )}
@@ -196,7 +199,7 @@ export default function TripDetail() {
             activeTab === "itinerary" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
           }`}
         >
-          Itinerary
+          {t("trip.itineraryTab")}
         </button>
         <button
           onClick={() => setActiveTab("guide")}
@@ -204,7 +207,7 @@ export default function TripDetail() {
             activeTab === "guide" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
           }`}
         >
-          Travel Guide
+          {t("trip.guideTab")}
         </button>
       </div>
 

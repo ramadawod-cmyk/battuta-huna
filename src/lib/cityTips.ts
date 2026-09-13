@@ -3,7 +3,7 @@ import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 
 export type CityTips = Record<string, string>;
 
-const TIP_CATEGORIES: { key: string; label: string }[] = [
+export const TIP_CATEGORIES: { key: string; label: string }[] = [
   { key: "safety", label: "safety" },
   { key: "what_to_have", label: "what to have" },
   { key: "where_to_eat", label: "where to eat" },

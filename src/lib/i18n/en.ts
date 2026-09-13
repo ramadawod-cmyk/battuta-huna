@@ -137,6 +137,68 @@ const en = {
   "siteDetail.previousPhoto": "Previous photo",
   "siteDetail.nextPhoto": "Next photo",
   "siteDetail.goToPhoto": "Go to photo {number}",
+
+  "common.loading": "Loading…",
+
+  "guide.gettingAround": "Getting around",
+  "guide.safety": "Safety",
+  "guide.whereToEat": "Where to eat",
+  "guide.whatToHave": "What to have",
+  "guide.localCulture": "Local culture",
+  "guide.moneyPayments": "Money & payments",
+  "guide.languageBasics": "Language basics",
+  "guide.bestTimeOfDay": "Best time of day",
+
+  "tripContent.mapView": "Map view",
+  "tripContent.showLess": "Show less",
+  "tripContent.readMore": "Read more",
+  "tripContent.noItinerary": "This trip doesn't have an itinerary yet.",
+  "tripContent.noTipsForCity": "No local tips yet for {city}.",
+  "tripContent.swapAria": "Swap {name}",
+
+  "trip.itineraryTab": "Itinerary",
+  "trip.guideTab": "Travel Guide",
+  "trip.daysUnit": "{count} DAYS",
+  "trip.dayLabel": "Day {number}",
+  "trip.dayFallback": "DAY {number}",
+  "trip.notFound": "Trip not found.",
+  "trip.loadFailed": "Failed to load trip",
+
+  "tripDetail.loading": "Loading trip…",
+  "tripDetail.copyLink": "COPY LINK",
+  "tripDetail.share": "SHARE",
+  "tripDetail.linkCopied": "Link copied!",
+  "tripDetail.editTrip": "EDIT TRIP",
+  "tripDetail.shareableNotice": "This trip is shareable —",
+  "tripDetail.stopSharing": "stop sharing",
+  "tripDetail.shareUpdateFailed": "Couldn't update sharing.",
+
+  "tripMap.loading": "Loading map…",
+  "tripMap.noLocatedStops": "No located stops for this day.",
+
+  "sharedTrip.unavailableTitle": "This trip isn't available.",
+  "sharedTrip.unavailableBody": "It may have been unshared, or the link is incorrect.",
+  "sharedTrip.planYourOwnLink": "Plan your own trip →",
+  "sharedTrip.planYourOwnCta": "PLAN YOUR OWN TRIP",
+
+  "customise.title": "Customise your trip",
+  "customise.durationInCity": "{count} days in {city}",
+  "customise.groupTypeLabel": "GROUP TYPE",
+  "customise.paceLabel": "PACE",
+  "customise.saving": "SAVING…",
+  "customise.saveChanges": "SAVE CHANGES",
+  "customise.saveFailed": "Couldn't save your changes.",
+
+  "swap.replaceTitle": "Replace \"{name}\"",
+  "swap.close": "Close",
+  "swap.askAi": "ASK BATTUTA AI",
+  "swap.askPlaceholder": "e.g. \"somewhere quieter\" or \"more food-focused\"",
+  "swap.asking": "Asking Battuta…",
+  "swap.clearSuggestions": "Clear AI suggestions",
+  "swap.orBrowseManually": "or browse manually",
+  "swap.noAlternatives": "No alternatives found for {city}.",
+  "swap.swapFailed": "Couldn't swap this stop.",
+  "swap.askAiAria": "Ask Battuta AI",
 };
 
 export default en;

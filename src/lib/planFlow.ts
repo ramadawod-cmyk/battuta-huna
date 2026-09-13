@@ -1,6 +1,7 @@
 import { ACTIVITY_TYPES } from "./activityTypes";
 import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 import { CATEGORIES } from "./categories";
+import type en from "./i18n/en";
 import type { Language } from "./i18n/translate";
 import { splitDaysAcrossLegs } from "./itineraryPlanner";
 import type { TripDay } from "./types";
@@ -172,3 +173,18 @@ export const PACE_OPTIONS = ["Relaxed", "Strict schedule"];
 // here biases pickDefaultPlacesForLegs toward matching activities exactly like picking "History"
 // already biases it toward matching sites, with no extra ranking logic needed.
 export const INTEREST_TAGS = [...CATEGORIES, ...ACTIVITY_TYPES];
+
+// GROUP_TYPES/PACE_OPTIONS are stored verbatim in Supabase (trip.group_type/pace) and matched
+// against elsewhere -- these map each canonical English value to its display label key only, so
+// every page showing them (Plan.tsx, CustomiseTrip.tsx) translates consistently without
+// duplicating the map.
+export const GROUP_LABEL_KEYS: Record<string, keyof typeof en> = {
+  Solo: "plan.group.solo",
+  Couple: "plan.group.couple",
+  Family: "plan.group.family",
+  Friends: "plan.group.friends",
+};
+export const PACE_LABEL_KEYS: Record<string, keyof typeof en> = {
+  Relaxed: "plan.pace.relaxed",
+  "Strict schedule": "plan.pace.strict",
+};

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVITY_TYPES } from "./activityTypes";
 import ar from "./i18n/ar";
 import en from "./i18n/en";
 import {
@@ -6,6 +7,7 @@ import {
   CATEGORY_ACCENTS,
   CATEGORY_DURATION_MINUTES,
   CATEGORY_LABEL_KEYS,
+  categoryOrActivityLabelKey,
   formatDuration,
   getDurationMinutes,
   normalizeCategory,
@@ -70,6 +72,30 @@ describe("getDurationMinutes", () => {
 
   it("normalizes the category before looking up the fallback duration", () => {
     expect(getDurationMinutes({ category: "Grand Mosque" })).toBe(CATEGORY_DURATION_MINUTES["Spiritual"]);
+  });
+});
+
+describe("categoryOrActivityLabelKey", () => {
+  it("resolves every canonical category", () => {
+    for (const category of CATEGORIES) {
+      const key = categoryOrActivityLabelKey(category);
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
+    }
+  });
+
+  it("resolves every canonical activity type too, since activity-derived slots aren't normalized onto site categories", () => {
+    for (const type of ACTIVITY_TYPES) {
+      const key = categoryOrActivityLabelKey(type);
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
+    }
+  });
+
+  it("falls back through normalizeActivityType for a drifted, non-canonical value", () => {
+    const key = categoryOrActivityLabelKey("Beach Day");
+    expect(en[key]).toBeTruthy();
+    expect(ar[key]).toBeTruthy();
   });
 });
 

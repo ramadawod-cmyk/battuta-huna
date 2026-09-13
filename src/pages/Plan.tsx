@@ -9,8 +9,7 @@ import PlanDatePicker from "../components/PlanDatePicker";
 import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { activityToCandidate, ensureCityActivities } from "../lib/activities";
-import { CATEGORY_LABEL_KEYS } from "../lib/categories";
-import { ACTIVITY_TYPE_LABEL_KEYS } from "../lib/activityTypes";
+import { categoryOrActivityLabelKey } from "../lib/categories";
 import { slugify } from "../lib/geo";
 import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlanner";
 import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
@@ -30,6 +29,8 @@ import {
   type ItineraryResult,
   GROUP_TYPES,
   PACE_OPTIONS,
+  GROUP_LABEL_KEYS,
+  PACE_LABEL_KEYS,
   INTEREST_TAGS,
 } from "../lib/planFlow";
 import type { Site } from "../lib/types";
@@ -45,26 +46,6 @@ const SUGGESTION_KEYS: (keyof typeof en)[] = [
   "plan.suggestion.couples",
 ];
 
-// GROUP_TYPES/PACE_OPTIONS (planFlow.ts) are stored verbatim in Supabase (trip.group_type/pace)
-// and used as-is elsewhere -- these map each canonical English value to its display label key,
-// the same "translate the label, keep the stored value English" pattern Phase 6 uses for
-// CATEGORIES/ACTIVITY_TYPES.
-const GROUP_LABEL_KEYS: Record<string, keyof typeof en> = {
-  Solo: "plan.group.solo",
-  Couple: "plan.group.couple",
-  Family: "plan.group.family",
-  Friends: "plan.group.friends",
-};
-const PACE_LABEL_KEYS: Record<string, keyof typeof en> = {
-  Relaxed: "plan.pace.relaxed",
-  "Strict schedule": "plan.pace.strict",
-};
-
-// INTEREST_TAGS spans both CATEGORIES and ACTIVITY_TYPES -- look the label up in whichever map
-// actually has it.
-function interestLabelKey(tag: string): keyof typeof en {
-  return CATEGORY_LABEL_KEYS[tag] ?? ACTIVITY_TYPE_LABEL_KEYS[tag];
-}
 
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
@@ -109,7 +90,7 @@ function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onC
             </span>
           )}
         </div>
-        <p className="text-[11px] text-secondary-purple font-medium mt-[2px]">{site.category}</p>
+        <p className="text-[11px] text-secondary-purple font-medium mt-[2px]">{t(categoryOrActivityLabelKey(site.category))}</p>
         <p className="text-[12px] text-text-secondary mt-[6px] line-clamp-2">{site.description}</p>
       </div>
     </button>
@@ -165,7 +146,7 @@ function InterestChoice({
     <div className="flex flex-col gap-[12px] max-w-[420px]">
       <div className="flex flex-wrap gap-[10px]">
         {INTEREST_TAGS.map((tag) => (
-          <TagPill key={tag} label={t(interestLabelKey(tag))} active={selected.includes(tag)} onClick={() => onToggle(tag)} />
+          <TagPill key={tag} label={t(categoryOrActivityLabelKey(tag))} active={selected.includes(tag)} onClick={() => onToggle(tag)} />
         ))}
       </div>
       <button
@@ -325,7 +306,7 @@ export default function Plan() {
   function continueInterests() {
     const label =
       interests.length > 0
-        ? interests.map((tag) => t(interestLabelKey(tag))).join(", ")
+        ? interests.map((tag) => t(categoryOrActivityLabelKey(tag))).join(", ")
         : t("plan.noInterests");
     answerStep(label, "pace", t("plan.q.pace"));
   }
@@ -667,7 +648,7 @@ export default function Plan() {
       <p className="text-[13px] text-text-secondary mt-[6px]">
         {t("plan.durationLabel", { count: partial?.duration ?? 0 })} · {partial?.dates || t("plan.flexibleDates")} ·{" "}
         {t(GROUP_LABEL_KEYS[groupType])} · {t(PACE_LABEL_KEYS[pace])}
-        {interests.length > 0 ? ` · ${interests.map((tag) => t(interestLabelKey(tag))).join(", ")}` : ""}
+        {interests.length > 0 ? ` · ${interests.map((tag) => t(categoryOrActivityLabelKey(tag))).join(", ")}` : ""}
       </p>
 
       <div className="flex flex-col gap-[24px] mt-[32px]">
@@ -677,7 +658,7 @@ export default function Plan() {
           </p>
           <div className="flex flex-wrap gap-[8px] mt-[12px]">
             {INTEREST_TAGS.map((tag) => (
-              <TagPill key={tag} label={t(interestLabelKey(tag))} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
+              <TagPill key={tag} label={t(categoryOrActivityLabelKey(tag))} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
             ))}
           </div>
           {loadingSites && (

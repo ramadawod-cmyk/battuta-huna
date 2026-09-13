@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_TYPES } from "./activityTypes";
 import { CATEGORIES } from "./categories";
+import ar from "./i18n/ar";
+import en from "./i18n/en";
 import {
   buildGatherSystemPrompt,
+  GROUP_LABEL_KEYS,
+  GROUP_TYPES,
   INTEREST_TAGS,
+  PACE_LABEL_KEYS,
+  PACE_OPTIONS,
   parseDayLabels,
   parsePartial,
 } from "./planFlow";
@@ -193,5 +199,25 @@ describe("parseDayLabels", () => {
 
   it("returns null for malformed input", () => {
     expect(parseDayLabels("not json at all")).toBeNull();
+  });
+});
+
+describe("GROUP_LABEL_KEYS / PACE_LABEL_KEYS", () => {
+  it("has a display-label key for every canonical group type, resolvable in both languages", () => {
+    for (const type of GROUP_TYPES) {
+      const key = GROUP_LABEL_KEYS[type];
+      expect(key).toBeDefined();
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
+    }
+  });
+
+  it("has a display-label key for every canonical pace option, resolvable in both languages", () => {
+    for (const option of PACE_OPTIONS) {
+      const key = PACE_LABEL_KEYS[option];
+      expect(key).toBeDefined();
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
+    }
   });
 });

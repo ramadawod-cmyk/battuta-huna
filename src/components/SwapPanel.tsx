@@ -4,21 +4,25 @@ import closeIcon from "../assets/trip-swap/close-icon.svg";
 import askAiArrow from "../assets/trip-swap/ask-ai-arrow.svg";
 import { db, planAgent } from "../lib/api";
 import { activityToCandidate } from "../lib/activities";
-import { normalizeCategory, getDurationMinutes } from "../lib/categories";
+import { categoryOrActivityLabelKey, normalizeCategory, getDurationMinutes } from "../lib/categories";
+import { useTranslation } from "../lib/LanguageContext";
 import { slugify } from "../lib/geo";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import type { Activity, Site, Trip, TripDay, TripSlot } from "../lib/types";
 
 function AlternativeItem({ site, onClick }: { site: Site; onClick: () => void }) {
+  const { t, language } = useTranslation();
   const imageUrl = useWikiThumbnail(site.name);
+  const name = language === "ar" && site.name_ar ? site.name_ar : site.name;
+  const description = language === "ar" && site.description_ar ? site.description_ar : site.description;
   return (
     <AllSitesListItem
-      name={site.name}
-      category={site.category.toUpperCase()}
-      description={site.description}
+      name={name}
+      category={t(categoryOrActivityLabelKey(site.category)).toUpperCase()}
+      description={description}
       className="max-w-none"
       imageUrl={site.image_url || imageUrl}
-      badge={site.kind === "activity" ? "ACTIVITY" : undefined}
+      badge={site.kind === "activity" ? t("plan.activityBadge") : undefined}
       onClick={onClick}
     />
   );
@@ -52,6 +56,7 @@ type SwapPanelProps = {
 // Renders in-place as a modal over TripDetail — no route change, so the trip stays mounted and
 // the transition is instant instead of unmounting the page to re-fetch everything from scratch.
 export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwapped }: SwapPanelProps) {
+  const { t, language } = useTranslation();
   const [alternatives, setAlternatives] = useState<Site[]>([]);
   const [rankedNames, setRankedNames] = useState<string[] | null>(null);
   const [query, setQuery] = useState("");
@@ -86,7 +91,7 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
           .map(activityToCandidate);
         setAlternatives([...siteCandidates, ...activityCandidates]);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load alternatives"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("trip.loadFailed")));
   }, [trip, day, slotName, dayCityId]);
 
   const visibleAlternatives = useMemo(() => {
@@ -133,7 +138,7 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
       await db("updateTripStatus", { tripId, days: updatedDays });
       onSwapped(updatedDays);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't swap this stop.");
+      setError(err instanceof Error ? err.message : t("swap.swapFailed"));
       setSwapping(false);
     }
   }
@@ -146,34 +151,34 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
       >
         <div className="flex items-start justify-between gap-[12px]">
           <p className="font-heading font-semibold text-[18px] text-text-primary">
-            Replace &quot;{slotName}&quot;
+            {t("swap.replaceTitle", { name: language === "ar" && currentSlot?.nameAr ? currentSlot.nameAr : slotName })}
           </p>
-          <button onClick={onClose} aria-label="Close" className="size-[16px] shrink-0 mt-[4px]">
+          <button onClick={onClose} aria-label={t("swap.close")} className="size-[16px] shrink-0 mt-[4px]">
             <img src={closeIcon} alt="" className="size-full" />
           </button>
         </div>
 
         {error && <p className="text-primary-orange text-[13px] mt-[12px]">{error}</p>}
 
-        <p className="font-medium text-[10px] text-primary-orange tracking-[0.4px] mt-[16px]">ASK BATTUTA AI</p>
+        <p className="font-medium text-[10px] text-primary-orange tracking-[0.4px] mt-[16px]">{t("swap.askAi")}</p>
         <form className="relative mt-[8px]" onSubmit={handleAsk}>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder='e.g. "somewhere quieter" or "more food-focused"'
-            className="w-full h-[52px] rounded-[14px] bg-surface-lavender pl-[18px] pr-[56px] text-[13px] text-text-primary placeholder:text-text-secondary outline-none"
+            placeholder={t("swap.askPlaceholder")}
+            className="w-full h-[52px] rounded-[14px] bg-surface-lavender ps-[18px] pe-[56px] text-[13px] text-text-primary placeholder:text-text-secondary outline-none"
           />
           <button
             type="submit"
-            aria-label="Ask Battuta AI"
+            aria-label={t("swap.askAiAria")}
             disabled={asking}
-            className="absolute right-[8px] top-1/2 -translate-y-1/2 size-[36px] rounded-full bg-primary-orange flex items-center justify-center disabled:opacity-60"
+            className="absolute end-[8px] top-1/2 -translate-y-1/2 size-[36px] rounded-full bg-primary-orange flex items-center justify-center disabled:opacity-60"
           >
             <img src={askAiArrow} alt="" className="size-[10px]" />
           </button>
         </form>
-        {asking && <p className="text-[11px] text-text-secondary mt-[8px]">Asking Battuta…</p>}
+        {asking && <p className="text-[11px] text-text-secondary mt-[8px]">{t("swap.asking")}</p>}
         {rankedNames && !asking && (
           <button
             onClick={() => {
@@ -182,19 +187,19 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
             }}
             className="text-[11px] text-secondary-purple mt-[8px] underline"
           >
-            Clear AI suggestions
+            {t("swap.clearSuggestions")}
           </button>
         )}
 
         <div className="flex items-center gap-[12px] mt-[24px]">
           <div className="flex-1 h-px bg-text-secondary" />
-          <p className="text-[11px] text-text-secondary whitespace-nowrap">or browse manually</p>
+          <p className="text-[11px] text-text-secondary whitespace-nowrap">{t("swap.orBrowseManually")}</p>
           <div className="flex-1 h-px bg-text-secondary" />
         </div>
 
         <div className="flex flex-col gap-[12px] mt-[16px] max-h-[420px] overflow-y-auto">
           {visibleAlternatives.length === 0 && (
-            <p className="text-[13px] text-text-secondary">No alternatives found for {dayCityName}.</p>
+            <p className="text-[13px] text-text-secondary">{t("swap.noAlternatives", { city: dayCityName })}</p>
           )}
           {visibleAlternatives.map((site) => (
             <AlternativeItem key={site.id} site={site} onClick={() => selectAlternative(site)} />

@@ -137,6 +137,68 @@ const ar: typeof en = {
   "siteDetail.previousPhoto": "الصورة السابقة",
   "siteDetail.nextPhoto": "الصورة التالية",
   "siteDetail.goToPhoto": "الانتقال إلى الصورة {number}",
+
+  "common.loading": "جارٍ التحميل…",
+
+  "guide.gettingAround": "التنقل",
+  "guide.safety": "السلامة",
+  "guide.whereToEat": "أين تأكل",
+  "guide.whatToHave": "ما يجب إحضاره",
+  "guide.localCulture": "الثقافة المحلية",
+  "guide.moneyPayments": "المال والدفع",
+  "guide.languageBasics": "أساسيات اللغة",
+  "guide.bestTimeOfDay": "أفضل وقت لليوم",
+
+  "tripContent.mapView": "عرض الخريطة",
+  "tripContent.showLess": "عرض أقل",
+  "tripContent.readMore": "اقرأ المزيد",
+  "tripContent.noItinerary": "لا تحتوي هذه الرحلة على خطة يومية بعد.",
+  "tripContent.noTipsForCity": "لا توجد نصائح محلية لـ{city} بعد.",
+  "tripContent.swapAria": "استبدال {name}",
+
+  "trip.itineraryTab": "خطة الرحلة",
+  "trip.guideTab": "دليل السفر",
+  "trip.daysUnit": "{count} يوم",
+  "trip.dayLabel": "اليوم {number}",
+  "trip.dayFallback": "اليوم {number}",
+  "trip.notFound": "الرحلة غير موجودة.",
+  "trip.loadFailed": "تعذّر تحميل الرحلة",
+
+  "tripDetail.loading": "جارٍ تحميل الرحلة…",
+  "tripDetail.copyLink": "نسخ الرابط",
+  "tripDetail.share": "مشاركة",
+  "tripDetail.linkCopied": "تم نسخ الرابط!",
+  "tripDetail.editTrip": "تعديل الرحلة",
+  "tripDetail.shareableNotice": "هذه الرحلة قابلة للمشاركة —",
+  "tripDetail.stopSharing": "إيقاف المشاركة",
+  "tripDetail.shareUpdateFailed": "تعذّر تحديث المشاركة.",
+
+  "tripMap.loading": "جارٍ تحميل الخريطة…",
+  "tripMap.noLocatedStops": "لا توجد محطات محددة الموقع لهذا اليوم.",
+
+  "sharedTrip.unavailableTitle": "هذه الرحلة غير متاحة.",
+  "sharedTrip.unavailableBody": "ربما تم إلغاء مشاركتها، أو أن الرابط غير صحيح.",
+  "sharedTrip.planYourOwnLink": "خطّط رحلتك الخاصة ←",
+  "sharedTrip.planYourOwnCta": "خطّط رحلتك الخاصة",
+
+  "customise.title": "خصّص رحلتك",
+  "customise.durationInCity": "{count} يوم في {city}",
+  "customise.groupTypeLabel": "نوع المجموعة",
+  "customise.paceLabel": "الوتيرة",
+  "customise.saving": "جارٍ الحفظ…",
+  "customise.saveChanges": "حفظ التغييرات",
+  "customise.saveFailed": "تعذّر حفظ التغييرات.",
+
+  "swap.replaceTitle": "استبدال \"{name}\"",
+  "swap.close": "إغلاق",
+  "swap.askAi": "اسأل بطوطة الذكي",
+  "swap.askPlaceholder": "مثلاً: \"مكان أهدأ\" أو \"يركّز أكثر على الطعام\"",
+  "swap.asking": "بطوطة يبحث لك…",
+  "swap.clearSuggestions": "مسح اقتراحات الذكاء الاصطناعي",
+  "swap.orBrowseManually": "أو تصفّح يدويًا",
+  "swap.noAlternatives": "لم يتم العثور على بدائل في {city}.",
+  "swap.swapFailed": "تعذّر استبدال هذه المحطة.",
+  "swap.askAiAria": "اسأل بطوطة الذكي",
 };
 
 export default ar;

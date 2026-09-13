@@ -5,6 +5,8 @@ import SiteDetailModal from "../components/SiteDetailModal";
 import { TripGuide, TripItinerary } from "../components/TripContent";
 import { db } from "../lib/api";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
+import { useTranslation } from "../lib/LanguageContext";
+import { GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { slugify } from "../lib/geo";
 import { publicDateLabel } from "../lib/tripSharing";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
@@ -22,6 +24,7 @@ import type { Trip } from "../lib/types";
 // this can't be used to probe which trip ids exist.
 export default function SharedTrip() {
   const { tripId } = useParams<{ tripId: string }>();
+  const { t } = useTranslation();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [tipsByCity, setTipsByCity] = useState<Record<string, CityTips>>({});
@@ -63,7 +66,11 @@ export default function SharedTrip() {
   const selectedSiteCityId = selectedSiteDay?.cityId || slugify(selectedSiteCityName);
 
   const metaParts = trip
-    ? [publicDateLabel(trip), trip.group_type?.toUpperCase(), trip.pace?.toUpperCase()].filter(Boolean)
+    ? [
+        publicDateLabel(trip),
+        trip.group_type ? (GROUP_LABEL_KEYS[trip.group_type] ? t(GROUP_LABEL_KEYS[trip.group_type]) : trip.group_type).toUpperCase() : null,
+        trip.pace ? (PACE_LABEL_KEYS[trip.pace] ? t(PACE_LABEL_KEYS[trip.pace]) : trip.pace).toUpperCase() : null,
+      ].filter(Boolean)
     : [];
 
   return (
@@ -78,21 +85,21 @@ export default function SharedTrip() {
           onClick={() => track("Plan Your Own Trip Clicked", { source: "shared_trip", trip_id: trip?.id })}
           className="bg-primary-orange text-white text-[12px] sm:text-[13px] font-bold tracking-[0.5px] rounded-[14px] px-[14px] sm:px-[18px] py-[10px] whitespace-nowrap"
         >
-          PLAN YOUR OWN TRIP
+          {t("sharedTrip.planYourOwnCta")}
         </Link>
       </header>
 
       <div className="px-4 sm:px-10 md:px-16 py-6 md:py-[32px] max-w-[900px] mx-auto">
-        {loading && <p className="text-text-secondary">Loading…</p>}
+        {loading && <p className="text-text-secondary">{t("common.loading")}</p>}
 
         {!loading && !trip && (
           <div>
-            <p className="font-heading font-semibold text-[20px] text-text-primary">This trip isn't available.</p>
+            <p className="font-heading font-semibold text-[20px] text-text-primary">{t("sharedTrip.unavailableTitle")}</p>
             <p className="text-text-secondary text-[13px] mt-[8px]">
-              It may have been unshared, or the link is incorrect.
+              {t("sharedTrip.unavailableBody")}
             </p>
             <Link to="/plan" className="text-secondary-purple text-[13px] font-medium mt-[16px] inline-block">
-              Plan your own trip →
+              {t("sharedTrip.planYourOwnLink")}
             </Link>
           </div>
         )}
@@ -124,7 +131,7 @@ export default function SharedTrip() {
                   activeTab === "itinerary" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
                 }`}
               >
-                Itinerary
+                {t("trip.itineraryTab")}
               </button>
               <button
                 onClick={() => setActiveTab("guide")}
@@ -132,7 +139,7 @@ export default function SharedTrip() {
                   activeTab === "guide" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
                 }`}
               >
-                Travel Guide
+                {t("trip.guideTab")}
               </button>
             </div>
 

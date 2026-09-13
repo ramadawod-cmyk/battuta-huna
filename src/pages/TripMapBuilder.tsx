@@ -5,6 +5,9 @@ import "leaflet/dist/leaflet.css";
 import BackLink from "../components/BackLink";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
+import { useTranslation } from "../lib/LanguageContext";
+import { categoryOrActivityLabelKey } from "../lib/categories";
+import { GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
 import type { Trip, TripSlot } from "../lib/types";
@@ -24,6 +27,7 @@ export default function TripMapBuilder() {
   const { tripId } = useParams<{ tripId: string }>();
   const [searchParams] = useSearchParams();
   const { session, loading: authLoading } = useAuth();
+  const { t, language } = useTranslation();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,17 +47,17 @@ export default function TripMapBuilder() {
     setError(null);
     db("getTrips", session?.user?.id ? { authUserId: session.user.id } : {})
       .then((trips: Trip[]) => {
-        const found = (trips || []).find((t) => t.id === tripId) || null;
+        const found = (trips || []).find((tr) => tr.id === tripId) || null;
         setTrip(found);
         if (!found) {
-          setError("Trip not found.");
+          setError(t("trip.notFound"));
           return;
         }
         const requestedDay = Number(searchParams.get("day"));
         const dayIndex = found.days.findIndex((d) => d.day === requestedDay);
         if (dayIndex !== -1) setActiveDayIndex(dayIndex);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load trip"))
+      .catch((err) => setError(err instanceof Error ? err.message : t("trip.loadFailed")))
       .finally(() => setLoading(false));
     // Only re-run for a new trip/session -- searchParams is read once on load so switching
     // days via the tabs below doesn't get stomped by this effect re-running.
@@ -99,22 +103,22 @@ export default function TripMapBuilder() {
   }, [mapEl, slots, selectedSlot]);
 
   if (loading) {
-    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">Loading map…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">{t("tripMap.loading")}</div>;
   }
 
   if (error || !trip) {
     return (
       <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
-        <p className="text-text-primary">{error || "Trip not found."}</p>
+        <p className="text-text-primary">{error || t("trip.notFound")}</p>
         <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary mt-[16px]" />
       </div>
     );
   }
 
   const metaParts = [
-    trip.duration ? `${trip.duration} DAYS` : null,
-    trip.group_type?.toUpperCase(),
-    trip.pace?.toUpperCase(),
+    trip.duration ? t("trip.daysUnit", { count: trip.duration }) : null,
+    trip.group_type ? (GROUP_LABEL_KEYS[trip.group_type] ? t(GROUP_LABEL_KEYS[trip.group_type]) : trip.group_type).toUpperCase() : null,
+    trip.pace ? (PACE_LABEL_KEYS[trip.pace] ? t(PACE_LABEL_KEYS[trip.pace]) : trip.pace).toUpperCase() : null,
   ].filter(Boolean);
   const isMultiCity = tripDestinations(trip).length > 1;
 
@@ -141,7 +145,7 @@ export default function TripMapBuilder() {
                   : "bg-white border border-secondary-purple text-text-primary"
               }`}
             >
-              Day {day.day}
+              {t("trip.dayLabel", { number: day.day })}
               {isMultiCity && day.city ? ` · ${day.city}` : ""}
             </button>
           ))}
@@ -151,15 +155,17 @@ export default function TripMapBuilder() {
       <div className="flex gap-[24px] lg:gap-[40px] items-start mt-[24px] flex-wrap">
         <div className="flex-1 min-w-0 w-full sm:min-w-[320px]">
           {slots.length === 0 && (
-            <p className="text-text-secondary text-[14px]">No located stops for this day.</p>
+            <p className="text-text-secondary text-[14px]">{t("tripMap.noLocatedStops")}</p>
           )}
           {slots.map((slot, i) => {
             const isSelected = selectedSlot?.name === slot.name;
+            const name = language === "ar" && slot.nameAr ? slot.nameAr : slot.name;
+            const description = language === "ar" && slot.descriptionAr ? slot.descriptionAr : slot.description;
             return (
               <button
                 key={slot.name}
                 onClick={() => setSelectedSlot(slot)}
-                className={`text-left w-full flex gap-[20px] bg-white border rounded-[20px] p-[23px] mb-[16px] transition-colors ${
+                className={`text-start w-full flex gap-[20px] bg-white border rounded-[20px] p-[23px] mb-[16px] transition-colors ${
                   isSelected ? "border-[2px] border-secondary-purple" : "border border-secondary-purple"
                 }`}
               >
@@ -168,11 +174,11 @@ export default function TripMapBuilder() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[12px] text-text-secondary">{slot.time}</p>
-                  <p className="font-heading font-semibold text-[16px] text-text-primary mt-[2px]">{slot.name}</p>
+                  <p className="font-heading font-semibold text-[16px] text-text-primary mt-[2px]">{name}</p>
                   <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px] mt-[3px]">
-                    {slot.category}
+                    {t(categoryOrActivityLabelKey(slot.category))}
                   </p>
-                  <p className="text-[12px] leading-[1.4] text-text-secondary mt-[4px]">{slot.description}</p>
+                  <p className="text-[12px] leading-[1.4] text-text-secondary mt-[4px]">{description}</p>
                 </div>
               </button>
             );
@@ -184,12 +190,14 @@ export default function TripMapBuilder() {
           {selectedSlot && (
             <div className="bg-white border border-secondary-purple rounded-[20px] p-[19px] mt-[16px]">
               <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px]">
-                {selectedSlot.category}
+                {t(categoryOrActivityLabelKey(selectedSlot.category))}
               </p>
               <p className="font-heading font-semibold text-[16px] text-text-primary mt-[4px]">
-                {selectedSlot.name}
+                {language === "ar" && selectedSlot.nameAr ? selectedSlot.nameAr : selectedSlot.name}
               </p>
-              <p className="text-[12px] leading-[1.4] text-text-secondary mt-[6px]">{selectedSlot.description}</p>
+              <p className="text-[12px] leading-[1.4] text-text-secondary mt-[6px]">
+                {language === "ar" && selectedSlot.descriptionAr ? selectedSlot.descriptionAr : selectedSlot.description}
+              </p>
             </div>
           )}
         </div>
