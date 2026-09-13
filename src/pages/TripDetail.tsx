@@ -10,6 +10,7 @@ import { ensureCityTips, type CityTips } from "../lib/cityTips";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
+import { shareUrl } from "../lib/tripSharing";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
 import type { Trip, TripDay } from "../lib/types";
 
@@ -26,6 +27,9 @@ export default function TripDetail() {
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
   const [swapTarget, setSwapTarget] = useState<{ day: number; slotName: string } | null>(null);
   const [selectedSite, setSelectedSite] = useState<{ day: number; slotName: string } | null>(null);
+  const [sharingBusy, setSharingBusy] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useTrackScreen("trip_detail");
 
@@ -87,6 +91,34 @@ export default function TripDetail() {
     trip.pace?.toUpperCase(),
   ].filter(Boolean);
 
+  async function copyShareLink(id: string) {
+    try {
+      await navigator.clipboard.writeText(shareUrl(window.location.origin, id));
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      // Clipboard access can fail (permissions, insecure context) -- the link still exists and
+      // works, it just wasn't auto-copied. Not worth surfacing as an error.
+    }
+  }
+
+  async function handleShareToggle() {
+    if (!trip || sharingBusy) return;
+    const nextIsPublic = !trip.is_public;
+    setSharingBusy(true);
+    setShareError(null);
+    try {
+      await db("setTripVisibility", { tripId: trip.id, isPublic: nextIsPublic });
+      setTrip({ ...trip, is_public: nextIsPublic });
+      track(nextIsPublic ? "Trip Shared" : "Trip Unshared", { trip_id: trip.id });
+      if (nextIsPublic) await copyShareLink(trip.id);
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : "Couldn't update sharing.");
+    } finally {
+      setSharingBusy(false);
+    }
+  }
+
   const selectedSiteDay = selectedSite ? trip.days.find((d) => d.day === selectedSite.day) : null;
   const selectedSiteCityName = selectedSiteDay?.city || trip.city;
   const selectedSiteCityId = selectedSiteDay?.cityId || slugify(selectedSiteCityName);
@@ -104,7 +136,21 @@ export default function TripDetail() {
           </p>
           <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{metaParts.join(" · ")}</p>
         </div>
-        <div className="flex gap-[8px] sm:gap-[16px] shrink-0">
+        <div className="flex gap-[8px] sm:gap-[16px] shrink-0 items-start">
+          <div className="relative">
+            <button
+              onClick={trip.is_public ? () => copyShareLink(trip.id) : handleShareToggle}
+              disabled={sharingBusy}
+              className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-secondary-purple bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-secondary-purple transition-opacity hover:opacity-90 whitespace-nowrap disabled:opacity-50"
+            >
+              {trip.is_public ? "COPY LINK" : "SHARE"}
+            </button>
+            {linkCopied && (
+              <p className="absolute top-full right-0 mt-[6px] text-[11px] text-secondary-purple whitespace-nowrap">
+                Link copied!
+              </p>
+            )}
+          </div>
           <Link
             to={`/trip/${tripId}/customise`}
             onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
@@ -114,6 +160,17 @@ export default function TripDetail() {
           </Link>
         </div>
       </div>
+
+      {trip.is_public && (
+        <p className="text-[11px] text-text-secondary mt-[8px]">
+          This trip is shareable —{" "}
+          <button onClick={handleShareToggle} disabled={sharingBusy} className="underline hover:text-text-primary disabled:opacity-50">
+            stop sharing
+          </button>
+        </p>
+      )}
+
+      {shareError && <p className="text-primary-orange text-[12px] mt-[8px]">{shareError}</p>}
 
       <div className="relative mt-[16px] bg-secondary-purple rounded-[24px] w-full h-[200px] sm:h-[240px] overflow-hidden">
         {heroImageUrl && !heroImageFailed && (
