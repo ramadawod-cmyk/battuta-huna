@@ -185,7 +185,7 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                     window.open(buildViatorSearchUrl(`${site.name}, ${cityName}`), "_blank", "noopener,noreferrer");
                   }}
                 >
-                  FIND TOURS & TICKETS
+                  BOOK NOW
                 </Button>
               </div>
             </div>
