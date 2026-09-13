@@ -9,6 +9,39 @@ its own later.
 
 ---
 
+## 2026-09-13 — Viator "Find tours & tickets" link (`3462cc6`)
+
+The account only has Viator's affiliate-link tooling (their Impact.com-backed portal: Links,
+Widgets, Banners, Selector), not their Partner/product-search API — confirmed by asking. That
+means **there's no way to check in advance whether Viator actually has a bookable tour for a given
+site or activity**. Any attempt to only show the button for "likely bookable" categories would
+just be a guess, and could as easily hide a real tour as show a dead-end search. Chose the honest
+default: every place gets the same affiliate-tracked Viator search-results link
+(`src/lib/viator.ts`), built from its name + city. If Viator has nothing for that query, the
+traveller just lands on an empty search page — not a broken link, no false confidence either way.
+
+The `pid`/`mcid`/`medium` params were reverse-engineered from a real link generated through the
+account's own "Create Link" tool (not guessed) — `pid=P00319816`, `mcid=42383`, `medium=link`.
+`mcid`/`medium` are fixed constants for this affiliate setup, not secrets.
+
+**`VITE_VIATOR_PID` needs to be set in Netlify's site environment variables (both staging and
+production), not just the local `.env`** — Netlify's build doesn't read the gitignored local file.
+Skipping this means the deployed site silently falls back to an untracked search link (no pid, no
+commission) with no visible error. Same value both places, one affiliate account regardless of
+environment.
+
+Wired into `SiteDetailModal` only for v1 (reaches Explore, Trip Detail, and AllSites at once,
+since they all share that modal) — not on `PlaceCard` or itinerary rows, to avoid cluttering the
+compact list views with a secondary action.
+
+Verified live: the button's `window.open` call produces the exact expected URL. Could not confirm
+an actual 200 from viator.com in this session — their bot protection blocks headless/automated
+traffic site-wide (even a bare, param-less homepage load 403s from both `curl` and headless
+Chrome here), unrelated to the link's correctness. Worth clicking the real button once in a normal
+browser to close the loop.
+
+---
+
 ## 2026-09-13 — Mobile: use `dvh`, not `vh`, for any full-height layout (`62b9976`)
 
 Reported: on mobile, the Plan chat's message input was hidden under the browser's address bar.
