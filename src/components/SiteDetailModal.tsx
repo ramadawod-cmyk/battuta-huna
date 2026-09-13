@@ -4,6 +4,7 @@ import Button from "./Button";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { db, planAgent, type WikiImage, wikiImagesBySearch } from "../lib/api";
 import { normalizeCategory } from "../lib/categories";
+import { buildViatorSearchUrl } from "../lib/viator";
 import { track } from "../lib/analytics";
 import type { Site } from "../lib/types";
 
@@ -165,16 +166,28 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                 <p className="text-[15px] leading-[1.65] text-text-primary mt-[24px]">{site.description}</p>
               )}
 
-              <Button
-                variant="orange"
-                className="!w-full !h-[52px] mt-[32px]"
-                onClick={() => {
-                  track("Map Link Clicked", { name: site.name, source: "site_detail_modal" });
-                  if (site.map_url) window.open(site.map_url, "_blank", "noopener,noreferrer");
-                }}
-              >
-                OPEN IN MAPS
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-[10px] mt-[32px]">
+                <Button
+                  variant="orange"
+                  className="!w-full sm:!flex-1 !h-[52px]"
+                  onClick={() => {
+                    track("Map Link Clicked", { name: site.name, source: "site_detail_modal" });
+                    if (site.map_url) window.open(site.map_url, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  OPEN IN MAPS
+                </Button>
+                <Button
+                  variant="outline"
+                  className="!w-full sm:!flex-1 !h-[52px]"
+                  onClick={() => {
+                    track("Viator Link Clicked", { name: site.name, source: "site_detail_modal" });
+                    window.open(buildViatorSearchUrl(`${site.name}, ${cityName}`), "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  FIND TOURS & TICKETS
+                </Button>
+              </div>
             </div>
           </div>
         )}
