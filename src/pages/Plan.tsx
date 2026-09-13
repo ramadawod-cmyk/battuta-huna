@@ -14,6 +14,7 @@ import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlann
 import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
 import { useAuth } from "../lib/AuthContext";
 import { useTranslation } from "../lib/LanguageContext";
+import type en from "../lib/i18n/en";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
@@ -35,7 +36,27 @@ function legsLabel(legs: PlanLeg[]): string {
   return legs.map((l) => l.city).join(" · ");
 }
 
-const SUGGESTIONS = ["Umrah Trip", "Flying Solo", "Family Vacation", "Couples Getaway"];
+const SUGGESTION_KEYS: (keyof typeof en)[] = [
+  "plan.suggestion.umrah",
+  "plan.suggestion.solo",
+  "plan.suggestion.family",
+  "plan.suggestion.couples",
+];
+
+// GROUP_TYPES/PACE_OPTIONS (planFlow.ts) are stored verbatim in Supabase (trip.group_type/pace)
+// and used as-is elsewhere -- these map each canonical English value to its display label key,
+// the same "translate the label, keep the stored value English" pattern Phase 6 uses for
+// CATEGORIES/ACTIVITY_TYPES.
+const GROUP_LABEL_KEYS: Record<string, keyof typeof en> = {
+  Solo: "plan.group.solo",
+  Couple: "plan.group.couple",
+  Family: "plan.group.family",
+  Friends: "plan.group.friends",
+};
+const PACE_LABEL_KEYS: Record<string, keyof typeof en> = {
+  Relaxed: "plan.pace.relaxed",
+  "Strict schedule": "plan.pace.strict",
+};
 
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
@@ -46,12 +67,13 @@ function nowLabel() {
 }
 
 function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onClick: () => void }) {
+  const { t } = useTranslation();
   const imageUrl = useWikiThumbnail(site.name);
   const thumb = site.image_url || imageUrl;
   return (
     <button
       onClick={onClick}
-      className={`text-left rounded-[16px] border overflow-hidden transition-colors ${
+      className={`text-start rounded-[16px] border overflow-hidden transition-colors ${
         active ? "border-secondary-purple bg-surface-lavender" : "border-text-primary/20 bg-white"
       }`}
     >
@@ -70,12 +92,12 @@ function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onC
           <p className="font-heading font-semibold text-[14px] text-text-primary">{site.name}</p>
           {site.kind === "activity" && (
             <span className="shrink-0 rounded-[8px] bg-secondary-purple/15 text-secondary-purple text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
-              ACTIVITY
+              {t("plan.activityBadge")}
             </span>
           )}
           {site.must_see && (
             <span className="shrink-0 rounded-[8px] bg-primary-orange/15 text-primary-orange text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
-              MUST-SEE
+              {t("plan.mustSeeBadge")}
             </span>
           )}
         </div>
@@ -97,7 +119,15 @@ function BotRow({ children }: { children: ReactNode }) {
   );
 }
 
-function PillChoice({ options, onSelect }: { options: string[]; onSelect: (option: string) => void }) {
+function PillChoice({
+  options,
+  labelFor,
+  onSelect,
+}: {
+  options: string[];
+  labelFor?: (option: string) => string;
+  onSelect: (option: string) => void;
+}) {
   return (
     <div className="flex flex-wrap gap-[10px] max-w-[420px]">
       {options.map((opt) => (
@@ -106,7 +136,7 @@ function PillChoice({ options, onSelect }: { options: string[]; onSelect: (optio
           onClick={() => onSelect(opt)}
           className="bg-white border border-secondary-purple rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium text-text-primary hover:bg-surface-lavender/60 transition-colors"
         >
-          {opt}
+          {labelFor ? labelFor(opt) : opt}
         </button>
       ))}
     </div>
@@ -122,6 +152,7 @@ function InterestChoice({
   onToggle: (tag: string) => void;
   onContinue: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-[12px] max-w-[420px]">
       <div className="flex flex-wrap gap-[10px]">
@@ -133,7 +164,7 @@ function InterestChoice({
         onClick={onContinue}
         className="self-start bg-primary-orange text-white text-[13px] font-bold tracking-[0.5px] rounded-[14px] px-[20px] py-[10px]"
       >
-        CONTINUE
+        {t("plan.continue")}
       </button>
     </div>
   );
@@ -148,27 +179,28 @@ function ModeChoice({
   onAuto: () => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-[10px] max-w-[440px]">
       <div className="flex flex-col sm:flex-row gap-[10px]">
         <button
           onClick={onBrowse}
           disabled={disabled}
-          className="text-left flex-1 rounded-[16px] border border-secondary-purple px-[18px] py-[14px] hover:bg-surface-lavender/40 transition-colors disabled:opacity-50"
+          className="text-start flex-1 rounded-[16px] border border-secondary-purple px-[18px] py-[14px] hover:bg-surface-lavender/40 transition-colors disabled:opacity-50"
         >
-          <p className="font-heading font-semibold text-[14px] text-text-primary">Let me pick the places</p>
-          <p className="text-[12px] text-text-secondary mt-[2px]">Browse suggested spots and choose what goes in.</p>
+          <p className="font-heading font-semibold text-[14px] text-text-primary">{t("plan.mode.pickTitle")}</p>
+          <p className="text-[12px] text-text-secondary mt-[2px]">{t("plan.mode.pickDesc")}</p>
         </button>
         <button
           onClick={onAuto}
           disabled={disabled}
-          className="text-left flex-1 rounded-[16px] border border-secondary-purple bg-secondary-purple/5 px-[18px] py-[14px] hover:bg-surface-lavender/40 transition-colors disabled:opacity-50"
+          className="text-start flex-1 rounded-[16px] border border-secondary-purple bg-secondary-purple/5 px-[18px] py-[14px] hover:bg-surface-lavender/40 transition-colors disabled:opacity-50"
         >
-          <p className="font-heading font-semibold text-[14px] text-text-primary">Build it for me</p>
-          <p className="text-[12px] text-text-secondary mt-[2px]">Get a full itinerary now — fine-tune it after.</p>
+          <p className="font-heading font-semibold text-[14px] text-text-primary">{t("plan.mode.buildTitle")}</p>
+          <p className="text-[12px] text-text-secondary mt-[2px]">{t("plan.mode.buildDesc")}</p>
         </button>
       </div>
-      {disabled && <p className="text-[11px] text-text-secondary">Still gathering places for you…</p>}
+      {disabled && <p className="text-[11px] text-text-secondary">{t("plan.mode.gathering")}</p>}
     </div>
   );
 }
@@ -176,7 +208,7 @@ function ModeChoice({
 export default function Plan() {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const { language } = useTranslation();
+  const { t, language } = useTranslation();
 
   const [phase, setPhase] = useState<Phase>("landing");
   const [step, setStep] = useState<Step>("city");
@@ -250,10 +282,10 @@ export default function Plan() {
           duration: parsed.duration,
         });
         sitesPromiseRef.current = loadSites(parsed);
-        askStep("dates", "Great — when are you planning to go?");
+        askStep("dates", t("plan.q.dates"));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      const message = err instanceof Error ? err.message : t("plan.errGeneric");
       setError(message);
       track("Plan AI Failed", { reason: message });
     } finally {
@@ -266,11 +298,7 @@ export default function Plan() {
     const trimmed = input.trim();
     setFollowupNotes(trimmed);
     setInput("");
-    answerStep(
-      trimmed || "Just this city, nothing specific in mind.",
-      "party",
-      "Who's this trip for — just you, or are you bringing company?",
-    );
+    answerStep(trimmed || t("plan.noSpecificPlace"), "party", t("plan.q.party"));
   }
 
   function confirmDates(label: string) {
@@ -278,30 +306,28 @@ export default function Plan() {
     // Used to also ask "or are you interested in nearby cities too?" -- now redundant, since the
     // gathering agent itself already offers multi-destination trips during the first exchange
     // (see buildGatherSystemPrompt). The destination(s) are settled by this point.
-    answerStep(label, "followup", "Anything specific you don't want to miss?");
+    answerStep(label, "followup", t("plan.q.followup"));
   }
 
   function selectParty(g: string) {
     setGroupType(g);
-    answerStep(g, "interests", "Any particular interests I should prioritize? Pick as many as you like, or skip ahead.");
+    answerStep(t(GROUP_LABEL_KEYS[g]), "interests", t("plan.q.interests"));
   }
 
+  // Interest tag names (CATEGORIES/ACTIVITY_TYPES) stay English here -- Phase 6 gives them Arabic
+  // display labels the same way GROUP_LABEL_KEYS/PACE_LABEL_KEYS do above.
   function continueInterests() {
-    const label = interests.length > 0 ? interests.join(", ") : "No particular interests — surprise me.";
-    answerStep(label, "pace", "Got it. Do you prefer a relaxed pace or a packed schedule?");
+    const label = interests.length > 0 ? interests.join(", ") : t("plan.noInterests");
+    answerStep(label, "pace", t("plan.q.pace"));
   }
 
   function selectPace(p: string) {
     setPace(p);
-    answerStep(
-      p,
-      "mode",
-      "Last thing — want to pick the exact places yourself, or should I put together a full itinerary you can fine-tune afterward?",
-    );
+    answerStep(t(PACE_LABEL_KEYS[p]), "mode", t("plan.q.mode"));
   }
 
   async function chooseBrowse() {
-    setMessages((prev) => [...prev, { role: "user", content: "I'll pick the places myself.", time: nowLabel() }]);
+    setMessages((prev) => [...prev, { role: "user", content: t("plan.pickMyselfEcho"), time: nowLabel() }]);
     setPlaceFilters(interests);
     setPhase("selecting");
   }
@@ -309,7 +335,7 @@ export default function Plan() {
   async function chooseAutoBuild() {
     setMessages((prev) => [
       ...prev,
-      { role: "user", content: "Build it for me — I'll fine-tune it after.", time: nowLabel() },
+      { role: "user", content: t("plan.buildForMeEcho"), time: nowLabel() },
     ]);
     if (sitesPromiseRef.current) await sitesPromiseRef.current;
     buildTrip();
@@ -348,9 +374,9 @@ export default function Plan() {
         duration: p.duration,
         leg_count: p.legs.length,
       });
-      if (result.length === 0) setError("Couldn't load places for this trip.");
+      if (result.length === 0) setError(t("plan.errLoadPlaces"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't load places for this trip.";
+      const message = err instanceof Error ? err.message : t("plan.errLoadPlaces");
       setError(message);
     } finally {
       setLoadingSites(false);
@@ -405,7 +431,7 @@ export default function Plan() {
       const days = planMultiCityItinerary(itineraryLegs, pace);
       if (days.every((d) => d.slots.length === 0)) {
         track("Itinerary Build Failed", { reason: "no_places_fit" });
-        throw new Error("Couldn't build the itinerary — try again.");
+        throw new Error(t("plan.errNoPlacesFit"));
       }
 
       try {
@@ -446,7 +472,7 @@ export default function Plan() {
         },
       });
       const tripId = draft?.[0]?.id;
-      if (!tripId) throw new Error("Couldn't save the trip.");
+      if (!tripId) throw new Error(t("plan.errSaveTrip"));
 
       await db("updateTripStatus", { tripId, status: "ready", days: itinerary.days });
       track("Trip Saved", {
@@ -459,7 +485,7 @@ export default function Plan() {
       });
       navigate(`/trip/${tripId}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong building your trip.";
+      const message = err instanceof Error ? err.message : t("plan.errBuildGeneric");
       setError(message);
       track("Trip Save Failed", { city: partial.legs[0].city, message });
       setPhase("selecting");
@@ -469,15 +495,14 @@ export default function Plan() {
   if (phase === "landing") {
     return (
       <div className="relative px-4 sm:px-10 md:px-16 lg:px-[80px] py-16 sm:py-24 md:py-32 lg:py-[140px] max-w-[1180px]">
-        <img src={heroIllustration} alt="" className="hidden lg:block absolute right-[80px] top-[140px] w-[203px]" />
+        <img src={heroIllustration} alt="" className="hidden lg:block absolute end-[80px] top-[140px] w-[203px]" />
 
-        <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">YOUR TRAVEL AI AGENT</p>
+        <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">{t("plan.heroEyebrow")}</p>
         <h1 className="font-heading font-semibold text-[32px] sm:text-[40px] md:text-[48px] leading-[1.15] text-text-primary mt-[16px] max-w-[600px]">
-          Where do you want to explore?
+          {t("plan.heroTitle")}
         </h1>
         <p className="text-[16px] leading-[1.5] text-text-secondary mt-[16px] max-w-[560px]">
-          Tell Battuta where you're headed, and it plans the rest — sites, timing, and hidden gems, built around how
-          you like to travel.
+          {t("plan.heroSubtitle")}
         </p>
 
         <form
@@ -491,26 +516,26 @@ export default function Plan() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder='Try "Plan a 5-day cultural trip to Amman for two"'
-            className="w-full h-[64px] sm:h-[76px] rounded-[24px] border-[1.5px] border-secondary-purple shadow-[0px_16px_40px_0px_rgba(48,48,48,0.12)] pl-[20px] sm:pl-[26px] pr-[70px] sm:pr-[80px] text-[15px] sm:text-[16px] text-text-primary placeholder:text-text-secondary outline-none"
+            placeholder={t("plan.inputPlaceholder")}
+            className="w-full h-[64px] sm:h-[76px] rounded-[24px] border-[1.5px] border-secondary-purple shadow-[0px_16px_40px_0px_rgba(48,48,48,0.12)] ps-[20px] sm:ps-[26px] pe-[70px] sm:pe-[80px] text-[15px] sm:text-[16px] text-text-primary placeholder:text-text-secondary outline-none"
           />
           <button
             type="submit"
-            aria-label="Send"
-            className="absolute right-[10px] sm:right-[12px] top-1/2 -translate-y-1/2 size-[44px] sm:size-[52px] rounded-full bg-primary-orange flex items-center justify-center"
+            aria-label={t("plan.send")}
+            className="absolute end-[10px] sm:end-[12px] top-1/2 -translate-y-1/2 size-[44px] sm:size-[52px] rounded-full bg-primary-orange flex items-center justify-center"
           >
             <img src={sendArrow} alt="" className="size-[12px]" />
           </button>
         </form>
 
         <div className="flex gap-[10px] mt-[24px] flex-wrap">
-          {SUGGESTIONS.map((s) => (
+          {SUGGESTION_KEYS.map((key) => (
             <button
-              key={s}
-              onClick={() => sendMessage(s)}
+              key={key}
+              onClick={() => sendMessage(t(key))}
               className="bg-white border border-secondary-purple rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium text-text-primary"
             >
-              {s}
+              {t(key)}
             </button>
           ))}
         </div>
@@ -535,7 +560,7 @@ export default function Plan() {
             </div>
             <div>
               <p className="font-heading font-semibold text-[15px] text-text-primary leading-tight">Battuta</p>
-              <p className="font-medium text-[11px] text-primary-orange tracking-[0.9px]">YOUR TRAVEL AI AGENT</p>
+              <p className="font-medium text-[11px] text-primary-orange tracking-[0.9px]">{t("plan.heroEyebrow")}</p>
             </div>
           </div>
 
@@ -544,25 +569,25 @@ export default function Plan() {
               m.role === "assistant" ? (
                 <BotRow key={i}>
                   <div className="flex flex-col gap-[4px] max-w-[85%] sm:max-w-[480px]">
-                    <div className="rounded-[20px] rounded-bl-[6px] px-[20px] py-[14px] text-[15px] leading-[1.5] bg-surface-lavender text-text-primary">
+                    <div className="rounded-[20px] rounded-es-[6px] px-[20px] py-[14px] text-[15px] leading-[1.5] bg-surface-lavender text-text-primary">
                       {m.content}
                     </div>
-                    <span className="text-[11px] text-text-secondary pl-[4px]">{m.time}</span>
+                    <span className="text-[11px] text-text-secondary ps-[4px]">{m.time}</span>
                   </div>
                 </BotRow>
               ) : (
                 <div key={i} className="self-end flex flex-col items-end gap-[4px] max-w-[85%] sm:max-w-[480px]">
-                  <div className="rounded-[20px] rounded-br-[6px] px-[20px] py-[14px] text-[15px] leading-[1.5] bg-secondary-purple text-white">
+                  <div className="rounded-[20px] rounded-ee-[6px] px-[20px] py-[14px] text-[15px] leading-[1.5] bg-secondary-purple text-white">
                     {m.content}
                   </div>
-                  <span className="text-[11px] text-text-secondary pr-[4px]">{m.time}</span>
+                  <span className="text-[11px] text-text-secondary pe-[4px]">{m.time}</span>
                 </div>
               ),
             )}
 
             {sending && (
               <BotRow>
-                <div className="rounded-[20px] rounded-bl-[6px] px-[20px] py-[16px] bg-surface-lavender flex items-center gap-[5px]">
+                <div className="rounded-[20px] rounded-es-[6px] px-[20px] py-[16px] bg-surface-lavender flex items-center gap-[5px]">
                   <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce [animation-delay:-0.3s]" />
                   <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce [animation-delay:-0.15s]" />
                   <span className="size-[6px] rounded-full bg-secondary-purple/50 animate-bounce" />
@@ -572,7 +597,7 @@ export default function Plan() {
 
             {!sending && step === "party" && (
               <BotRow>
-                <PillChoice options={GROUP_TYPES} onSelect={selectParty} />
+                <PillChoice options={GROUP_TYPES} labelFor={(g) => t(GROUP_LABEL_KEYS[g])} onSelect={selectParty} />
               </BotRow>
             )}
 
@@ -584,7 +609,7 @@ export default function Plan() {
 
             {!sending && step === "pace" && (
               <BotRow>
-                <PillChoice options={PACE_OPTIONS} onSelect={selectPace} />
+                <PillChoice options={PACE_OPTIONS} labelFor={(p) => t(PACE_LABEL_KEYS[p])} onSelect={selectPace} />
               </BotRow>
             )}
 
@@ -607,13 +632,13 @@ export default function Plan() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={step === "city" ? "Reply to Battuta…" : "e.g. want to see Petra, or nothing specific"}
-                className="w-full h-[52px] rounded-[18px] bg-surface-lavender pl-[20px] pr-[64px] text-[15px] text-text-primary placeholder:text-text-secondary outline-none"
+                placeholder={step === "city" ? t("plan.replyPlaceholder") : t("plan.followupPlaceholder")}
+                className="w-full h-[52px] rounded-[18px] bg-surface-lavender ps-[20px] pe-[64px] text-[15px] text-text-primary placeholder:text-text-secondary outline-none"
               />
               <button
                 type="submit"
-                aria-label="Send"
-                className="absolute right-[28px] top-1/2 -translate-y-1/2 size-[38px] rounded-full bg-primary-orange flex items-center justify-center"
+                aria-label={t("plan.send")}
+                className="absolute end-[28px] top-1/2 -translate-y-1/2 size-[38px] rounded-full bg-primary-orange flex items-center justify-center"
               >
                 <img src={sendArrow} alt="" className="size-[11px]" />
               </button>
@@ -628,17 +653,18 @@ export default function Plan() {
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1180px]">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">
-        Planning {partial && legsLabel(partial.legs)}
+        {t("plan.planningHeading", { legs: partial ? legsLabel(partial.legs) : "" })}
       </h1>
       <p className="text-[13px] text-text-secondary mt-[6px]">
-        {partial?.duration} days · {partial?.dates || "flexible dates"} · {groupType} · {pace}
+        {t("plan.durationLabel", { count: partial?.duration ?? 0 })} · {partial?.dates || t("plan.flexibleDates")} ·{" "}
+        {t(GROUP_LABEL_KEYS[groupType])} · {t(PACE_LABEL_KEYS[pace])}
         {interests.length > 0 ? ` · ${interests.join(", ")}` : ""}
       </p>
 
       <div className="flex flex-col gap-[24px] mt-[32px]">
         <div>
           <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] uppercase">
-            Places ({selectedPlaces.size} selected)
+            {t("plan.placesSelected", { count: selectedPlaces.size })}
           </p>
           <div className="flex flex-wrap gap-[8px] mt-[12px]">
             {INTEREST_TAGS.map((tag) => (
@@ -647,7 +673,7 @@ export default function Plan() {
           </div>
           {loadingSites && (
             <p className="text-text-secondary text-[14px] mt-[12px]">
-              Finding places in {partial && legsLabel(partial.legs)}…
+              {t("plan.findingPlaces", { legs: partial ? legsLabel(partial.legs) : "" })}
             </p>
           )}
           {partial?.legs.map((leg) => {
@@ -661,7 +687,7 @@ export default function Plan() {
                   <p className="font-heading font-semibold text-[15px] text-text-primary mt-[20px] mb-[4px]">
                     {leg.city}{" "}
                     <span className="text-text-secondary text-[12px] font-normal">
-                      · {leg.days} {leg.days === 1 ? "day" : "days"}
+                      · {leg.days} {leg.days === 1 ? t("plan.day") : t("plan.days")}
                     </span>
                   </p>
                 )}
@@ -688,7 +714,7 @@ export default function Plan() {
           disabled={phase === "building" || selectedPlaces.size === 0}
           onClick={buildTrip}
         >
-          {phase === "building" ? "BUILDING YOUR TRIP…" : "BUILD MY ITINERARY"}
+          {phase === "building" ? t("plan.buildingCta") : t("plan.buildCta")}
         </Button>
       </div>
     </div>
