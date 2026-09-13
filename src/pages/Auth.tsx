@@ -5,10 +5,12 @@ import { authApi } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
+import { useTranslation } from "../lib/LanguageContext";
 
 export default function Auth() {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -24,7 +26,7 @@ export default function Auth() {
     e.preventDefault();
     if (!email.includes("@")) {
       track("Magic Link Requested", { success: false, reason: "invalid_email" });
-      setError("Please enter a valid email.");
+      setError(t("auth.invalidEmail"));
       return;
     }
     setSending(true);
@@ -34,7 +36,7 @@ export default function Auth() {
       setSent(true);
       track("Magic Link Requested", { success: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't send the link — try again.";
+      const message = err instanceof Error ? err.message : t("auth.sendError");
       setError(message);
       track("Magic Link Requested", { success: false, reason: message });
     } finally {
@@ -47,29 +49,28 @@ export default function Auth() {
       <div className="w-full max-w-[440px] rounded-[28px] bg-surface-white shadow-[0px_20px_60px_0px_rgba(48,48,48,0.2)] overflow-hidden px-10 py-12 flex flex-col items-center">
         <Link
           to="/plan"
-          aria-label="Back to app"
+          aria-label={t("auth.backToApp")}
           className="mb-2 flex size-[56px] items-center justify-center rounded-full bg-secondary-purple transition-opacity hover:opacity-90"
         />
 
         <h1 className="mt-6 text-center font-heading text-[22px] font-semibold text-text-primary">
-          Save your trip
+          {t("auth.title")}
         </h1>
         <p className="mt-2 text-center font-body text-[14px] leading-[1.5] text-text-secondary">
-          Create a free account to keep your itinerary and access it from any
-          device.
+          {t("auth.subtitle")}
         </p>
 
         {sent ? (
           <div className="mt-8 w-full text-center">
             <p className="font-body text-[14px] text-text-primary">
-              Check <span className="font-medium">{email}</span> for a sign-in link.
+              {t("auth.checkEmail", { email })}
             </p>
             <button
               type="button"
               onClick={() => setSent(false)}
               className="mt-4 text-[13px] font-medium text-text-secondary underline"
             >
-              Use a different email
+              {t("auth.useDifferentEmail")}
             </button>
           </div>
         ) : (
@@ -79,15 +80,15 @@ export default function Auth() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your email address"
-              aria-label="Your email address"
+              placeholder={t("auth.emailPlaceholder")}
+              aria-label={t("auth.emailPlaceholder")}
               className="h-[52px] w-full rounded-[16px] bg-surface-lavender px-5 font-body text-[14px] text-text-primary placeholder:text-text-secondary outline-none focus:ring-2 focus:ring-secondary-purple"
             />
 
             {error && <p className="text-primary-orange text-[13px]">{error}</p>}
 
             <Button type="submit" variant="orange" disabled={sending} style={{ width: "100%", height: "52px" }}>
-              {sending ? "SENDING…" : "SEND ME A LINK"}
+              {sending ? t("auth.sending") : t("auth.sendLink")}
             </Button>
           </form>
         )}

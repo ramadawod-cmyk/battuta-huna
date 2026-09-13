@@ -18,6 +18,26 @@ const en = {
   "common.backToMyTrips": "Back to My Trips",
   "common.backToTrip": "Back to Trip",
   "common.backToBlog": "Back to Blog",
+
+  "landing.getStarted": "Get Started",
+  "landing.toggleMenu": "Toggle menu",
+  "landing.quote": "Traveling, it leaves you speechless, then turns you into a storyteller.",
+  "landing.quoteAuthor": "— Ibn Battuta",
+  "landing.startPlanning": "Start Planning your Trip",
+  "landing.statSites": "Thousands of Cultural Sites",
+  "landing.statExplorers": "12,000+ Explorers",
+  "landing.statRating": "4.8 User Rating",
+
+  "auth.backToApp": "Back to app",
+  "auth.title": "Save your trip",
+  "auth.subtitle": "Create a free account to keep your itinerary and access it from any device.",
+  "auth.checkEmail": "Check {email} for a sign-in link.",
+  "auth.useDifferentEmail": "Use a different email",
+  "auth.emailPlaceholder": "Your email address",
+  "auth.sending": "SENDING…",
+  "auth.sendLink": "SEND ME A LINK",
+  "auth.invalidEmail": "Please enter a valid email.",
+  "auth.sendError": "Couldn't send the link — try again.",
 };
 
 export default en;

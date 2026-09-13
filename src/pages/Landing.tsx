@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import { useTranslation } from "../lib/LanguageContext";
+import type en from "../lib/i18n/en";
 import "./Landing.css";
 
 const VIDEOS = [
@@ -14,13 +16,13 @@ const DARK_INDEX = 2; // the lighter/snowy clip — swap all text to black while
 const HOLD_MS = 6000;
 const FADE_MS = 2200;
 
-const NAV_ITEMS = [
-  { label: "Explore", path: "/explore" },
-  { label: "Plan", path: "/plan" },
-  { label: "My Trips", path: "/my-trips" },
-  { label: "Settings", path: "/settings" },
-  { label: "About", path: "/about" },
-  { label: "Blog", path: "/blog" },
+const NAV_ITEMS: { labelKey: keyof typeof en; path: string }[] = [
+  { labelKey: "sidebar.explore", path: "/explore" },
+  { labelKey: "sidebar.plan", path: "/plan" },
+  { labelKey: "sidebar.myTrips", path: "/my-trips" },
+  { labelKey: "sidebar.settings", path: "/settings" },
+  { labelKey: "sidebar.about", path: "/about" },
+  { labelKey: "sidebar.blog", path: "/blog" },
 ];
 
 function BrandMark({ color, size = 28 }: { color: string; size?: number }) {
@@ -36,6 +38,7 @@ function BrandMark({ color, size = 28 }: { color: string; size?: number }) {
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [active, setActive] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const transitioning = useRef(false);
@@ -85,24 +88,24 @@ export default function Landing() {
             <span className="font-heading font-semibold text-xl sm:text-2xl">Battuta</span>
           </div>
 
-          <div className="hidden md:flex liquid-glass rounded-full items-center gap-6 pl-6 pr-2 py-2">
+          <div className="hidden md:flex liquid-glass rounded-full items-center gap-6 ps-6 pe-2 py-2">
             {NAV_ITEMS.map((item) => (
               <Link key={item.path} to={item.path} className="text-sm opacity-80 hover:opacity-100 transition-opacity">
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             ))}
             <button
               className="bg-primary-orange text-white text-sm font-medium rounded-full px-4 py-2 transition-opacity hover:opacity-90"
               onClick={() => navigate("/plan")}
             >
-              Get Started
+              {t("landing.getStarted")}
             </button>
           </div>
 
           <button
             className={`md:hidden liquid-glass rounded-full w-11 h-11 flex items-center justify-center ${menuOpen ? "landing-menu-open" : ""}`}
             onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Toggle menu"
+            aria-label={t("landing.toggleMenu")}
           >
             <span className="landing-icon-wrap">
               <svg className="landing-icon-menu" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
@@ -123,22 +126,22 @@ export default function Landing() {
             className="mt-6 max-w-xl italic opacity-80 text-lg sm:text-xl leading-relaxed"
             style={{ color: fg, transition: "color 700ms ease" }}
           >
-            &ldquo;Traveling, it leaves you speechless, then turns you into a storyteller.&rdquo;
+            &ldquo;{t("landing.quote")}&rdquo;
             <br />
-            <span className="not-italic opacity-80">— Ibn Battuta</span>
+            <span className="not-italic opacity-80">{t("landing.quoteAuthor")}</span>
           </p>
 
           <Button variant="orange" className="mt-8" onClick={() => navigate("/plan")}>
-            Start Planning your Trip
+            {t("landing.startPlanning")}
           </Button>
         </div>
 
         <div className="px-6 pb-6 sm:pb-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap opacity-70 text-xs sm:text-sm">
-          <span>Thousands of Cultural Sites</span>
+          <span>{t("landing.statSites")}</span>
           <span className="hidden sm:inline">|</span>
-          <span>12,000+ Explorers</span>
+          <span>{t("landing.statExplorers")}</span>
           <span className="hidden sm:inline">|</span>
-          <span>4.8 User Rating</span>
+          <span>{t("landing.statRating")}</span>
         </div>
       </div>
 
@@ -150,11 +153,11 @@ export default function Landing() {
             className="landing-menu-link text-white text-3xl font-heading font-semibold"
             onClick={() => setMenuOpen(false)}
           >
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         ))}
         <Button variant="orange" className="landing-menu-link landing-menu-cta mt-4" onClick={() => navigate("/plan")}>
-          Get Started
+          {t("landing.getStarted")}
         </Button>
       </div>
     </section>
