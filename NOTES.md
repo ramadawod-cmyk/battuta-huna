@@ -15,10 +15,23 @@ The account only has Viator's affiliate-link tooling (their Impact.com-backed po
 Widgets, Banners, Selector), not their Partner/product-search API — confirmed by asking. That
 means **there's no way to check in advance whether Viator actually has a bookable tour for a given
 site or activity**. Any attempt to only show the button for "likely bookable" categories would
-just be a guess, and could as easily hide a real tour as show a dead-end search. Chose the honest
-default: every place gets the same affiliate-tracked Viator search-results link
-(`src/lib/viator.ts`), built from its name + city. If Viator has nothing for that query, the
-traveller just lands on an empty search page — not a broken link, no false confidence either way.
+just be a guess, and could as easily hide a real tour as show a dead-end search.
+
+Shipped it showing on every place first ("the honest default, since we can't check real
+availability") — but seeing it live on literally every attraction (including minor ones with
+obviously no real tour) was the wrong call in practice, not just a hypothetical dead-end risk.
+Fixed by gating the button on `must_see`/`must_do` instead: it's not a real availability check
+either, but unlike a category guess, it's an existing signal (AI-tagged "iconic, unmissable
+landmark") that correlates strongly with "Viator likely has something real here" — the Colosseum
+or Vatican Museums almost certainly do, a minor side street or one of a dozen ordinary neighborhood
+sites almost certainly doesn't. **Lesson: "we can't verify availability" argued against a
+*category*-based guess specifically (arbitrary, no existing signal to lean on) — it didn't mean
+"show it on everything." A field that already means roughly the right thing (`must_see`) is a
+different, much safer kind of filter than fabricating a new one.**
+
+Every place still gets the same affiliate-tracked Viator search-results link
+(`src/lib/viator.ts`), built from its name + city, when it does show. If Viator has nothing for
+that query, the traveller just lands on an empty search page — not a broken link.
 
 The `pid`/`mcid`/`medium` params were reverse-engineered from a real link generated through the
 account's own "Create Link" tool (not guessed) — `pid=P00319816`, `mcid=42383`, `medium=link`.

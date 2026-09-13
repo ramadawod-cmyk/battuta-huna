@@ -177,19 +177,21 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                 >
                   OPEN IN MAPS
                 </Button>
-                <Button
-                  variant="outline"
-                  className="!w-full sm:!flex-1 !h-[52px]"
-                  onClick={() => {
-                    track("Viator Link Clicked", { name: site.name, source: "site_detail_modal" });
-                    window.open(buildViatorSearchUrl(`${site.name}, ${cityName}`), "_blank", "noopener,noreferrer");
-                  }}
-                >
-                  <span className="inline-flex items-center justify-center gap-[6px]">
-                    BOOK NOW
-                    <ExternalLink size={14} strokeWidth={2.5} />
-                  </span>
-                </Button>
+                {site.must_see && (
+                  <Button
+                    variant="outline"
+                    className="!w-full sm:!flex-1 !h-[52px]"
+                    onClick={() => {
+                      track("Viator Link Clicked", { name: site.name, source: "site_detail_modal" });
+                      window.open(buildViatorSearchUrl(`${site.name}, ${cityName}`), "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <span className="inline-flex items-center justify-center gap-[6px]">
+                      BOOK NOW
+                      <ExternalLink size={14} strokeWidth={2.5} />
+                    </span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
