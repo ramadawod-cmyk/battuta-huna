@@ -9,7 +9,7 @@ its own later.
 
 ---
 
-## 2026-09-13 — Activities (in progress)
+## 2026-09-13 — Activities (shipped, iterating)
 
 Full plan in `ACTIVITIES-PLAN.md`. Adds a second AI-generated content type alongside sites —
 "go to the beach" / "go out for drinks" style experiences, not landmarks — in their own
@@ -56,13 +56,29 @@ Progress:
 - ✅ Phase 5 — docs. README's "Trip data model" section gets an activities paragraph. This entry
   is the closing note.
 
-**Done.** All 6 phases shipped to staging. Not pushed to `main` yet.
+All 6 phases shipped to staging and then `main` (`0c6449e`).
 
-**Deliberately left out of v1**: teaching the conversational agent to extract activity intent
-from free text ("I want a beach day") — it stays scoped to destinations/duration; activities are
-only ever surfaced via the interests step and place-selection grid. Scheduling activities at a
-time-of-day-appropriate slot (nightlife in the evening) is also out of scope — `planItinerary` has
-no time-of-day awareness for anything today, sites included.
+**Follow-up (`5a414fa`) — evening scheduling.** The v1 plan explicitly deferred time-of-day
+awareness, and it showed immediately in practice: a nightlife activity competed for a slot on pure
+geography, so it could land at 11am or lose out to a closer museum and never get scheduled at all.
+Fixed in `planItinerary` (`src/lib/itineraryPlanner.ts`): activities whose category is
+unambiguously evening-only (`Nightlife & Drinks`, `Live Entertainment` — a small hardcoded set,
+*not* every activity type; things like Food Experience or Beach & Swim are left "any time" on
+purpose, since guessing a specific time-of-day for those would misfire as often as it'd help) are
+held out of the normal daytime proximity walk and assigned separately, one per day, always
+appended after dinner (8:30pm+) regardless of geography. Must-see evening activities get first
+pick of their closest day; the rest spread across whichever days are still unclaimed, so several
+real nightlife options in a city cover several different evenings instead of one day claiming
+them all. Verified live: a 4-day Beirut trip landed 3 different nightlife/entertainment activities
+at 8:30pm across 3 different days, with every non-evening activity type scheduling exactly as
+before.
+
+**Deliberately still left out**: teaching the conversational agent to extract activity intent from
+free text ("I want a beach day") — it stays scoped to destinations/duration; activities are only
+ever surfaced via the interests step and place-selection grid. Per-item time-of-day (e.g. a
+specific "Food Experience" being breakfast-only) also isn't modeled — only the two unambiguous
+evening categories get special treatment; expanding that mapping is a natural next step if a
+particular category's default placement turns out to be wrong often enough to matter.
 
 ---
 
