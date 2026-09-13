@@ -9,6 +9,17 @@ its own later.
 
 ---
 
+## 2026-09-13 — Scoped multi-destination trips (not started)
+
+Full plan in `MULTI-DESTINATION-PLAN.md`. The two decisions that shape everything else:
+carry `city`/`cityId`/`country` on each `TripDay` inside the existing JSON `days` column
+(**no DB migration**, old trips keep working because `trips.city` stays the first city), and
+wrap the existing single-city scheduler per leg instead of rewriting it. Six phases, each
+shippable on its own; the prompt (Phase 3) can ship before the flow uses legs (Phase 4)
+because the parser accepts both the old and new `[PARTIAL]` shapes.
+
+---
+
 ## 2026-09-12 — Added an automated test suite as a deploy gate
 
 Set up [Vitest](https://vitest.dev) for unit tests, scoped to pure logic only (no
