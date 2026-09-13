@@ -203,8 +203,20 @@ non-blocking, best-effort shape as the existing must-see/duration backfill.
   (`"Heart of the Medina"` / `"في قلب المدينة العتيقة"`, etc.), matching `parseDayLabels`' expected
   shape exactly.
 
-### Phase 4 — Landing, Auth
+### Phase 4 — Landing, Auth — DONE
 First-touch pages; small string count, second RTL rep before the bigger pages.
+- `landing.*`/`auth.*` keys added to `en.ts`/`ar.ts`; `Landing.tsx`'s nav items reuse the existing
+  `sidebar.*` keys instead of duplicating them. `Battuta`/`Battuta Huna` brand text stays literal,
+  matching the existing pattern in `Sidebar.tsx`/`Plan.tsx`.
+- One physical-to-logical fix: the landing nav pill's `pl-6 pr-2` → `ps-6 pe-2`, so the asymmetric
+  padding (more room around the nav links, less around the CTA button) stays on the correct side
+  regardless of direction. `Auth.tsx` had no physical-direction utilities to fix — already
+  direction-agnostic (centered flex column).
+- Manual (verified live on staging, commit `72a49e4`): downloaded the deployed JS bundle and
+  confirmed 6 sampled Arabic strings (`landing.getStarted`, `landing.toggleMenu`, `landing.quote`,
+  `landing.statExplorers`, `auth.title`, `auth.sendError`) shipped byte-correct, ruling out any
+  build-time mangling. Full in-browser RTL/toggle verification (already proven mechanically sound
+  in Phase 1) deferred to a browser-driving tool not available this session.
 
 ### Phase 5 — Plan flow (`Plan.tsx`)
 UI chrome translation + RTL for the largest single page, now that Phase 3 means the chat itself is
