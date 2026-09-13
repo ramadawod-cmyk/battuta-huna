@@ -91,6 +91,20 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 
+    // ── SAVE SITE TRANSLATION (Arabic backfill) ──────
+    if (action === 'saveSiteTranslation') {
+      const { name, cityId, nameAr, descriptionAr } = data;
+      const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { name_ar: nameAr, description_ar: descriptionAr });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
+    // ── SAVE ACTIVITY TRANSLATION (Arabic backfill) ──
+    if (action === 'saveActivityTranslation') {
+      const { name, cityId, nameAr, descriptionAr } = data;
+      const res = await request('PATCH', `/rest/v1/activities?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { name_ar: nameAr, description_ar: descriptionAr });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
     // ── GET CITY HERO ────────────────────────────────
     if (action === 'getCityHero') {
       const { cityId } = data;

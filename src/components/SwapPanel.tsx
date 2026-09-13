@@ -124,6 +124,8 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
         mapUrl: site.map_url || `https://maps.google.com/?q=${encodeURIComponent(site.name)}`,
         durationMinutes: getDurationMinutes(site),
         kind: site.kind,
+        nameAr: site.name_ar,
+        descriptionAr: site.description_ar,
       };
       const updatedDays = trip.days.map((d) =>
         d.day !== day ? d : { ...d, slots: d.slots.map((s) => (s.name === slotName ? newSlot : s)) },

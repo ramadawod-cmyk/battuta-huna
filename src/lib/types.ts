@@ -30,6 +30,12 @@ export type Site = {
   // src/lib/activities.ts) -- purely a UI badge hint, never read by scheduling logic, so every
   // real site (kind undefined) behaves exactly as it always did.
   kind?: "site" | "activity";
+  // Bilingual content, see ARABIC-LOCALIZATION-PLAN.md decision 6 -- generated in the same AI call
+  // as the English fields, not a separate translation pass. Absent/null on any site cached before
+  // this existed; src/lib/sites.ts's backfill fills these in opportunistically, not eagerly.
+  name_ar?: string | null;
+  description_ar?: string | null;
+  long_description_ar?: string | null;
 };
 
 export type Activity = {
@@ -53,6 +59,9 @@ export type Activity = {
   source?: string;
   must_do?: boolean | null;
   duration_minutes?: number | null;
+  // Bilingual content -- see the note on Site.name_ar, same rationale applies here.
+  name_ar?: string | null;
+  description_ar?: string | null;
 };
 
 export type TripSlot = {
@@ -69,6 +78,12 @@ export type TripSlot = {
   // Carried through from Site.kind when this slot was built from an activity, purely for a UI
   // badge -- see the note on Site.kind.
   kind?: "site" | "activity";
+  // Snapshotted from the underlying Site/Activity's name_ar/description_ar at build time (see
+  // itineraryPlanner.ts's siteToSlot) -- carried on the slot itself, not looked up live, so a
+  // built trip (and any /shared link to it) renders correctly in Arabic regardless of which
+  // language the viewer has selected, independent of which language the trip was built in.
+  nameAr?: string | null;
+  descriptionAr?: string | null;
 };
 
 export type TripDay = {
@@ -81,6 +96,9 @@ export type TripDay = {
   city?: string;
   cityId?: string;
   country?: string;
+  // Bilingual day title, generated alongside `label` (see planFlow.ts's
+  // buildDayLabelsSystemPrompt) -- same rationale as TripSlot's nameAr/descriptionAr.
+  labelAr?: string;
 };
 
 export type Trip = {
