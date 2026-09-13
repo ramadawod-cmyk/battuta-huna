@@ -253,7 +253,7 @@ export function planItinerary(sites: Site[], duration: number, pace: string): Tr
  */
 function assignEveningActivities(allSites: Site[], dayGroups: Site[][]): (Site | null)[] {
   const eveningPool = new Set(allSites.filter(isEveningAffinity));
-  const picks: (Site | null)[] = new Array(dayGroups.length).fill(null);
+  const picks: (Site | null)[] = Array.from({ length: dayGroups.length }, () => null);
   if (eveningPool.size === 0) return picks;
 
   const dayCenters = dayGroups.map((group) => (group.length > 0 ? centroid(group) : null));
@@ -275,8 +275,13 @@ function assignEveningActivities(allSites: Site[], dayGroups: Site[][]): (Site |
     }
   }
 
-  for (const candidate of [...eveningPool].filter((s) => s.must_see)) claimNearestDayFor(candidate);
-  for (const candidate of [...eveningPool]) claimNearestDayFor(candidate);
+  // Two passes over the same live Set, each only ever deleting (never adding) entries -- safe to
+  // iterate directly without a defensive copy. Must-see candidates get first claim on their
+  // closest day; whatever's left over fills in remaining days in the second pass.
+  for (const candidate of eveningPool) {
+    if (candidate.must_see) claimNearestDayFor(candidate);
+  }
+  for (const candidate of eveningPool) claimNearestDayFor(candidate);
 
   return picks;
 }

@@ -139,7 +139,7 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4" onClick={onClose}>
       <div
-        className="w-[420px] max-w-full max-h-[calc(100vh-32px)] overflow-y-auto rounded-[20px] border border-secondary-purple bg-white shadow-[0px_8px_32px_0px_rgba(48,48,48,0.12)] p-[23px]"
+        className="w-[420px] max-w-full max-h-[calc(100dvh-32px)] overflow-y-auto rounded-[20px] border border-secondary-purple bg-white shadow-[0px_8px_32px_0px_rgba(48,48,48,0.12)] p-[23px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-[12px]">

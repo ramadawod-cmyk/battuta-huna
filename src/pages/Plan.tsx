@@ -518,7 +518,7 @@ export default function Plan() {
   if (phase === "chat") {
     const showTextInput = step === "city" || step === "followup";
     return (
-      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col h-[calc(100vh-60px)] md:h-[calc(100vh-120px)]">
+      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col h-[calc(100dvh-60px)] md:h-[calc(100dvh-120px)]">
         {step === "dates" && partial && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4">
             <PlanDatePicker duration={partial.duration || 1} onConfirm={confirmDates} />
