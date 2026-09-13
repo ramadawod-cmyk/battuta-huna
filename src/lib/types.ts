@@ -26,6 +26,33 @@ export type Site = {
   source?: string;
   must_see?: boolean | null;
   duration_minutes?: number | null;
+  // Set only when this Site-shaped object actually came from the activities table (normalized in
+  // src/lib/activities.ts) -- purely a UI badge hint, never read by scheduling logic, so every
+  // real site (kind undefined) behaves exactly as it always did.
+  kind?: "site" | "activity";
+};
+
+export type Activity = {
+  id: string;
+  city_id: string;
+  name: string;
+  activity_type: string;
+  description: string;
+  long_description?: string | null;
+  tags: string[];
+  lat: number;
+  lng: number;
+  // True for a district/neighborhood-level recommendation (lat/lng is that area's centroid, not
+  // one exact venue) rather than a single specific spot -- e.g. "Gemmayze" for nightlife, vs. a
+  // named beach for Beach & Swim.
+  is_area?: boolean;
+  area_name?: string | null;
+  map_url?: string | null;
+  image_url?: string | null;
+  review_status?: string;
+  source?: string;
+  must_do?: boolean | null;
+  duration_minutes?: number | null;
 };
 
 export type TripSlot = {
@@ -39,6 +66,9 @@ export type TripSlot = {
   mapUrl: string;
   durationMinutes?: number;
   _removed?: boolean;
+  // Carried through from Site.kind when this slot was built from an activity, purely for a UI
+  // badge -- see the note on Site.kind.
+  kind?: "site" | "activity";
 };
 
 export type TripDay = {
