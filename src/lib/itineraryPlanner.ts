@@ -10,6 +10,22 @@ const DINNER_START = 19 * 60; // 7:00 PM
 const DINNER_MINUTES = 90;
 const TRANSIT_BUFFER_MINUTES = 15;
 const MAX_STOP_DISTANCE_METERS = 3000;
+
+// These two activity_type strings (src/lib/activityTypes.ts) are the only ones treated as
+// evening-only for scheduling purposes -- unambiguously night-time by nature, unlike e.g. "Food
+// Experience" or "Beach & Swim" which can reasonably happen at any hour. Kept as literals (not
+// imported) to avoid a hard dependency between the scheduler and the activity taxonomy; a test in
+// itineraryPlanner.test.ts pins these against ACTIVITY_TYPES so a rename there doesn't silently
+// break this.
+const EVENING_ACTIVITY_TYPES = new Set(["Nightlife & Drinks", "Live Entertainment"]);
+// Nightlife runs later than a normal sightseeing day -- this only bounds the one evening-slot
+// activity appended after dinner (see planItinerary), not the regular daytime budget.
+const NIGHT_END_MINUTES = 23 * 60; // 11:00 PM
+
+/** True for an activity-sourced candidate whose category is unambiguously an evening activity. */
+function isEveningAffinity(site: Site): boolean {
+  return site.kind === "activity" && EVENING_ACTIVITY_TYPES.has(site.category);
+}
 // An under-filled day is allowed to reach past MAX_STOP_DISTANCE_METERS rather than quit early,
 // but both bounds below keep that reach from turning into a citywide crawl that vacuums up
 // candidates other, later days needed too (which visually collapses a trip: TripDetail hides
@@ -120,10 +136,13 @@ export function planItinerary(sites: Site[], duration: number, pace: string): Tr
   const days = Math.max(1, duration);
   const budgetMinutes = touringBudgetMinutes(pace);
 
-  // Must-see first so they win contested slots; stable order otherwise.
+  // Must-see first so they win contested slots; stable order otherwise. Evening-affinity
+  // activities (nightlife, live entertainment) are held out of the daytime pool entirely -- they
+  // get assigned separately below and appended after dinner, instead of competing for a 2pm slot
+  // just because they happened to be geographically nearest.
   const priority = [...sites].sort((a, b) => Number(!!b.must_see) - Number(!!a.must_see));
   const mustSeeQueue = priority.filter((s) => s.must_see);
-  const remaining = new Set(priority);
+  const remaining = new Set(priority.filter((s) => !isEveningAffinity(s)));
 
   const dayGroups: Site[][] = [];
 
@@ -189,23 +208,77 @@ export function planItinerary(sites: Site[], duration: number, pace: string): Tr
     dayGroups.push(group);
   }
 
+  const eveningPicks = assignEveningActivities(sites, dayGroups);
+
   return dayGroups.map((group, idx) => {
-    if (group.length === 0) {
+    const eveningPick = eveningPicks[idx];
+    if (group.length === 0 && !eveningPick) {
       return { day: idx + 1, label: `Day ${idx + 1}`, slots: [] };
     }
-    const [seed, ...rest] = group;
-    const ordered = routeOrder(seed, rest);
 
     let cursor = DAY_START_MINUTES;
-    const slots: TripSlot[] = ordered.map((site) => {
-      cursor = skipMealBlocks(cursor);
-      const slot = siteToSlot(site, formatClockTime(cursor));
-      cursor += getDurationMinutes(site) + TRANSIT_BUFFER_MINUTES;
-      return slot;
-    });
+    const slots: TripSlot[] = [];
+    if (group.length > 0) {
+      const [seed, ...rest] = group;
+      const ordered = routeOrder(seed, rest);
+      for (const site of ordered) {
+        cursor = skipMealBlocks(cursor);
+        slots.push(siteToSlot(site, formatClockTime(cursor)));
+        cursor += getDurationMinutes(site) + TRANSIT_BUFFER_MINUTES;
+      }
+    }
+
+    // Always lands after dinner regardless of how the daytime walk above finished -- an evening
+    // activity being geographically closest to an earlier stop shouldn't schedule it mid-afternoon.
+    if (eveningPick) {
+      const eveningStart = Math.max(cursor, DINNER_START + DINNER_MINUTES);
+      // A day that already overran past the night cutoff (a very packed "Strict schedule" day)
+      // skips its evening pick rather than scheduling nightlife at 1am.
+      if (eveningStart < NIGHT_END_MINUTES) {
+        slots.push(siteToSlot(eveningPick, formatClockTime(eveningStart)));
+      }
+    }
 
     return { day: idx + 1, label: `Day ${idx + 1}`, slots };
   });
+}
+
+/**
+ * Picks at most one evening-affinity activity (nightlife, live entertainment) per day, assigned
+ * to whichever day's daytime stops are geographically closest -- so a full trip's worth of
+ * evenings get spread across real nightlife options instead of one day claiming several while
+ * others get none. Must-see evening activities get first pick of their best-fit day; the rest of
+ * the pool fills in whatever days are still unclaimed. A day with no daytime stops (an otherwise
+ * empty day) can still receive an evening pick, giving it something rather than nothing.
+ */
+function assignEveningActivities(allSites: Site[], dayGroups: Site[][]): (Site | null)[] {
+  const eveningPool = new Set(allSites.filter(isEveningAffinity));
+  const picks: (Site | null)[] = new Array(dayGroups.length).fill(null);
+  if (eveningPool.size === 0) return picks;
+
+  const dayCenters = dayGroups.map((group) => (group.length > 0 ? centroid(group) : null));
+
+  function claimNearestDayFor(candidate: Site): void {
+    let bestDayIdx = -1;
+    let bestDist = Infinity;
+    dayCenters.forEach((center, idx) => {
+      if (picks[idx]) return;
+      const dist = center ? haversineMeters(center.lat, center.lng, candidate.lat, candidate.lng) : 0;
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestDayIdx = idx;
+      }
+    });
+    if (bestDayIdx !== -1) {
+      picks[bestDayIdx] = candidate;
+      eveningPool.delete(candidate);
+    }
+  }
+
+  for (const candidate of [...eveningPool].filter((s) => s.must_see)) claimNearestDayFor(candidate);
+  for (const candidate of [...eveningPool]) claimNearestDayFor(candidate);
+
+  return picks;
 }
 
 export type ItineraryLeg = {
