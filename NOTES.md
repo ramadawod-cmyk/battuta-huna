@@ -36,10 +36,33 @@ Progress:
   after the fix: generated real, distinct Beirut beaches and nightlife districts (Gemmayzeh, Mar
   Mikhael) with correct `is_area`/`area_name`, and correctly returned zero Beach & Swim results
   for landlocked Amman rather than hallucinating one — all 6 rows persisted and were readable back.
-- ⬜ Phase 2 — fetch integration (Plan flow loads activities per leg, not surfaced in UI yet).
-- ⬜ Phase 3 — place-selection & interests UI.
-- ⬜ Phase 4 — itinerary / Trip Detail display.
-- ⬜ Phase 5 — docs.
+- ✅ Phase 2 (`1a08190`) — `Plan.tsx`'s `loadSites` fans `ensureCityActivities` out per leg in
+  parallel with `ensureCitySites`, normalizing each `Activity` into a `Site`-shaped candidate
+  (`activityToCandidate`) before merging into the same pool. Verified live: a Beirut trip's
+  place-selection grid showed all 6 previously-generated activities alongside regular sites, with
+  zero scheduler/UI changes needed.
+- ✅ Phase 3 (`2518bb6`) — `INTEREST_TAGS` now spans `CATEGORIES` + `ACTIVITY_TYPES`; the
+  place-selection filter pills (previously hardcoded to just `CATEGORIES`) use the same combined
+  list so activities don't disappear under a filter; `PlaceCard` shows an `ACTIVITY` badge.
+  Verified live: picking "Nightlife & Drinks" as an interest correctly widened the default
+  selection to include matching activities (23 places, up from the unbiased baseline).
+- ✅ Phase 4 (`4a199b5`) — `siteToSlot()` carries `kind` through onto `TripSlot` so an
+  activity-sourced stop stays tagged all the way into the built itinerary; `TripDetail`'s itinerary
+  rows and `SwapPanel`'s alternatives list (extended to also fetch activities for the day's city)
+  both show the same badge. Verified live end to end: built a Beirut trip with "Nightlife & Drinks"
+  as an interest, got 5 activity-sourced stops in the finished itinerary (Souks of Beirut, Jeita
+  Grotto, Mar Mikhael Nightlife District, etc), all correctly badged on Trip Detail and in the swap
+  panel.
+- ✅ Phase 5 — docs. README's "Trip data model" section gets an activities paragraph. This entry
+  is the closing note.
+
+**Done.** All 6 phases shipped to staging. Not pushed to `main` yet.
+
+**Deliberately left out of v1**: teaching the conversational agent to extract activity intent
+from free text ("I want a beach day") — it stays scoped to destinations/duration; activities are
+only ever surfaced via the interests step and place-selection grid. Scheduling activities at a
+time-of-day-appropriate slot (nightlife in the evening) is also out of scope — `planItinerary` has
+no time-of-day awareness for anything today, sites included.
 
 ---
 
