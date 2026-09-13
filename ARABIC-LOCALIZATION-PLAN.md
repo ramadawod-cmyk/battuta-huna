@@ -218,9 +218,27 @@ First-touch pages; small string count, second RTL rep before the bigger pages.
   build-time mangling. Full in-browser RTL/toggle verification (already proven mechanically sound
   in Phase 1) deferred to a browser-driving tool not available this session.
 
-### Phase 5 — Plan flow (`Plan.tsx`)
+### Phase 5 — Plan flow (`Plan.tsx`) — DONE
 UI chrome translation + RTL for the largest single page, now that Phase 3 means the chat itself is
 also fully Arabic when selected — no more "mixed language" caveat to test around.
+- ~50 new `plan.*` keys: hero copy, suggestion chips, every hard-coded chat question/echo, mode/pace/
+  party choices, error messages, and the selecting/building summary screen.
+- `GROUP_TYPES`/`PACE_OPTIONS` (planFlow.ts) keep their canonical English values in Supabase
+  (`trip.group_type`/`pace`) — only their pill/summary display labels are translated
+  (`GROUP_LABEL_KEYS`/`PACE_LABEL_KEYS`), the same pattern Phase 6 uses for
+  `CATEGORIES`/`ACTIVITY_TYPES`. Interest tag names stay English for now — explicitly Phase 6's job.
+- RTL fixes beyond Phase 1's: input padding and absolutely-positioned send buttons (`pl/pr`/`right-`
+  → `ps/pe`/`end-`), the hero illustration's `right-` → `end-`, message timestamp padding, and —
+  the one non-obvious one — chat bubble tail corners. `rounded-bl`/`rounded-br` are physical and
+  don't flip with `dir`, but the tail must always point toward the avatar (bot, inline-start) or the
+  self-end side (user) regardless of direction, so they became logical `rounded-es`/`rounded-ee`.
+  `text-left` → `text-start` on `PlaceCard` and `ModeChoice`'s buttons.
+- Manual (verified live on staging, commit `f71a504`): downloaded the deployed bundle and confirmed
+  10 sampled Arabic strings across hero copy, chat questions, pill labels, and error messages
+  shipped byte-correct. One process note: the first two bundle-hash polls after this push actually
+  caught an intermediate rebuild (triggered by the prior docs-only commit) that didn't yet contain
+  Phase 5 strings — fixed by polling for a specific Phase-5 string's presence in the bundle instead
+  of just any hash change, which is the more reliable check going forward.
 
 ### Phase 6 — Explore, AllSites, SiteDetailModal, PoiCard, TagPill
 Renders the bilingual site/activity content from Phase 2 for the first time — confirm the language
