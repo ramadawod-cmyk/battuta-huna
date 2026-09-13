@@ -29,7 +29,7 @@ export default function TripDetail() {
   const [selectedSite, setSelectedSite] = useState<{ day: number; slotName: string } | null>(null);
   const [sharingBusy, setSharingBusy] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState<{ url: string; copied: boolean } | null>(null);
 
   useTrackScreen("trip_detail");
 
@@ -92,14 +92,19 @@ export default function TripDetail() {
   ].filter(Boolean);
 
   async function copyShareLink(id: string) {
+    const url = shareUrl(window.location.origin, id);
+    let copied = false;
     try {
-      await navigator.clipboard.writeText(shareUrl(window.location.origin, id));
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2500);
+      await navigator.clipboard.writeText(url);
+      copied = true;
     } catch {
-      // Clipboard access can fail (permissions, insecure context) -- the link still exists and
-      // works, it just wasn't auto-copied. Not worth surfacing as an error.
+      // Clipboard access can fail -- permissions, insecure context, or a browser (Safari, Firefox
+      // are stricter than Chrome here) that gates it behind conditions this click may not satisfy.
+      // Falls through to showing the raw link below so the traveller can still grab it manually,
+      // rather than the toggle silently succeeding with zero visible feedback.
     }
+    setLinkCopied({ url, copied });
+    setTimeout(() => setLinkCopied(null), 4000);
   }
 
   async function handleShareToggle() {
@@ -146,8 +151,8 @@ export default function TripDetail() {
               {trip.is_public ? "COPY LINK" : "SHARE"}
             </button>
             {linkCopied && (
-              <p className="absolute top-full right-0 mt-[6px] text-[11px] text-secondary-purple whitespace-nowrap">
-                Link copied!
+              <p className="absolute top-full right-0 mt-[6px] text-[11px] text-secondary-purple whitespace-nowrap max-w-[260px] truncate">
+                {linkCopied.copied ? "Link copied!" : linkCopied.url}
               </p>
             )}
           </div>
