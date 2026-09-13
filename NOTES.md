@@ -9,6 +9,40 @@ its own later.
 
 ---
 
+## 2026-09-13 — Activities (in progress)
+
+Full plan in `ACTIVITIES-PLAN.md`. Adds a second AI-generated content type alongside sites —
+"go to the beach" / "go out for drinks" style experiences, not landmarks — in their own
+`activities` table (separate from `sites` on purpose: different taxonomy, different generation
+cadence, `is_area`/`area_name` fields sites don't need). Designed to normalize into a
+`Site`-shaped candidate at fetch time so the existing scheduler, place-selection ranking, and map
+need zero changes (same "wrap, don't rewrite" call as multi-destination).
+
+There are **two separate Supabase projects** for this app (staging and production) — every schema
+change has to be run on both by hand, there's no migration tooling in this repo. Forgetting the
+second one means staging works and production silently 404s/500s on activities.
+
+Progress:
+- ✅ Phase 0 (`e0190b2`) — `Activity` type, `kind?: "site"|"activity"` on `Site`/`TripSlot`,
+  `src/lib/activityTypes.ts` (`ACTIVITY_TYPES`, accents, `normalizeActivityType`).
+- ✅ Phase 1 (`5da2395`) — `ensureCityActivities` (`src/lib/activities.ts`), `getActivities`/
+  `upsertActivities` proxy actions. **Real gotcha hit and fixed**: the new `activities` table came
+  up with Row-Level Security enabled and zero policies, which silently denies all anon-key access
+  — inserts failed with a `42501` error, reads came back an empty array instead of erroring (easy
+  to misread as "generation produced nothing" rather than "everything is blocked"). Fixed with
+  `alter table activities disable row level security;` on both databases, matching whatever
+  `sites`/`cities` already have. **If a future new table's inserts fail with a `42501` Postgres
+  error code, check RLS before assuming the code is wrong.** Verified live against the staging DB
+  after the fix: generated real, distinct Beirut beaches and nightlife districts (Gemmayzeh, Mar
+  Mikhael) with correct `is_area`/`area_name`, and correctly returned zero Beach & Swim results
+  for landlocked Amman rather than hallucinating one — all 6 rows persisted and were readable back.
+- ⬜ Phase 2 — fetch integration (Plan flow loads activities per leg, not surfaced in UI yet).
+- ⬜ Phase 3 — place-selection & interests UI.
+- ⬜ Phase 4 — itinerary / Trip Detail display.
+- ⬜ Phase 5 — docs.
+
+---
+
 ## 2026-09-13 — Multi-destination trips (in progress)
 
 Full plan in `MULTI-DESTINATION-PLAN.md`. The two decisions that shape everything else:
