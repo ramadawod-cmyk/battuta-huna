@@ -9,6 +9,31 @@ its own later.
 
 ---
 
+## 2026-09-13 — Mobile: use `dvh`, not `vh`, for any full-height layout (`62b9976`)
+
+Reported: on mobile, the Plan chat's message input was hidden under the browser's address bar.
+Root cause: `100vh` on mobile browsers is computed as if the address bar is permanently collapsed
+(the "large viewport"), but the actually-visible area right after page load is smaller since the
+bar is showing — so anything sized with a fixed `h-[calc(100vh-...)]` renders taller than what's
+on screen, pushing whatever's at the bottom (here, the chat input) below the fold.
+
+Fixed by switching to the `dvh` (dynamic viewport height) unit everywhere `100vh` was driving an
+exact height, not just a `min-height`: Plan.tsx's chat container, and the `SwapPanel`/
+`SiteDetailModal` modal overlays. `dvh` tracks the real visible viewport as the address bar
+shows/hides, and is supported by every mobile browser in active use today. **Rule of thumb for
+future full-height layouts: `min-h-screen` (i.e. `min-height: 100vh`) is fine — a taller-than-
+expected element just causes normal page scroll. An exact `height: 100vh` on anything with
+content pinned to its bottom edge is the risky pattern on mobile; use `dvh` there instead.**
+
+Couldn't fully verify on-device in this session — headless Chrome has no real collapsing address
+bar, so `vh` and `dvh` compute identically there, and a screenshot can only confirm the fix causes
+no regression, not that it fixes the original symptom. Confirmed instead via DOM measurement (chat
+input's bounding box fully within the viewport) and a broader overflow sweep (Explore, Plan, My
+Trips, About at 375/390/360px widths, no horizontal overflow, hamburger menu works). Worth a quick
+check on an actual phone to close the loop.
+
+---
+
 ## 2026-09-13 — Activities (shipped, iterating)
 
 Full plan in `ACTIVITIES-PLAN.md`. Adds a second AI-generated content type alongside sites —
