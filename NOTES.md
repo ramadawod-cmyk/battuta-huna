@@ -75,7 +75,21 @@ it's one continuous effort):
   Verified live: built a fresh Rome+Florence trip and confirmed swapping "Ponte Vecchio" (a
   Florence stop) offered only Florence alternatives (Uffizi, Piazzale Michelangelo, etc, zero Rome
   places), and its site-detail modal showed "Florence", not "Rome".
-- ⬜ Phase 6 — docs.
+- ✅ Phase 6 — docs. Added a "Trip data model" section to `README.md` explaining the
+  `TripDay.city/cityId/country` shape, `trips.city` = first leg, the `src/lib/trips.ts`
+  helpers, and the day-scoping gotcha Phase 5 caught (resolve *that day's* city, not
+  `trip.city`, for any day-level UI). This entry is the closing note for the effort.
+
+**Done.** All 6 phases shipped to staging (`c2493ca` → `e488984` → `63656d3` → `084d9f4` →
+`bd69a1a` → `c605e7d` → `fd37ae8`). Not pushed to `main` yet — do that the same
+tree-replacement way as the 2026-09-12 launch below if `main` has diverged again, otherwise
+a normal merge is fine since both branches share history this time.
+
+**Deliberately left out of v1** (call these out before extending this further): editing
+the day split between legs in the UI; travel time/transport between legs; per-leg dates;
+mixing an existing trip's legs after creation; more than 4 legs. Also open per the plan
+doc: whether the agent should ever be allowed to pre-fill `dates` from chat text instead of
+always deferring to the calendar — left as "no" for v1.
 
 ---
 

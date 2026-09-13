@@ -1,5 +1,39 @@
 # battuta-huna
 
+## Trip data model
+
+A trip can span multiple destinations (e.g. "Rome and Florence"). There's no separate
+`destinations` column — the existing `trips.days` JSON column carries it: each `TripDay`
+has optional `city`/`cityId`/`country` fields (`src/lib/types.ts`), absent on every trip
+created before multi-destination support existed. `trips.city` (the DB column) always
+holds the **first** destination, so anything reading it directly — a page thumbnail via
+`useWikiThumbnail(trip.city)`, say — keeps working untouched on old and new trips alike.
+
+Don't read `trip.city` when you actually want "all of this trip's destinations" or "this
+specific stop's city" — use the helpers in `src/lib/trips.ts` instead:
+
+- `tripDestinations(trip)` — unique `{city, cityId, country?}` in visit order, falling
+  back to `[{city: trip.city}]` when no day carries a city.
+- `destinationsLabel(trip)` — human-readable label, e.g. `"Rome"` or `"Rome · Florence"`.
+- `legsFromDays(days)` — groups consecutive same-city days into legs, for rendering a
+  city heading wherever the destination changes.
+
+A day-level UI (swapping a stop, viewing its details) should resolve *that day's* city,
+not the trip's overall city — see how `SwapPanel` and `TripDetail` do it, falling back to
+`trip.city` for a day with none. Getting this wrong was a real bug during Phase 5 of
+`MULTI-DESTINATION-PLAN.md`: a later leg's stop would silently offer/show the *first*
+leg's city instead of its own.
+
+The itinerary scheduler mirrors this: `planItinerary(sites, days, pace)` still builds one
+city's days; `planMultiCityItinerary(legs, pace)` (`src/lib/itineraryPlanner.ts`) runs it
+once per leg and stitches the results together with consecutive day numbers. The
+conversational planner's `[PARTIAL]` block is `{legs: [{city, country, country_id,
+days}], duration, dates}` — `parsePartial` in `src/lib/planFlow.ts` also accepts the
+older single-city shape for backward compatibility.
+
+See `MULTI-DESTINATION-PLAN.md` for the full design rationale and `NOTES.md` for how it
+was rolled out phase by phase.
+
 ## Testing
 
 Unit tests run on [Vitest](https://vitest.dev) and live next to the code they test, as
