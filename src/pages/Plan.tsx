@@ -13,6 +13,7 @@ import { slugify } from "../lib/geo";
 import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlanner";
 import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
 import { useAuth } from "../lib/AuthContext";
+import { useTranslation } from "../lib/LanguageContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
@@ -175,6 +176,7 @@ function ModeChoice({
 export default function Plan() {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const { language } = useTranslation();
 
   const [phase, setPhase] = useState<Phase>("landing");
   const [step, setStep] = useState<Step>("city");
@@ -234,7 +236,7 @@ export default function Plan() {
     setPhase("chat");
     try {
       const reply = await planAgent(
-        buildGatherSystemPrompt(new Date()),
+        buildGatherSystemPrompt(new Date(), language),
         nextMessages.map(({ role, content }) => ({ role, content })),
       );
       const { partial: parsed, cleanText } = parsePartial(reply);
@@ -414,7 +416,8 @@ export default function Plan() {
         const labels = parseDayLabels(labelText);
         if (labels && labels.length === days.length) {
           days.forEach((day, i) => {
-            day.label = `Day ${day.day} — ${labels[i]}`;
+            day.label = `Day ${day.day} — ${labels[i].label}`;
+            day.labelAr = `اليوم ${day.day} — ${labels[i].labelAr}`;
           });
         }
       } catch {

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_TYPES } from "./activityTypes";
 import { CATEGORIES } from "./categories";
-import { INTEREST_TAGS, parsePartial } from "./planFlow";
+import {
+  buildGatherSystemPrompt,
+  INTEREST_TAGS,
+  parseDayLabels,
+  parsePartial,
+} from "./planFlow";
 
 describe("INTEREST_TAGS", () => {
   it("spans both site categories and activity types, so either can be picked as an interest", () => {
@@ -148,5 +153,45 @@ describe("parsePartial", () => {
       wrap(JSON.stringify({ legs: [{ city: "Rome", days: 3 }, { city: "Florence", days: 2 }] })),
     );
     expect(partial?.duration).toBe(5);
+  });
+});
+
+describe("buildGatherSystemPrompt", () => {
+  it("defaults to no language instruction and stays out of the way for English", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-01-01"));
+    expect(prompt).not.toContain("Reply to the traveller in Arabic");
+  });
+
+  it("instructs the agent to reply in Arabic when language is ar", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-01-01"), "ar");
+    expect(prompt).toContain("Reply to the traveller in Arabic");
+  });
+
+  it("always requires the [PARTIAL] block's city/country fields to stay English", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-01-01"), "ar");
+    expect(prompt).toMatch(/must always be in English/);
+  });
+});
+
+describe("parseDayLabels", () => {
+  it("parses a bilingual array of {label, labelAr} objects", () => {
+    const text = '[{"label":"Old Town & Markets","labelAr":"البلدة القديمة والأسواق"},{"label":"Coastal Escape","labelAr":"هروب إلى الساحل"}]';
+    const labels = parseDayLabels(text);
+    expect(labels).toEqual([
+      { label: "Old Town & Markets", labelAr: "البلدة القديمة والأسواق" },
+      { label: "Coastal Escape", labelAr: "هروب إلى الساحل" },
+    ]);
+  });
+
+  it("returns null for the old plain-string-array shape", () => {
+    expect(parseDayLabels('["Old Town & Markets", "Coastal Escape"]')).toBeNull();
+  });
+
+  it("returns null when a label is missing its Arabic sibling", () => {
+    expect(parseDayLabels('[{"label":"Old Town & Markets"}]')).toBeNull();
+  });
+
+  it("returns null for malformed input", () => {
+    expect(parseDayLabels("not json at all")).toBeNull();
   });
 });

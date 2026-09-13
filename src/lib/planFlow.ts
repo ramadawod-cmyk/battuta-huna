@@ -1,5 +1,7 @@
 import { ACTIVITY_TYPES } from "./activityTypes";
+import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 import { CATEGORIES } from "./categories";
+import type { Language } from "./i18n/translate";
 import { splitDaysAcrossLegs } from "./itineraryPlanner";
 import type { TripDay } from "./types";
 
@@ -26,8 +28,12 @@ function formatToday(today: Date): string {
  * the traveller for it, and can suggest actual destinations instead of only accepting ones the
  * traveller already named. See MULTI-DESTINATION-PLAN.md Phase 3 for the full rationale.
  */
-export function buildGatherSystemPrompt(today: Date): string {
-  return `You are Battuta, a warm and concise travel-planning assistant. Today is ${formatToday(today)}. Your job is to figure out where the traveller wants to go and how many days the trip will be, in about 2-4 short exchanges. Keep replies to 1-3 sentences, no markdown, no emojis, no em dashes.
+export function buildGatherSystemPrompt(today: Date, language: Language = "en"): string {
+  const languageInstruction =
+    language === "ar"
+      ? `Reply to the traveller in Arabic. ${ARABIC_VOICE_GUIDANCE} `
+      : "";
+  return `You are Battuta, a warm and concise travel-planning assistant. Today is ${formatToday(today)}. ${languageInstruction}Your job is to figure out where the traveller wants to go and how many days the trip will be, in about 2-4 short exchanges. Keep replies to 1-3 sentences, no markdown, no emojis, no em dashes.
 
 Rules:
 - If they already name a specific city or cities, confirm and move on — don't second-guess a clear answer.
@@ -42,6 +48,7 @@ Rules:
 [PARTIAL]{"legs":[{"city":"City Name","country":"Country Name","country_id":"lowercase-slug","days":number of days for this leg}],"duration":total number of days,"dates":null}[/PARTIAL]
 - For a single-destination trip, "legs" has exactly one entry and its "days" equals "duration". For multiple destinations, split "duration" across the legs sensibly (more days for the destination that deserves them) so the "days" values add up to "duration".
 - Always include each leg's country and a lowercase hyphenated country_id slug.
+- The [PARTIAL] block's "city", "country", and "country_id" values must always be in English (their standard English name/slug), even when your reply above it is in Arabic — these are read by code, never shown to the user.
 - Everything before the [PARTIAL] block is shown to the user as your reply — keep it natural and friendly.`;
 }
 
@@ -123,26 +130,36 @@ export type ItineraryResult = {
 // by planItinerary() in ./itineraryPlanner — proximity- and time-budget-aware, so days can no
 // longer come back overloaded or empty (the old per-day AI call couldn't see other days' picks).
 // The AI's only remaining job here is writing a short, evocative title per day.
+// Day titles are always generated bilingually in one call, regardless of the current UI language
+// (same one-call-both-languages approach as sites/activities/tips -- see decision 6) -- so a
+// built trip's titles are ready to show in either language whenever it's later viewed or shared.
+export type DayLabel = { label: string; labelAr: string };
+
 export function buildDayLabelsSystemPrompt(destination: string, days: TripDay[], notes?: string): string {
   // Each day carries its own city for a multi-leg trip (see planMultiCityItinerary), so the model
   // can title "Day 4" with Florence in mind even though the trip overall spans Rome and Florence.
   const daysJson = JSON.stringify(
     days.map((d) => ({ day: d.day, city: d.city, stops: d.slots.map((s) => s.name) })),
   );
-  return `You are Battuta, a travel-planning assistant. For a trip to ${destination}, write a short, evocative title (3-5 words, no "Day N" prefix) for each day below, based on its stops and (if given) its city.${notes ? ` Traveler notes: ${notes}` : ""}
+  return `You are Battuta, a travel-planning assistant. For a trip to ${destination}, write a short, evocative title (3-5 words, no "Day N" prefix) for each day below, based on its stops and (if given) its city, in both English and Arabic.${notes ? ` Traveler notes: ${notes}` : ""} ${ARABIC_VOICE_GUIDANCE}
 
 Days: ${daysJson}
 
-Output ONLY a JSON array of ${days.length} strings, in day order, no other text. Example: ["Old Town & Markets", "Coastal Escape"]`;
+Output ONLY a JSON array of ${days.length} objects, in day order, no other text. Each item: {"label": string (English title), "labelAr": string (Arabic title)}. Example: [{"label": "Old Town & Markets", "labelAr": "البلدة القديمة والأسواق"}, {"label": "Coastal Escape", "labelAr": "هروب إلى الساحل"}]`;
 }
 
-export function parseDayLabels(text: string): string[] | null {
+export function parseDayLabels(text: string): DayLabel[] | null {
   const start = text.indexOf("[");
   const end = text.lastIndexOf("]");
   if (start === -1 || end === -1 || end < start) return null;
   try {
     const parsed = JSON.parse(text.slice(start, end + 1));
-    if (!Array.isArray(parsed) || !parsed.every((v) => typeof v === "string")) return null;
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.every((v) => v && typeof v.label === "string" && typeof v.labelAr === "string")
+    ) {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
