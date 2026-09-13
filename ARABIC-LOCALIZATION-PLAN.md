@@ -182,13 +182,26 @@ non-blocking, best-effort shape as the existing must-see/duration backfill.
   not a Supabase or proxy bug) — fixed by writing the JSON payload to a file and using
   `--data-binary @file`, after which the Arabic round-tripped correctly end to end.
 
-### Phase 3 — Bilingual chat
-- `buildGatherSystemPrompt(today, language)`, `buildDayLabelsSystemPrompt(..., language)`.
-- `Plan.tsx` passes the current UI language into both calls.
-- **Manual**: full conversation in Arabic — confirm the visible reply is in the calibrated voice,
-  the `[PARTIAL]` block still parses correctly with English `city`/`country_id`, multi-leg trips
-  still split correctly, and a built trip's day titles come back bilingual regardless of which
-  language the conversation happened in.
+### Phase 3 — Bilingual chat — DONE
+- `buildGatherSystemPrompt(today, language)`: adds the calibrated Arabic-voice instruction only
+  when `language === "ar"`; the `[PARTIAL]` block's `city`/`country`/`country_id` are explicitly
+  required to stay English in the prompt itself, regardless of reply language.
+- `buildDayLabelsSystemPrompt`: always generates both `label` and `labelAr` in one call (same
+  one-call-both-languages approach as Phase 2, decision 6) — day titles don't depend on which
+  language the conversation happened in. `parseDayLabels` now returns `{label, labelAr}[]`.
+  `Plan.tsx` composes `day.label`/`day.labelAr` (each with its own "Day N"/"اليوم N" prefix) from
+  the parsed pair.
+- `Plan.tsx` passes the current UI language (`useTranslation()`) into `buildGatherSystemPrompt`.
+- **Tests**: `buildGatherSystemPrompt` language switch and the always-English `[PARTIAL]`
+  instruction; `parseDayLabels`' bilingual shape validation (accepts `{label, labelAr}[]`, rejects
+  the old plain-string-array shape and any item missing `labelAr`). 111/111 passing.
+- Manual (verified live on staging, commit `822a10a`): called `plan-agent` directly with the real
+  Arabic gather prompt for "أريد رحلة لمدة أربعة أيام إلى مراكش" — reply came back in natural,
+  calibrated MSA, and the `[PARTIAL]` block correctly kept `"city":"Marrakech"`,
+  `"country":"Morocco"`, `"country_id":"morocco"` in English. Called it again with the real
+  day-labels prompt for a 2-day Marrakech itinerary — got back well-formed bilingual titles
+  (`"Heart of the Medina"` / `"في قلب المدينة العتيقة"`, etc.), matching `parseDayLabels`' expected
+  shape exactly.
 
 ### Phase 4 — Landing, Auth
 First-touch pages; small string count, second RTL rep before the bigger pages.
