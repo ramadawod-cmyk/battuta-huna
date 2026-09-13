@@ -16,7 +16,7 @@ import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import {
-  GATHER_SYSTEM_PROMPT,
+  buildGatherSystemPrompt,
   parsePartial,
   type PlanPartial,
   buildDayLabelsSystemPrompt,
@@ -242,7 +242,7 @@ export default function Plan() {
     setPhase("chat");
     try {
       const reply = await planAgent(
-        GATHER_SYSTEM_PROMPT,
+        buildGatherSystemPrompt(new Date()),
         nextMessages.map(({ role, content }) => ({ role, content })),
       );
       const { partial: parsed, cleanText } = parsePartial(reply);
@@ -281,11 +281,10 @@ export default function Plan() {
 
   function confirmDates(label: string) {
     setPartial((prev) => (prev ? { ...prev, dates: label } : prev));
-    answerStep(
-      label,
-      "followup",
-      `Will you only be exploring ${partial?.legs[0]?.city}, or are you interested in nearby cities too? And is there anything specific you don't want to miss?`,
-    );
+    // Used to also ask "or are you interested in nearby cities too?" -- now redundant, since the
+    // gathering agent itself already offers multi-destination trips during the first exchange
+    // (see buildGatherSystemPrompt). The destination(s) are settled by this point.
+    answerStep(label, "followup", "Anything specific you don't want to miss?");
   }
 
   function selectParty(g: string) {
@@ -579,7 +578,7 @@ export default function Plan() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={step === "city" ? "Reply to Battuta…" : "e.g. also want to see Petra, or just this city"}
+                placeholder={step === "city" ? "Reply to Battuta…" : "e.g. want to see Petra, or nothing specific"}
                 className="w-full h-[52px] rounded-[18px] bg-surface-lavender pl-[20px] pr-[64px] text-[15px] text-text-primary placeholder:text-text-secondary outline-none"
               />
               <button

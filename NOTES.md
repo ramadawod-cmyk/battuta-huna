@@ -27,7 +27,18 @@ it's one continuous effort):
   accepts both the legacy single-city shape and the new legs shape. `Plan.tsx` reads
   `partial.legs[0]` everywhere it read `partial.city` -- pure refactor, verified live against
   a real model response, no behavior change (the prompt still only ever emits one leg).
-- ⬜ Phase 3 — the date-aware, suggestion-capable prompt.
+- ✅ Phase 3 — `GATHER_SYSTEM_PROMPT` constant became `buildGatherSystemPrompt(today: Date)`
+  in `planFlow.ts`, called as `buildGatherSystemPrompt(new Date())` from `Plan.tsx`. Verified
+  live against the real model (not unit-testable — it's a prompt) with a Puppeteer script that
+  intercepts the `plan-agent` response: single city (Amman) unchanged, country → base-city
+  suggestion (Jordan → Amman + Wadi Musa), multi-city split that sums correctly (Rome+Florence,
+  Jordan+Egypt), vague/seasonal request → concrete named cities (warm+cheap December). **One
+  round of prompt tightening needed**: the first draft only told the agent to propose cities for
+  a *country* name, so "Bali" (a region, not a country) slipped through and just asked for
+  duration instead of naming Seminyak/Ubud/Canggu. Added an explicit region/island rule with a
+  worked example — re-tested and fixed. Lesson: when a prompt rule is scoped to one noun
+  category (here "country"), explicitly test the adjacent categories (region, island, area) too,
+  don't assume they're covered by the same wording.
 - ⬜ Phase 4 — Plan flow builds multi-leg trips.
 - ⬜ Phase 5 — Trip Detail / cards / map / customise show multiple destinations.
 - ⬜ Phase 6 — docs.
