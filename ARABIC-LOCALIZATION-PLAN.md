@@ -272,10 +272,36 @@ underlying English strings stay as data keys (Supabase values, `normalizeCategor
   `long_description`.
 
 ### Phase 7 — Trip pages (`TripDetail`, `TripContent`, `TripMapBuilder`, `CustomiseTrip`,
-`SwapPanel`, `SharedTrip`)
+`SwapPanel`, `SharedTrip`) — DONE
 Renders bilingual itinerary content end to end. `SharedTrip` specifically: a stranger should see
 the page in *their* language, independent of the owner's — and since Phase 2 made day titles/slot
 content bilingual regardless of build language, this should just work; confirm it actually does.
+- `TripContent.tsx` (shared by `TripDetail` and the public `/shared` page): slot rows switch to
+  `nameAr`/`descriptionAr`, day headers to `labelAr`, purely by reading the current UI language —
+  independent of which language built the trip, confirming the decision-6/8 bet paid off.
+- Found and fixed a real bug while wiring this up: `TripGuide` iterated `tipsByCity` with
+  `Object.entries()`, which rendered every tip category **twice** — once under its real key, once
+  under the untranslatable `<key>_ar` sibling Phase 2 introduced (no `GUIDE_META` entry, so it fell
+  back to the raw key as an ugly title). Now iterates the fixed `TIP_CATEGORIES` taxonomy (exported
+  from cityTips.ts for this) and picks the language-appropriate value directly — this bug existed
+  since Phase 2 shipped but had no visible surface until this phase actually rendered the guide.
+- `GROUP_LABEL_KEYS`/`PACE_LABEL_KEYS` moved out of `Plan.tsx` into `planFlow.ts` (exported) so
+  `CustomiseTrip`/`TripDetail`/`TripMapBuilder`/`SharedTrip` reuse one map instead of duplicating.
+- `categoryOrActivityLabelKey` (categories.ts): a trip slot's stored `category` can be a site
+  category *or* a raw `activity_type` (activityToCandidate deliberately skips normalizeCategory,
+  see the note there), so label lookup falls back through `normalizeActivityType` for anything not
+  found verbatim in either canonical map — handles the general case Plan.tsx's narrower
+  `interestLabelKey` didn't need to.
+- `GUIDE_META` entries now carry a `labelKey` instead of a hardcoded English `title`.
+- RTL: `pr-`/`right-` → `pe-`/`end-` across `TripDetail`/`SwapPanel`; `text-left` → `text-start` on
+  `TripContent`'s slot rows and `TripMapBuilder`'s list items.
+- **Tests**: `categoryOrActivityLabelKey` resolves categories, activity types, and a drifted
+  non-canonical value; `GROUP_LABEL_KEYS`/`PACE_LABEL_KEYS` and `GUIDE_META`'s `labelKey`s resolve
+  in both languages; `GUIDE_META` has an entry for every key `ensureCityTips` actually generates
+  (the exact mismatch class that caused the bug above). 121/121 passing.
+- Manual (verified live on staging, commit `02754b7`): downloaded the deployed bundle and confirmed
+  10 sampled Arabic strings across TripDetail, TripMapBuilder, CustomiseTrip, and SwapPanel shipped
+  byte-correct.
 
 ### Phase 8 — MyTrips, remaining pages (`About`, `Blog`, `BlogPost`), docs
 Closes out remaining pages; `NOTES.md` entry + README addendum covering both the i18n/RTL
