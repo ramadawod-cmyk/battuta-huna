@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import TripDetail from "./pages/TripDetail";
 import CustomiseTrip from "./pages/CustomiseTrip";
+import SharedTrip from "./pages/SharedTrip";
 import { useProximityNotifications } from "./lib/useProximityNotifications";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
     <Routes>
       <Route path="/auth" element={<Auth />} />
       <Route path="/" element={<Landing />} />
+      <Route path="/shared/:tripId" element={<SharedTrip />} />
 
       <Route path="/about" element={<Layout><About /></Layout>} />
       <Route path="/blog" element={<Layout><Blog /></Layout>} />

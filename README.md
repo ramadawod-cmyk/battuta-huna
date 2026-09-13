@@ -60,6 +60,29 @@ category.
 See `ACTIVITIES-PLAN.md` for the full design rationale and `NOTES.md` for the rollout
 (including a real Row-Level Security gotcha the new table hit).
 
+### Sharing a trip publicly
+
+A trip can be made read-only public via `trips.is_public` (default `false`) — when true, its own
+UUID `id` doubles as the share token (`/shared/{id}`), so there's no separate token to manage.
+`getPublicTrip` (Netlify function) returns identically-null for a private trip and a nonexistent
+one, so the endpoint can't be used to enumerate which trip ids exist.
+
+The public page (`src/pages/SharedTrip.tsx`) never shows the trip's exact `dates` string — only
+`publicDateLabel()`'s redacted duration + month/year (`src/lib/tripSharing.ts`). An exact date
+range on a page anyone with the link can open is a "this home is empty on these dates" signal, so
+if `dates` ever changes format, redo `publicDateLabel`'s parsing rather than letting it silently
+fall through to showing the raw string.
+
+`src/components/TripContent.tsx`'s `TripItinerary`/`TripGuide` are shared between the owner's
+`TripDetail` and the public page — `onSwap` and `mapHrefForDay` are optional props, left
+**unset** (not passed-but-disabled) for the public view, since neither works for a stranger:
+swapping mutates a trip they don't own, and the map route is owner-scoped.
+
+See `TRIP-SHARING-PLAN.md` for the full design rationale (including why voting/discovery are
+explicitly out of scope) and `NOTES.md` for a real bug the rollout caught (a "this succeeded"
+confirmation silently doing nothing when a dependent step — clipboard write — failed
+independently of the state change it was meant to confirm).
+
 ## Testing
 
 Unit tests run on [Vitest](https://vitest.dev) and live next to the code they test, as

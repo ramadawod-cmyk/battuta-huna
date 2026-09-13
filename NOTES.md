@@ -9,6 +9,89 @@ its own later.
 
 ---
 
+## 2026-09-13 — Trip sharing: read-only public link, no voting/discovery
+
+Full plan in `TRIP-SHARING-PLAN.md`. Lightweight version of "social," scoped down deliberately:
+one `is_public` boolean on `trips` (the trip's own UUID `id` doubles as the share token -- already
+unguessable, no separate token needed), a standalone `/shared/:tripId` page (no `<Layout>`
+sidebar, same pattern as `/` and `/auth`), and a Share toggle on `TripDetail`. No voting, no public
+browse/discovery feed -- cold-start problem pre-launch and an ongoing moderation burden that
+doesn't fit a solo founder; revisit after launch once there's real shared-trip volume.
+
+Key pieces:
+- `src/lib/tripSharing.ts`: `publicDateLabel()` redacts a trip's exact dates down to
+  duration + month/year for the shared view -- an exact range on a page anyone can open is a
+  "this home is empty on these dates" signal. `shareUrl()` builds the link.
+- `src/components/TripContent.tsx`: `TripItinerary`/`TripGuide` extracted out of `TripDetail` so
+  the new public page reuses the *same* rendering rather than a second copy that drifts. `onSwap`
+  and `mapHrefForDay` are optional props, **omitted entirely** (not passed-but-disabled) on the
+  public page -- neither works there: swapping mutates a trip the viewer doesn't own, and the map
+  route (`/trip/:id/map`) is owner-scoped (`getTrips`, not `getPublicTrip`), so keeping the link
+  would just 404 for a stranger.
+- `getPublicTrip` (Netlify function) returns identically-null for a private trip and a
+  nonexistent one -- the shared page can't be used to probe which trip ids exist.
+- Schema change (`alter table trips add column is_public boolean not null default false;`) needed
+  on **both** Supabase projects, same two-databases gotcha as Activities.
+
+**Real bug caught by live testing, not by inspection**: the "Link copied!" confirmation was
+sitting inside the same `try` block as `navigator.clipboard.writeText`, *after* the `await` --
+so when the clipboard write failed (it did, intermittently, even in normal Chrome automation;
+Safari and Firefox are genuinely stricter about this than Chromium), `setLinkCopied(true)` never
+ran and the Share button silently did nothing visible, even though the underlying `is_public`
+toggle had already succeeded. Fixed by decoupling the two: the toggle's success and the clipboard
+write's success are reported independently, and the confirmation always shows *something* --
+"Link copied!" when the write succeeds, the raw URL as selectable text when it doesn't. **Lesson:
+never gate a "this succeeded" confirmation behind a step (clipboard, notifications, etc.) that can
+silently fail independently of the actual state change it's confirming.**
+
+---
+
+## 2026-09-13 — Viator "Find tours & tickets" link (`3462cc6`)
+
+The account only has Viator's affiliate-link tooling (their Impact.com-backed portal: Links,
+Widgets, Banners, Selector), not their Partner/product-search API — confirmed by asking. That
+means **there's no way to check in advance whether Viator actually has a bookable tour for a given
+site or activity**. Any attempt to only show the button for "likely bookable" categories would
+just be a guess, and could as easily hide a real tour as show a dead-end search.
+
+Shipped it showing on every place first ("the honest default, since we can't check real
+availability") — but seeing it live on literally every attraction (including minor ones with
+obviously no real tour) was the wrong call in practice, not just a hypothetical dead-end risk.
+Fixed by gating the button on `must_see`/`must_do` instead: it's not a real availability check
+either, but unlike a category guess, it's an existing signal (AI-tagged "iconic, unmissable
+landmark") that correlates strongly with "Viator likely has something real here" — the Colosseum
+or Vatican Museums almost certainly do, a minor side street or one of a dozen ordinary neighborhood
+sites almost certainly doesn't. **Lesson: "we can't verify availability" argued against a
+*category*-based guess specifically (arbitrary, no existing signal to lean on) — it didn't mean
+"show it on everything." A field that already means roughly the right thing (`must_see`) is a
+different, much safer kind of filter than fabricating a new one.**
+
+Every place still gets the same affiliate-tracked Viator search-results link
+(`src/lib/viator.ts`), built from its name + city, when it does show. If Viator has nothing for
+that query, the traveller just lands on an empty search page — not a broken link.
+
+The `pid`/`mcid`/`medium` params were reverse-engineered from a real link generated through the
+account's own "Create Link" tool (not guessed) — `pid=P00319816`, `mcid=42383`, `medium=link`.
+`mcid`/`medium` are fixed constants for this affiliate setup, not secrets.
+
+**`VITE_VIATOR_PID` needs to be set in Netlify's site environment variables (both staging and
+production), not just the local `.env`** — Netlify's build doesn't read the gitignored local file.
+Skipping this means the deployed site silently falls back to an untracked search link (no pid, no
+commission) with no visible error. Same value both places, one affiliate account regardless of
+environment.
+
+Wired into `SiteDetailModal` only for v1 (reaches Explore, Trip Detail, and AllSites at once,
+since they all share that modal) — not on `PlaceCard` or itinerary rows, to avoid cluttering the
+compact list views with a secondary action.
+
+Verified live: the button's `window.open` call produces the exact expected URL. Could not confirm
+an actual 200 from viator.com in this session — their bot protection blocks headless/automated
+traffic site-wide (even a bare, param-less homepage load 403s from both `curl` and headless
+Chrome here), unrelated to the link's correctness. Worth clicking the real button once in a normal
+browser to close the loop.
+
+---
+
 ## 2026-09-13 — Mobile: use `dvh`, not `vh`, for any full-height layout (`62b9976`)
 
 Reported: on mobile, the Plan chat's message input was hidden under the browser's address bar.

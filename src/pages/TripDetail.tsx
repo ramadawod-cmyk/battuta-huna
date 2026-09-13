@@ -1,97 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Map } from "lucide-react";
-import swapIcon from "../assets/trip-detail/swap-icon.svg";
 import SiteDetailModal from "../components/SiteDetailModal";
 import SwapPanel from "../components/SwapPanel";
+import { TripGuide, TripItinerary } from "../components/TripContent";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { slugify } from "../lib/geo";
-import { formatDuration } from "../lib/categories";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
-import { GUIDE_ACCENT_CLASSES, GUIDE_META } from "../lib/guideMeta";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
-import { destinationsLabel, legsFromDays, tripDestinations } from "../lib/trips";
-import type { Trip, TripDay, TripSlot } from "../lib/types";
-
-function ItinerarySlotRow({
-  slot,
-  onSwap,
-  onViewDetails,
-}: {
-  slot: TripSlot;
-  onSwap: () => void;
-  onViewDetails: () => void;
-}) {
-  const imageUrl = useWikiThumbnail(slot.name);
-  return (
-    <div className="flex items-start gap-[16px] py-[10px]">
-      <div className="w-[80px] shrink-0 mt-[2px]">
-        <p className="text-[12px] font-medium text-text-secondary">{slot.time}</p>
-        {slot.durationMinutes && (
-          <p className="text-[11px] text-text-secondary/70 mt-[2px]">{formatDuration(slot.durationMinutes)}</p>
-        )}
-      </div>
-      <button onClick={onViewDetails} className="flex items-start gap-[16px] flex-1 min-w-0 text-left">
-        <div className="size-[56px] shrink-0 rounded-[12px] bg-surface-lavender overflow-hidden">
-          {imageUrl && <img src={imageUrl} alt="" className="size-full object-cover" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-[8px]">
-            <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
-            {slot.kind === "activity" && (
-              <span className="shrink-0 rounded-[8px] bg-secondary-purple/15 text-secondary-purple text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
-                ACTIVITY
-              </span>
-            )}
-          </div>
-          <p className="text-[13px] leading-[1.4] text-text-secondary mt-[6px]">{slot.description}</p>
-        </div>
-      </button>
-      <button onClick={onSwap} aria-label={`Swap ${slot.name}`} className="shrink-0 size-[32px]">
-        <img src={swapIcon} alt="" className="size-full" />
-      </button>
-    </div>
-  );
-}
-
-function GuideCard({
-  tipKey,
-  value,
-  expanded,
-  onToggle,
-}: {
-  tipKey: string;
-  value: string;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const meta = GUIDE_META[tipKey];
-  const title = meta?.title || tipKey;
-  const Icon = meta?.icon;
-  const accentClasses = GUIDE_ACCENT_CLASSES[meta?.accent || "purple"];
-  const isLong = value.length > 100;
-  return (
-    <div className="bg-white border border-border rounded-[16px] p-[16px]">
-      <div className="flex items-center gap-[10px]">
-        <div className={`size-[36px] rounded-full flex items-center justify-center shrink-0 ${accentClasses.bg}`}>
-          {Icon && <Icon className={`size-[18px] ${accentClasses.text}`} strokeWidth={2} />}
-        </div>
-        <p className="font-heading font-semibold text-[14px] text-text-primary">{title}</p>
-      </div>
-      <p className={`text-[12px] leading-[1.4] text-text-secondary mt-[10px] ${expanded ? "" : "line-clamp-2"}`}>
-        {value}
-      </p>
-      {isLong && (
-        <button onClick={onToggle} className="text-[12px] font-medium text-secondary-purple mt-[6px]">
-          {expanded ? "Show less" : "Read more"}
-        </button>
-      )}
-    </div>
-  );
-}
+import { shareUrl } from "../lib/tripSharing";
+import { destinationsLabel, tripDestinations } from "../lib/trips";
+import type { Trip, TripDay } from "../lib/types";
 
 export default function TripDetail() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -106,6 +27,9 @@ export default function TripDetail() {
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
   const [swapTarget, setSwapTarget] = useState<{ day: number; slotName: string } | null>(null);
   const [selectedSite, setSelectedSite] = useState<{ day: number; slotName: string } | null>(null);
+  const [sharingBusy, setSharingBusy] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState<{ url: string; copied: boolean } | null>(null);
 
   useTrackScreen("trip_detail");
 
@@ -167,10 +91,39 @@ export default function TripDetail() {
     trip.pace?.toUpperCase(),
   ].filter(Boolean);
 
-  const destinations = tripDestinations(trip);
-  const isMultiCity = destinations.length > 1;
-  const visibleDays = trip.days.filter((day) => day.slots.some((s) => !s._removed));
-  const itineraryLegs = legsFromDays(visibleDays);
+  async function copyShareLink(id: string) {
+    const url = shareUrl(window.location.origin, id);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    } catch {
+      // Clipboard access can fail -- permissions, insecure context, or a browser (Safari, Firefox
+      // are stricter than Chrome here) that gates it behind conditions this click may not satisfy.
+      // Falls through to showing the raw link below so the traveller can still grab it manually,
+      // rather than the toggle silently succeeding with zero visible feedback.
+    }
+    setLinkCopied({ url, copied });
+    setTimeout(() => setLinkCopied(null), 4000);
+  }
+
+  async function handleShareToggle() {
+    if (!trip || sharingBusy) return;
+    const nextIsPublic = !trip.is_public;
+    setSharingBusy(true);
+    setShareError(null);
+    try {
+      await db("setTripVisibility", { tripId: trip.id, isPublic: nextIsPublic });
+      setTrip({ ...trip, is_public: nextIsPublic });
+      track(nextIsPublic ? "Trip Shared" : "Trip Unshared", { trip_id: trip.id });
+      if (nextIsPublic) await copyShareLink(trip.id);
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : "Couldn't update sharing.");
+    } finally {
+      setSharingBusy(false);
+    }
+  }
+
   const selectedSiteDay = selectedSite ? trip.days.find((d) => d.day === selectedSite.day) : null;
   const selectedSiteCityName = selectedSiteDay?.city || trip.city;
   const selectedSiteCityId = selectedSiteDay?.cityId || slugify(selectedSiteCityName);
@@ -188,7 +141,21 @@ export default function TripDetail() {
           </p>
           <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{metaParts.join(" · ")}</p>
         </div>
-        <div className="flex gap-[8px] sm:gap-[16px] shrink-0">
+        <div className="flex gap-[8px] sm:gap-[16px] shrink-0 items-start">
+          <div className="relative">
+            <button
+              onClick={trip.is_public ? () => copyShareLink(trip.id) : handleShareToggle}
+              disabled={sharingBusy}
+              className="h-[36px] sm:h-[44px] px-[14px] sm:w-[140px] rounded-[14px] border-[1.5px] border-secondary-purple bg-transparent flex items-center justify-center font-bold text-[12px] sm:text-[14px] tracking-[0.56px] text-secondary-purple transition-opacity hover:opacity-90 whitespace-nowrap disabled:opacity-50"
+            >
+              {trip.is_public ? "COPY LINK" : "SHARE"}
+            </button>
+            {linkCopied && (
+              <p className="absolute top-full right-0 mt-[6px] text-[11px] text-secondary-purple whitespace-nowrap max-w-[260px] truncate">
+                {linkCopied.copied ? "Link copied!" : linkCopied.url}
+              </p>
+            )}
+          </div>
           <Link
             to={`/trip/${tripId}/customise`}
             onClick={() => track("Trip Edit Started", { trip_id: trip.id, city: trip.city })}
@@ -198,6 +165,17 @@ export default function TripDetail() {
           </Link>
         </div>
       </div>
+
+      {trip.is_public && (
+        <p className="text-[11px] text-text-secondary mt-[8px]">
+          This trip is shareable —{" "}
+          <button onClick={handleShareToggle} disabled={sharingBusy} className="underline hover:text-text-primary disabled:opacity-50">
+            stop sharing
+          </button>
+        </p>
+      )}
+
+      {shareError && <p className="text-primary-orange text-[12px] mt-[8px]">{shareError}</p>}
 
       <div className="relative mt-[16px] bg-secondary-purple rounded-[24px] w-full h-[200px] sm:h-[240px] overflow-hidden">
         {heroImageUrl && !heroImageFailed && (
@@ -234,86 +212,31 @@ export default function TripDetail() {
       </div>
 
       {activeTab === "itinerary" && (
-        <div className="flex flex-col gap-[24px] mt-[32px]">
-          {itineraryLegs.map((leg, legIdx) => (
-            <div key={leg.cityId || leg.city || legIdx} className="flex flex-col gap-[24px]">
-              {isMultiCity && leg.city && (
-                <p className="font-heading font-semibold text-[19px] text-text-primary">{leg.city}</p>
-              )}
-              {leg.days.map((day) => (
-                <div key={day.day}>
-                  <div className="flex items-center gap-[8px]">
-                    <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
-                      {day.label || `DAY ${day.day}`}
-                    </p>
-                    <Link
-                      to={`/trip/${tripId}/map?day=${day.day}`}
-                      onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail", day: day.day })}
-                      className="flex items-center gap-[4px] text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
-                    >
-                      <Map size={13} strokeWidth={2} />
-                      Map view
-                    </Link>
-                  </div>
-                  <div className="flex flex-col mt-[16px]">
-                    {day.slots
-                      .filter((slot) => !slot._removed)
-                      .map((slot) => (
-                        <ItinerarySlotRow
-                          key={`${day.day}-${slot.name}`}
-                          slot={slot}
-                          onSwap={() => setSwapTarget({ day: day.day, slotName: slot.name })}
-                          onViewDetails={() => setSelectedSite({ day: day.day, slotName: slot.name })}
-                        />
-                      ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-          {trip.days.length === 0 && (
-            <p className="text-text-secondary text-[14px]">This trip doesn't have an itinerary yet.</p>
-          )}
+        <div className="mt-[32px]">
+          <TripItinerary
+            trip={trip}
+            onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
+            onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
+            mapHrefForDay={(day) => `/trip/${tripId}/map?day=${day}`}
+          />
         </div>
       )}
 
       {activeTab === "guide" && (
-        <div className="flex flex-col gap-[32px] mt-[32px]">
-          {destinations.map((dest) => {
-            const entries = Object.entries(tipsByCity[dest.cityId] || {}).filter(([, value]) => value);
-            return (
-              <div key={dest.cityId}>
-                {isMultiCity && (
-                  <p className="font-heading font-semibold text-[18px] text-text-primary mb-[16px]">{dest.city}</p>
-                )}
-                {entries.length === 0 ? (
-                  <p className="text-text-secondary text-[13px]">No local tips yet for {dest.city}.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px]">
-                    {entries.map(([key, value]) => {
-                      const guideKey = `${dest.cityId}:${key}`;
-                      return (
-                        <GuideCard
-                          key={guideKey}
-                          tipKey={key}
-                          value={value}
-                          expanded={expandedGuideKeys.has(guideKey)}
-                          onToggle={() =>
-                            setExpandedGuideKeys((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(guideKey)) next.delete(guideKey);
-                              else next.add(guideKey);
-                              return next;
-                            })
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="mt-[32px]">
+          <TripGuide
+            trip={trip}
+            tipsByCity={tipsByCity}
+            expandedGuideKeys={expandedGuideKeys}
+            onToggleGuideKey={(guideKey) =>
+              setExpandedGuideKeys((prev) => {
+                const next = new Set(prev);
+                if (next.has(guideKey)) next.delete(guideKey);
+                else next.add(guideKey);
+                return next;
+              })
+            }
+          />
         </div>
       )}
 

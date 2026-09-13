@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import Button from "./Button";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { db, planAgent, type WikiImage, wikiImagesBySearch } from "../lib/api";
 import { normalizeCategory } from "../lib/categories";
+import { buildViatorSearchUrl } from "../lib/viator";
 import { track } from "../lib/analytics";
 import type { Site } from "../lib/types";
+
+// Paused (2026-09-13) pending a UX rethink on how/where the Viator CTA should actually appear --
+// code, tests, and the env var wiring are all intact, just not rendered. Flip back to true to
+// re-enable without touching any other logic.
+const VIATOR_BOOKING_ENABLED = false;
 
 type SiteDetailModalProps = {
   siteName: string;
@@ -165,16 +171,33 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                 <p className="text-[15px] leading-[1.65] text-text-primary mt-[24px]">{site.description}</p>
               )}
 
-              <Button
-                variant="orange"
-                className="!w-full !h-[52px] mt-[32px]"
-                onClick={() => {
-                  track("Map Link Clicked", { name: site.name, source: "site_detail_modal" });
-                  if (site.map_url) window.open(site.map_url, "_blank", "noopener,noreferrer");
-                }}
-              >
-                OPEN IN MAPS
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-[10px] mt-[32px]">
+                <Button
+                  variant="orange"
+                  className="!w-full sm:!flex-1 !h-[52px]"
+                  onClick={() => {
+                    track("Map Link Clicked", { name: site.name, source: "site_detail_modal" });
+                    if (site.map_url) window.open(site.map_url, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  OPEN IN MAPS
+                </Button>
+                {VIATOR_BOOKING_ENABLED && site.must_see && (
+                  <Button
+                    variant="outline"
+                    className="!w-full sm:!flex-1 !h-[52px]"
+                    onClick={() => {
+                      track("Viator Link Clicked", { name: site.name, source: "site_detail_modal" });
+                      window.open(buildViatorSearchUrl(`${site.name}, ${cityName}`), "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <span className="inline-flex items-center justify-center gap-[6px]">
+                      BOOK NOW
+                      <ExternalLink size={14} strokeWidth={2.5} />
+                    </span>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
