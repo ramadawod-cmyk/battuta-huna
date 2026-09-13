@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import Button from "./Button";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { db, planAgent, type WikiImage, wikiImagesBySearch } from "../lib/api";
@@ -185,7 +185,10 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                     window.open(buildViatorSearchUrl(`${site.name}, ${cityName}`), "_blank", "noopener,noreferrer");
                   }}
                 >
-                  BOOK NOW
+                  <span className="inline-flex items-center justify-center gap-[6px]">
+                    BOOK NOW
+                    <ExternalLink size={14} strokeWidth={2.5} />
+                  </span>
                 </Button>
               </div>
             </div>
