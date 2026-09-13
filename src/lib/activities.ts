@@ -2,7 +2,35 @@ import { db, planAgent } from "./api";
 import { ACTIVITY_TYPES, normalizeActivityType } from "./activityTypes";
 import { slugify } from "./geo";
 import { track } from "./analytics";
-import type { Activity } from "./types";
+import type { Activity, Site } from "./types";
+
+/**
+ * Normalizes an Activity into a Site-shaped candidate so it can flow through planItinerary,
+ * pickDefaultPlaces, PlaceCard, and the map completely unchanged -- category becomes the
+ * activity_type (deliberately NOT run through normalizeCategory, which would misclassify an
+ * activity type like "Beach & Swim" onto the unrelated site taxonomy), must_see mirrors must_do,
+ * and kind: "activity" is set purely so the UI can show a distinguishing badge.
+ */
+export function activityToCandidate(activity: Activity): Site {
+  return {
+    id: activity.id,
+    city_id: activity.city_id,
+    name: activity.name,
+    category: activity.activity_type,
+    tags: activity.tags,
+    description: activity.description,
+    long_description: activity.long_description,
+    lat: activity.lat,
+    lng: activity.lng,
+    map_url: activity.map_url,
+    image_url: activity.image_url,
+    review_status: activity.review_status,
+    source: activity.source,
+    must_see: activity.must_do,
+    duration_minutes: activity.duration_minutes,
+    kind: "activity",
+  };
+}
 
 type GeneratedActivity = {
   name: string;

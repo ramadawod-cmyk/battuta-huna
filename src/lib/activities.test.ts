@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedupeActivitiesByName, toActivityRow } from "./activities";
+import { activityToCandidate, dedupeActivitiesByName, toActivityRow } from "./activities";
 import type { Activity } from "./types";
 
 function makeGenerated(overrides: Partial<Parameters<typeof toActivityRow>[2]> & { name: string }) {
@@ -74,5 +74,44 @@ describe("toActivityRow", () => {
     );
     expect(row.must_do).toBe(true);
     expect(row.duration_minutes).toBe(45);
+  });
+});
+
+describe("activityToCandidate", () => {
+  const activity: Activity = {
+    id: "beirut-gemmayzeh",
+    city_id: "beirut",
+    name: "Gemmayzeh Street Bar Crawl",
+    activity_type: "Nightlife & Drinks",
+    description: "Beirut's liveliest strip of bars and rooftop lounges.",
+    tags: ["nightlife"],
+    lat: 33.89,
+    lng: 35.51,
+    is_area: true,
+    area_name: "Gemmayzeh",
+    map_url: "https://maps.google.com/?q=Gemmayzeh",
+    must_do: true,
+    duration_minutes: 180,
+  };
+
+  it("maps activity_type to category without running it through the site taxonomy", () => {
+    const candidate = activityToCandidate(activity);
+    // "Beach & Swim" or "Nightlife & Drinks" would get misclassified by normalizeCategory (site
+    // keyword matching), which is exactly why activityToCandidate must not call it.
+    expect(candidate.category).toBe("Nightlife & Drinks");
+  });
+
+  it("mirrors must_do onto must_see and tags the result as an activity", () => {
+    const candidate = activityToCandidate(activity);
+    expect(candidate.must_see).toBe(true);
+    expect(candidate.kind).toBe("activity");
+  });
+
+  it("preserves id, coordinates, and duration unchanged", () => {
+    const candidate = activityToCandidate(activity);
+    expect(candidate.id).toBe(activity.id);
+    expect(candidate.lat).toBe(activity.lat);
+    expect(candidate.lng).toBe(activity.lng);
+    expect(candidate.duration_minutes).toBe(180);
   });
 });
