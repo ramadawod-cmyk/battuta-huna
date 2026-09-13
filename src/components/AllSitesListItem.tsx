@@ -26,7 +26,7 @@ export default function AllSitesListItem({
   return (
     <button
       onClick={onClick}
-      className={`text-left flex gap-[16px] items-start bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
+      className={`text-start flex gap-[16px] items-start bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
     >
       <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
         {imageUrl && !imgFailed ? (

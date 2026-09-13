@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ImagePlaceholder from "./ImagePlaceholder";
+import { useTranslation } from "../lib/LanguageContext";
 import type { CategoryAccent } from "../lib/categories";
 
 type PoiCardProps = {
@@ -30,11 +31,12 @@ export default function PoiCard({
   categoryAccent = "purple",
   onClick,
 }: PoiCardProps) {
+  const { t } = useTranslation();
   const [imgFailed, setImgFailed] = useState(false);
   return (
     <div className={`bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full p-[19px] ${className}`}>
       <div className="flex justify-between gap-4">
-        <button className="text-left" onClick={onClick}>
+        <button className="text-start" onClick={onClick}>
           <p className="font-heading font-semibold text-[17px] text-text-primary">{name}</p>
           <p className="font-medium text-[10px] text-text-secondary tracking-[0.4px] mt-[5px]">{distance}</p>
           <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
@@ -60,7 +62,7 @@ export default function PoiCard({
           onClick={onClick}
           className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
         >
-          View more
+          {t("poiCard.viewMore")}
         </button>
       </div>
     </div>

@@ -9,6 +9,8 @@ import PlanDatePicker from "../components/PlanDatePicker";
 import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { activityToCandidate, ensureCityActivities } from "../lib/activities";
+import { CATEGORY_LABEL_KEYS } from "../lib/categories";
+import { ACTIVITY_TYPE_LABEL_KEYS } from "../lib/activityTypes";
 import { slugify } from "../lib/geo";
 import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlanner";
 import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
@@ -57,6 +59,12 @@ const PACE_LABEL_KEYS: Record<string, keyof typeof en> = {
   Relaxed: "plan.pace.relaxed",
   "Strict schedule": "plan.pace.strict",
 };
+
+// INTEREST_TAGS spans both CATEGORIES and ACTIVITY_TYPES -- look the label up in whichever map
+// actually has it.
+function interestLabelKey(tag: string): keyof typeof en {
+  return CATEGORY_LABEL_KEYS[tag] ?? ACTIVITY_TYPE_LABEL_KEYS[tag];
+}
 
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
@@ -157,7 +165,7 @@ function InterestChoice({
     <div className="flex flex-col gap-[12px] max-w-[420px]">
       <div className="flex flex-wrap gap-[10px]">
         {INTEREST_TAGS.map((tag) => (
-          <TagPill key={tag} label={tag} active={selected.includes(tag)} onClick={() => onToggle(tag)} />
+          <TagPill key={tag} label={t(interestLabelKey(tag))} active={selected.includes(tag)} onClick={() => onToggle(tag)} />
         ))}
       </div>
       <button
@@ -314,10 +322,11 @@ export default function Plan() {
     answerStep(t(GROUP_LABEL_KEYS[g]), "interests", t("plan.q.interests"));
   }
 
-  // Interest tag names (CATEGORIES/ACTIVITY_TYPES) stay English here -- Phase 6 gives them Arabic
-  // display labels the same way GROUP_LABEL_KEYS/PACE_LABEL_KEYS do above.
   function continueInterests() {
-    const label = interests.length > 0 ? interests.join(", ") : t("plan.noInterests");
+    const label =
+      interests.length > 0
+        ? interests.map((tag) => t(interestLabelKey(tag))).join(", ")
+        : t("plan.noInterests");
     answerStep(label, "pace", t("plan.q.pace"));
   }
 
@@ -658,7 +667,7 @@ export default function Plan() {
       <p className="text-[13px] text-text-secondary mt-[6px]">
         {t("plan.durationLabel", { count: partial?.duration ?? 0 })} · {partial?.dates || t("plan.flexibleDates")} ·{" "}
         {t(GROUP_LABEL_KEYS[groupType])} · {t(PACE_LABEL_KEYS[pace])}
-        {interests.length > 0 ? ` · ${interests.join(", ")}` : ""}
+        {interests.length > 0 ? ` · ${interests.map((tag) => t(interestLabelKey(tag))).join(", ")}` : ""}
       </p>
 
       <div className="flex flex-col gap-[24px] mt-[32px]">
@@ -668,7 +677,7 @@ export default function Plan() {
           </p>
           <div className="flex flex-wrap gap-[8px] mt-[12px]">
             {INTEREST_TAGS.map((tag) => (
-              <TagPill key={tag} label={tag} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
+              <TagPill key={tag} label={t(interestLabelKey(tag))} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
             ))}
           </div>
           {loadingSites && (

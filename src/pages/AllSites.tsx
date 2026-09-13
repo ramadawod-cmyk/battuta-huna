@@ -3,8 +3,9 @@ import TagPill from "../components/TagPill";
 import AllSitesListItem from "../components/AllSitesListItem";
 import SiteDetailModal from "../components/SiteDetailModal";
 import { useCity } from "../lib/CityContext";
+import { useTranslation } from "../lib/LanguageContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
-import { CATEGORIES as SITE_CATEGORIES } from "../lib/categories";
+import { CATEGORIES as SITE_CATEGORIES, CATEGORY_LABEL_KEYS, normalizeCategory } from "../lib/categories";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Site } from "../lib/types";
@@ -15,12 +16,15 @@ const CATEGORIES = [
 ];
 
 function AllSitesListItemWithImage({ site, onClick }: { site: Site; onClick: () => void }) {
+  const { t, language } = useTranslation();
   const imageUrl = useWikiThumbnail(site.name);
+  const name = language === "ar" && site.name_ar ? site.name_ar : site.name;
+  const description = language === "ar" && site.description_ar ? site.description_ar : site.description;
   return (
     <AllSitesListItem
-      name={site.name}
-      category={site.category.toUpperCase()}
-      description={site.description}
+      name={name}
+      category={t(CATEGORY_LABEL_KEYS[normalizeCategory(site.category)]).toUpperCase()}
+      description={description}
       className="max-w-none"
       imageUrl={site.image_url || imageUrl}
       onClick={onClick}
@@ -30,6 +34,7 @@ function AllSitesListItemWithImage({ site, onClick }: { site: Site; onClick: () 
 
 export default function AllSites() {
   const { city, sites, status } = useCity();
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [selectedSiteName, setSelectedSiteName] = useState<string | null>(null);
@@ -56,7 +61,7 @@ export default function AllSites() {
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] max-w-[1260px]">
       <h1 className="font-heading font-semibold text-[26px] text-text-primary">
-        All Sites{city ? ` · ${city.name}` : ""}
+        {t("allSites.title")}{city ? ` · ${city.name}` : ""}
       </h1>
 
       <div className="mt-[20px] max-w-[420px]">
@@ -64,7 +69,7 @@ export default function AllSites() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search sites, categories…"
+          placeholder={t("allSites.searchPlaceholder")}
           className="w-full h-[52px] rounded-[16px] bg-surface-lavender px-[24px] text-[14px] text-text-primary placeholder:text-text-secondary outline-none"
         />
       </div>
@@ -73,7 +78,7 @@ export default function AllSites() {
         {CATEGORIES.map((category) => (
           <TagPill
             key={category}
-            label={category}
+            label={category === "All" ? t("explore.allCategories") : t(CATEGORY_LABEL_KEYS[category])}
             active={activeCategory === category}
             onClick={() => {
               track("Site Filter Toggled", { tag: category, active: activeCategory !== category, view: "all_sites" });
@@ -92,10 +97,10 @@ export default function AllSites() {
           />
         ))}
         {status === "ready" && filteredSites.length === 0 && (
-          <p className="text-text-secondary text-[14px] col-span-full">No sites match your search.</p>
+          <p className="text-text-secondary text-[14px] col-span-full">{t("allSites.noMatches")}</p>
         )}
         {status !== "ready" && (
-          <p className="text-text-secondary text-[14px] col-span-full">Loading sites…</p>
+          <p className="text-text-secondary text-[14px] col-span-full">{t("allSites.loading")}</p>
         )}
       </div>
 

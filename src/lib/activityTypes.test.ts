@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVITY_TYPES, ACTIVITY_TYPE_ACCENTS, normalizeActivityType } from "./activityTypes";
+import ar from "./i18n/ar";
+import en from "./i18n/en";
+import { ACTIVITY_TYPES, ACTIVITY_TYPE_ACCENTS, ACTIVITY_TYPE_LABEL_KEYS, normalizeActivityType } from "./activityTypes";
 
 describe("normalizeActivityType", () => {
   it("passes canonical activity types through unchanged", () => {
@@ -31,6 +33,17 @@ describe("ACTIVITY_TYPE_ACCENTS", () => {
   it("has an accent color for every canonical activity type", () => {
     for (const type of ACTIVITY_TYPES) {
       expect(ACTIVITY_TYPE_ACCENTS[type]).toBeDefined();
+    }
+  });
+});
+
+describe("ACTIVITY_TYPE_LABEL_KEYS", () => {
+  it("has a display-label key for every canonical activity type, resolvable in both languages", () => {
+    for (const type of ACTIVITY_TYPES) {
+      const key = ACTIVITY_TYPE_LABEL_KEYS[type];
+      expect(key).toBeDefined();
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
     }
   });
 });

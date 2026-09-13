@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import ar from "./i18n/ar";
+import en from "./i18n/en";
 import {
   CATEGORIES,
   CATEGORY_ACCENTS,
   CATEGORY_DURATION_MINUTES,
+  CATEGORY_LABEL_KEYS,
   formatDuration,
   getDurationMinutes,
   normalizeCategory,
@@ -43,6 +46,15 @@ describe("category accent/duration maps", () => {
   it("has a default duration for every canonical category", () => {
     for (const category of CATEGORIES) {
       expect(CATEGORY_DURATION_MINUTES[category]).toBeGreaterThan(0);
+    }
+  });
+
+  it("has a display-label key for every canonical category, resolvable in both languages", () => {
+    for (const category of CATEGORIES) {
+      const key = CATEGORY_LABEL_KEYS[category];
+      expect(key).toBeDefined();
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
     }
   });
 });

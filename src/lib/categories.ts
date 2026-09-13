@@ -1,3 +1,5 @@
+import type en from "./i18n/en";
+
 export const CATEGORIES = [
   "Sightseeing",
   "History",
@@ -8,6 +10,20 @@ export const CATEGORIES = [
   "Neighbourhood",
   "Architecture",
 ];
+
+// Display label only -- the English strings above stay the stored/data values everywhere
+// (normalizeCategory, Supabase, analytics). Same pattern as Plan.tsx's GROUP_LABEL_KEYS/
+// PACE_LABEL_KEYS.
+export const CATEGORY_LABEL_KEYS: Record<string, keyof typeof en> = {
+  "Sightseeing": "category.sightseeing",
+  "History": "category.history",
+  "Art & Culture": "category.artCulture",
+  "Spiritual": "category.spiritual",
+  "Food & Market": "category.foodMarket",
+  "Nature": "category.nature",
+  "Neighbourhood": "category.neighbourhood",
+  "Architecture": "category.architecture",
+};
 
 // Same 4-color accent set used for the trip travel guide icons (src/lib/guideMeta.ts) -- cycled
 // across the 8 site categories so filter pills are visually distinguishable at a glance.

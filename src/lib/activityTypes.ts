@@ -1,3 +1,5 @@
+import type en from "./i18n/en";
+
 export const ACTIVITY_TYPES = [
   "Beach & Swim",
   "Nightlife & Drinks",
@@ -8,6 +10,18 @@ export const ACTIVITY_TYPES = [
   "Day Trip",
   "Live Entertainment",
 ];
+
+// Display label only -- see the note on categories.ts's CATEGORY_LABEL_KEYS.
+export const ACTIVITY_TYPE_LABEL_KEYS: Record<string, keyof typeof en> = {
+  "Beach & Swim": "activityType.beachSwim",
+  "Nightlife & Drinks": "activityType.nightlifeDrinks",
+  "Shopping": "activityType.shopping",
+  "Outdoor & Adventure": "activityType.outdoorAdventure",
+  "Food Experience": "activityType.foodExperience",
+  "Wellness & Relaxation": "activityType.wellnessRelaxation",
+  "Day Trip": "activityType.dayTrip",
+  "Live Entertainment": "activityType.liveEntertainment",
+};
 
 // Same 4-color accent set used for site categories (src/lib/categories.ts) and the travel guide
 // icons (src/lib/guideMeta.ts) -- reusing it keeps activity pills visually consistent with
