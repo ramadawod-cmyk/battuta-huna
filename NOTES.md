@@ -9,6 +9,43 @@ its own later.
 
 ---
 
+## 2026-09-13 — Trip sharing: read-only public link, no voting/discovery
+
+Full plan in `TRIP-SHARING-PLAN.md`. Lightweight version of "social," scoped down deliberately:
+one `is_public` boolean on `trips` (the trip's own UUID `id` doubles as the share token -- already
+unguessable, no separate token needed), a standalone `/shared/:tripId` page (no `<Layout>`
+sidebar, same pattern as `/` and `/auth`), and a Share toggle on `TripDetail`. No voting, no public
+browse/discovery feed -- cold-start problem pre-launch and an ongoing moderation burden that
+doesn't fit a solo founder; revisit after launch once there's real shared-trip volume.
+
+Key pieces:
+- `src/lib/tripSharing.ts`: `publicDateLabel()` redacts a trip's exact dates down to
+  duration + month/year for the shared view -- an exact range on a page anyone can open is a
+  "this home is empty on these dates" signal. `shareUrl()` builds the link.
+- `src/components/TripContent.tsx`: `TripItinerary`/`TripGuide` extracted out of `TripDetail` so
+  the new public page reuses the *same* rendering rather than a second copy that drifts. `onSwap`
+  and `mapHrefForDay` are optional props, **omitted entirely** (not passed-but-disabled) on the
+  public page -- neither works there: swapping mutates a trip the viewer doesn't own, and the map
+  route (`/trip/:id/map`) is owner-scoped (`getTrips`, not `getPublicTrip`), so keeping the link
+  would just 404 for a stranger.
+- `getPublicTrip` (Netlify function) returns identically-null for a private trip and a
+  nonexistent one -- the shared page can't be used to probe which trip ids exist.
+- Schema change (`alter table trips add column is_public boolean not null default false;`) needed
+  on **both** Supabase projects, same two-databases gotcha as Activities.
+
+**Real bug caught by live testing, not by inspection**: the "Link copied!" confirmation was
+sitting inside the same `try` block as `navigator.clipboard.writeText`, *after* the `await` --
+so when the clipboard write failed (it did, intermittently, even in normal Chrome automation;
+Safari and Firefox are genuinely stricter about this than Chromium), `setLinkCopied(true)` never
+ran and the Share button silently did nothing visible, even though the underlying `is_public`
+toggle had already succeeded. Fixed by decoupling the two: the toggle's success and the clipboard
+write's success are reported independently, and the confirmation always shows *something* --
+"Link copied!" when the write succeeds, the raw URL as selectable text when it doesn't. **Lesson:
+never gate a "this succeeded" confirmation behind a step (clipboard, notifications, etc.) that can
+silently fail independently of the actual state change it's confirming.**
+
+---
+
 ## 2026-09-13 — Viator "Find tours & tickets" link (`3462cc6`)
 
 The account only has Viator's affiliate-link tooling (their Impact.com-backed portal: Links,
