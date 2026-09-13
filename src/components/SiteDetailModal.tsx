@@ -8,6 +8,11 @@ import { buildViatorSearchUrl } from "../lib/viator";
 import { track } from "../lib/analytics";
 import type { Site } from "../lib/types";
 
+// Paused (2026-09-13) pending a UX rethink on how/where the Viator CTA should actually appear --
+// code, tests, and the env var wiring are all intact, just not rendered. Flip back to true to
+// re-enable without touching any other logic.
+const VIATOR_BOOKING_ENABLED = false;
+
 type SiteDetailModalProps = {
   siteName: string;
   cityId: string;
@@ -177,7 +182,7 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
                 >
                   OPEN IN MAPS
                 </Button>
-                {site.must_see && (
+                {VIATOR_BOOKING_ENABLED && site.must_see && (
                   <Button
                     variant="outline"
                     className="!w-full sm:!flex-1 !h-[52px]"
