@@ -53,12 +53,23 @@ interpolation, `LanguageProvider` detecting `navigator.language` and persisting 
 (`bh_language`), setting `document.documentElement.lang`/`dir` reactively. A switcher in `Settings`
 plus a quick-access toggle in `Sidebar`/`MobileHeader`.
 
-### 2. RTL via Tailwind's native variants
+### 2. RTL via Tailwind's native variants — logical utilities first, `rtl:` variant as fallback
 
-`dir="rtl"` on `<html>` when Arabic is active; Tailwind v4's `rtl:`/`ltr:` variants key off that
-automatically. Every directional utility (`ml-*`/`mr-*`, `pl-*`/`pr-*`, `left-*`/`right-*`,
-`text-left`/`text-right`, asymmetric `rounded-*` like the chat bubbles) gets an `rtl:` counterpart
-as each page is translated.
+`dir="rtl"` on `<html>` when Arabic is active. **Refined during Phase 1**: two mechanisms handle
+almost everything, in this preference order:
+1. **CSS flexbox's `row` direction is itself direction-aware** — a plain `flex`/`inline-flex`
+   container's children reorder automatically under `dir="rtl"`, with zero extra classes. Confirmed
+   live in Phase 1: the sidebar (a `flex` row: aside + main) flips to the right edge on its own.
+2. **Tailwind's logical property utilities** (`ps-*`/`pe-*`, `ms-*`/`me-*`, `border-s`/`border-e`,
+   `start-*`/`end-*`, `rounded-ss`/`rounded-ee` etc.) flip automatically based on `dir`, with no
+   `rtl:` variant needed at all — swap the physical utility for its logical equivalent once,
+   forever correct in both directions. Used for the sidebar's border (`border-r` → `border-e`).
+
+Only fall back to an explicit `rtl:`/`ltr:` variant for things logical properties don't cover —
+mainly a literal visual mirror like an icon (`rtl:scale-x-[-1]`, as `BackLink`'s chevron does) or
+`text-left`/`text-right` where the intent is genuinely physical, not flow-relative. **Note**:
+Tailwind v4's `scale-*` utilities emit a CSS `scale` property, not `transform` — check `.scale` in
+DevTools/tests, not `.transform`, when verifying a flip.
 
 ### 3. Direction-aware icons, one small component
 
