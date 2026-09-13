@@ -57,13 +57,19 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
   const [swapping, setSwapping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const currentSlot: TripSlot | null = useMemo(() => {
-    const foundDay = trip.days.find((d) => d.day === day);
-    return foundDay?.slots.find((s) => s.name === slotName) || null;
-  }, [trip, day, slotName]);
+  const currentDay = useMemo(() => trip.days.find((d) => d.day === day), [trip, day]);
+  const currentSlot: TripSlot | null = useMemo(
+    () => currentDay?.slots.find((s) => s.name === slotName) || null,
+    [currentDay, slotName],
+  );
+  // A multi-destination trip's days each belong to a leg -- swap alternatives must come from
+  // that day's city, not the trip's overall (first-leg) city, or a Florence day would offer Rome
+  // replacements. Falls back to the trip's city for pre-multi-destination trips (no day.city).
+  const dayCityName = currentDay?.city || trip.city;
+  const dayCityId = currentDay?.cityId || slugify(dayCityName);
 
   useEffect(() => {
-    db("getSites", { cityId: slugify(trip.city) })
+    db("getSites", { cityId: dayCityId })
       .then((sites: Site[]) => {
         const usedNames = new Set(
           trip.days.flatMap((d) => d.slots.filter((s) => !s._removed).map((s) => s.name)),
@@ -75,7 +81,7 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
         );
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load alternatives"));
-  }, [trip, day, slotName]);
+  }, [trip, day, slotName, dayCityId]);
 
   const visibleAlternatives = useMemo(() => {
     if (!rankedNames) return alternatives;
@@ -179,7 +185,7 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
 
         <div className="flex flex-col gap-[12px] mt-[16px] max-h-[420px] overflow-y-auto">
           {visibleAlternatives.length === 0 && (
-            <p className="text-[13px] text-text-secondary">No alternatives found for {trip.city}.</p>
+            <p className="text-[13px] text-text-secondary">No alternatives found for {dayCityName}.</p>
           )}
           {visibleAlternatives.map((site) => (
             <AlternativeItem key={site.id} site={site} onClick={() => selectAlternative(site)} />

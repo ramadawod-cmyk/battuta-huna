@@ -206,3 +206,55 @@ export function planItinerary(sites: Site[], duration: number, pace: string): Tr
     return { day: idx + 1, label: `Day ${idx + 1}`, slots };
   });
 }
+
+export type ItineraryLeg = {
+  city: string;
+  cityId: string;
+  country?: string;
+  days: number;
+  sites: Site[];
+};
+
+/**
+ * Splits a trip's total duration across N legs so every leg gets at least one day, favoring an
+ * even split with any remainder going to the earlier legs (they're presented first, so a
+ * traveller re-reading the plan sees the extra day land somewhere they'd expect). If duration
+ * is smaller than legCount (a malformed request that shouldn't reach here given legs are capped
+ * well below realistic trip lengths upstream), every leg still gets at least one day rather than
+ * some getting zero -- the total then runs slightly over duration instead of leaving a leg
+ * unplannable.
+ */
+export function splitDaysAcrossLegs(duration: number, legCount: number): number[] {
+  if (legCount <= 0) return [];
+  const totalDays = Math.max(duration, legCount, 1);
+  const base = Math.floor(totalDays / legCount);
+  const remainder = totalDays - base * legCount;
+  return Array.from({ length: legCount }, (_, i) => base + (i < remainder ? 1 : 0));
+}
+
+/**
+ * Builds a full itinerary across multiple destinations by running the proven single-city
+ * planItinerary() once per leg and stitching the results together -- day numbers renumbered to
+ * run consecutively across the whole trip, each day stamped with which leg (city) it belongs to.
+ * A leg with no sites (a cold city whose generation failed, say) still produces its full share of
+ * days, just empty ones, exactly like planItinerary does for a single city that runs out of
+ * candidates -- it doesn't throw and doesn't steal days from other legs.
+ */
+export function planMultiCityItinerary(legs: ItineraryLeg[], pace: string): TripDay[] {
+  const allDays: TripDay[] = [];
+  let dayOffset = 0;
+  for (const leg of legs) {
+    const legDays = planItinerary(leg.sites, leg.days, pace);
+    for (const day of legDays) {
+      allDays.push({
+        ...day,
+        day: dayOffset + day.day,
+        city: leg.city,
+        cityId: leg.cityId,
+        country: leg.country,
+      });
+    }
+    dayOffset += legDays.length;
+  }
+  return allDays;
+}

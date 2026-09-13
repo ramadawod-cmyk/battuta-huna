@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useTrackScreen } from "../lib/useTrackScreen";
+import { destinationsLabel, tripDestinations } from "../lib/trips";
 import type { Trip, TripSlot } from "../lib/types";
 
 function markerIcon(index: number, selected: boolean) {
@@ -116,6 +117,7 @@ export default function TripMapBuilder() {
     trip.group_type?.toUpperCase(),
     trip.pace?.toUpperCase(),
   ].filter(Boolean);
+  const isMultiCity = tripDestinations(trip).length > 1;
 
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px]">
@@ -124,7 +126,7 @@ export default function TripMapBuilder() {
       </Link>
 
       <div className="mt-[16px]">
-        <h1 className="font-heading font-semibold text-[30px] text-text-primary">{trip.city}</h1>
+        <h1 className="font-heading font-semibold text-[30px] text-text-primary">{destinationsLabel(trip)}</h1>
         <p className="font-medium text-[11px] text-text-secondary tracking-[0.44px] mt-[4px]">
           {metaParts.join(" · ")}
         </p>
@@ -143,6 +145,7 @@ export default function TripMapBuilder() {
               }`}
             >
               Day {day.day}
+              {isMultiCity && day.city ? ` · ${day.city}` : ""}
             </button>
           ))}
         </div>

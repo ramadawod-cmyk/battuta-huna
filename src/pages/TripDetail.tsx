@@ -13,6 +13,7 @@ import { GUIDE_ACCENT_CLASSES, GUIDE_META } from "../lib/guideMeta";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
+import { destinationsLabel, legsFromDays, tripDestinations } from "../lib/trips";
 import type { Trip, TripDay, TripSlot } from "../lib/types";
 
 function ItinerarySlotRow({
@@ -49,19 +50,55 @@ function ItinerarySlotRow({
   );
 }
 
+function GuideCard({
+  tipKey,
+  value,
+  expanded,
+  onToggle,
+}: {
+  tipKey: string;
+  value: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const meta = GUIDE_META[tipKey];
+  const title = meta?.title || tipKey;
+  const Icon = meta?.icon;
+  const accentClasses = GUIDE_ACCENT_CLASSES[meta?.accent || "purple"];
+  const isLong = value.length > 100;
+  return (
+    <div className="bg-white border border-border rounded-[16px] p-[16px]">
+      <div className="flex items-center gap-[10px]">
+        <div className={`size-[36px] rounded-full flex items-center justify-center shrink-0 ${accentClasses.bg}`}>
+          {Icon && <Icon className={`size-[18px] ${accentClasses.text}`} strokeWidth={2} />}
+        </div>
+        <p className="font-heading font-semibold text-[14px] text-text-primary">{title}</p>
+      </div>
+      <p className={`text-[12px] leading-[1.4] text-text-secondary mt-[10px] ${expanded ? "" : "line-clamp-2"}`}>
+        {value}
+      </p>
+      {isLong && (
+        <button onClick={onToggle} className="text-[12px] font-medium text-secondary-purple mt-[6px]">
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function TripDetail() {
   const { tripId } = useParams<{ tripId: string }>();
   const { session, loading: authLoading } = useAuth();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tips, setTips] = useState<CityTips | null>(null);
+  const [tipsByCity, setTipsByCity] = useState<Record<string, CityTips>>({});
   const [error, setError] = useState<string | null>(null);
   const heroImageUrl = useWikiThumbnail(trip?.city);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
   const [swapTarget, setSwapTarget] = useState<{ day: number; slotName: string } | null>(null);
-  const [selectedSiteName, setSelectedSiteName] = useState<string | null>(null);
+  const [selectedSite, setSelectedSite] = useState<{ day: number; slotName: string } | null>(null);
 
   useTrackScreen("trip_detail");
 
@@ -81,15 +118,22 @@ export default function TripDetail() {
           setError("Trip not found.");
           return;
         }
+        const destinations = tripDestinations(found);
         track("Trip Detail Viewed", {
           trip_id: found.id,
           city: found.city,
+          leg_count: destinations.length,
           status: found.status,
           day_count: found.days?.length || 0,
         });
-        ensureCityTips(slugify(found.city), found.city)
-          .then(setTips)
-          .catch(() => {});
+        setTipsByCity({});
+        destinations.forEach((dest) => {
+          ensureCityTips(dest.cityId, dest.city)
+            .then((cityTips) => {
+              if (cityTips) setTipsByCity((prev) => ({ ...prev, [dest.cityId]: cityTips }));
+            })
+            .catch(() => {});
+        });
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load trip"))
       .finally(() => setLoading(false));
@@ -116,7 +160,13 @@ export default function TripDetail() {
     trip.pace?.toUpperCase(),
   ].filter(Boolean);
 
-  const guideEntries = Object.entries(tips || {}).filter(([, value]) => value);
+  const destinations = tripDestinations(trip);
+  const isMultiCity = destinations.length > 1;
+  const visibleDays = trip.days.filter((day) => day.slots.some((s) => !s._removed));
+  const itineraryLegs = legsFromDays(visibleDays);
+  const selectedSiteDay = selectedSite ? trip.days.find((d) => d.day === selectedSite.day) : null;
+  const selectedSiteCityName = selectedSiteDay?.city || trip.city;
+  const selectedSiteCityId = selectedSiteDay?.cityId || slugify(selectedSiteCityName);
 
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
@@ -126,7 +176,9 @@ export default function TripDetail() {
 
       <div className="flex items-start justify-between gap-[16px] mt-[24px] sm:mt-[32px]">
         <div className="min-w-0">
-          <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-text-primary truncate">{trip.city}</p>
+          <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-text-primary truncate">
+            {destinationsLabel(trip)}
+          </p>
           <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{metaParts.join(" · ")}</p>
         </div>
         <div className="flex gap-[8px] sm:gap-[16px] shrink-0">
@@ -176,37 +228,42 @@ export default function TripDetail() {
 
       {activeTab === "itinerary" && (
         <div className="flex flex-col gap-[24px] mt-[32px]">
-          {trip.days
-            .filter((day) => day.slots.some((s) => !s._removed))
-            .map((day) => (
-              <div key={day.day}>
-                <div className="flex items-center gap-[8px]">
-                  <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
-                    {day.label || `DAY ${day.day}`}
-                  </p>
-                  <Link
-                    to={`/trip/${tripId}/map?day=${day.day}`}
-                    onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail", day: day.day })}
-                    className="flex items-center gap-[4px] text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
-                  >
-                    <Map size={13} strokeWidth={2} />
-                    Map view
-                  </Link>
+          {itineraryLegs.map((leg, legIdx) => (
+            <div key={leg.cityId || leg.city || legIdx} className="flex flex-col gap-[24px]">
+              {isMultiCity && leg.city && (
+                <p className="font-heading font-semibold text-[19px] text-text-primary">{leg.city}</p>
+              )}
+              {leg.days.map((day) => (
+                <div key={day.day}>
+                  <div className="flex items-center gap-[8px]">
+                    <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
+                      {day.label || `DAY ${day.day}`}
+                    </p>
+                    <Link
+                      to={`/trip/${tripId}/map?day=${day.day}`}
+                      onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail", day: day.day })}
+                      className="flex items-center gap-[4px] text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
+                    >
+                      <Map size={13} strokeWidth={2} />
+                      Map view
+                    </Link>
+                  </div>
+                  <div className="flex flex-col mt-[16px]">
+                    {day.slots
+                      .filter((slot) => !slot._removed)
+                      .map((slot) => (
+                        <ItinerarySlotRow
+                          key={`${day.day}-${slot.name}`}
+                          slot={slot}
+                          onSwap={() => setSwapTarget({ day: day.day, slotName: slot.name })}
+                          onViewDetails={() => setSelectedSite({ day: day.day, slotName: slot.name })}
+                        />
+                      ))}
+                  </div>
                 </div>
-                <div className="flex flex-col mt-[16px]">
-                  {day.slots
-                    .filter((slot) => !slot._removed)
-                    .map((slot) => (
-                      <ItinerarySlotRow
-                        key={`${day.day}-${slot.name}`}
-                        slot={slot}
-                        onSwap={() => setSwapTarget({ day: day.day, slotName: slot.name })}
-                        onViewDetails={() => setSelectedSiteName(slot.name)}
-                      />
-                    ))}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          ))}
           {trip.days.length === 0 && (
             <p className="text-text-secondary text-[14px]">This trip doesn't have an itinerary yet.</p>
           )}
@@ -214,44 +271,38 @@ export default function TripDetail() {
       )}
 
       {activeTab === "guide" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px] mt-[32px]">
-          {guideEntries.length === 0 && (
-            <p className="text-text-secondary text-[13px]">No local tips yet for {trip.city}.</p>
-          )}
-          {guideEntries.map(([key, value]) => {
-            const meta = GUIDE_META[key];
-            const title = meta?.title || key;
-            const Icon = meta?.icon;
-            const accentClasses = GUIDE_ACCENT_CLASSES[meta?.accent || "purple"];
-            const isExpanded = expandedGuideKeys.has(key);
-            const isLong = value.length > 100;
+        <div className="flex flex-col gap-[32px] mt-[32px]">
+          {destinations.map((dest) => {
+            const entries = Object.entries(tipsByCity[dest.cityId] || {}).filter(([, value]) => value);
             return (
-              <div key={key} className="bg-white border border-border rounded-[16px] p-[16px]">
-                <div className="flex items-center gap-[10px]">
-                  <div className={`size-[36px] rounded-full flex items-center justify-center shrink-0 ${accentClasses.bg}`}>
-                    {Icon && <Icon className={`size-[18px] ${accentClasses.text}`} strokeWidth={2} />}
+              <div key={dest.cityId}>
+                {isMultiCity && (
+                  <p className="font-heading font-semibold text-[18px] text-text-primary mb-[16px]">{dest.city}</p>
+                )}
+                {entries.length === 0 ? (
+                  <p className="text-text-secondary text-[13px]">No local tips yet for {dest.city}.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px]">
+                    {entries.map(([key, value]) => {
+                      const guideKey = `${dest.cityId}:${key}`;
+                      return (
+                        <GuideCard
+                          key={guideKey}
+                          tipKey={key}
+                          value={value}
+                          expanded={expandedGuideKeys.has(guideKey)}
+                          onToggle={() =>
+                            setExpandedGuideKeys((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(guideKey)) next.delete(guideKey);
+                              else next.add(guideKey);
+                              return next;
+                            })
+                          }
+                        />
+                      );
+                    })}
                   </div>
-                  <p className="font-heading font-semibold text-[14px] text-text-primary">{title}</p>
-                </div>
-                <p
-                  className={`text-[12px] leading-[1.4] text-text-secondary mt-[10px] ${isExpanded ? "" : "line-clamp-2"}`}
-                >
-                  {value}
-                </p>
-                {isLong && (
-                  <button
-                    onClick={() =>
-                      setExpandedGuideKeys((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(key)) next.delete(key);
-                        else next.add(key);
-                        return next;
-                      })
-                    }
-                    className="text-[12px] font-medium text-secondary-purple mt-[6px]"
-                  >
-                    {isExpanded ? "Show less" : "Read more"}
-                  </button>
                 )}
               </div>
             );
@@ -273,13 +324,13 @@ export default function TripDetail() {
         />
       )}
 
-      {selectedSiteName && (
+      {selectedSite && (
         <SiteDetailModal
-          siteName={selectedSiteName}
-          cityId={slugify(trip.city)}
-          cityName={trip.city}
+          siteName={selectedSite.slotName}
+          cityId={selectedSiteCityId}
+          cityName={selectedSiteCityName}
           source="trip_detail"
-          onClose={() => setSelectedSiteName(null)}
+          onClose={() => setSelectedSite(null)}
         />
       )}
     </div>

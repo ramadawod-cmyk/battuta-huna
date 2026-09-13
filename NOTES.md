@@ -9,6 +9,119 @@ its own later.
 
 ---
 
+## 2026-09-13 — Multi-destination trips (in progress)
+
+Full plan in `MULTI-DESTINATION-PLAN.md`. The two decisions that shape everything else:
+carry `city`/`cityId`/`country` on each `TripDay` inside the existing JSON `days` column
+(**no DB migration**, old trips keep working because `trips.city` stays the first city), and
+wrap the existing single-city scheduler per leg instead of rewriting it. Six phases, each
+shippable on its own; the prompt (Phase 3) can ship before the flow uses legs (Phase 4)
+because the parser accepts both the old and new `[PARTIAL]` shapes.
+
+Progress (update this line as phases land, don't add a new dated entry per phase --
+it's one continuous effort):
+- ✅ Phase 0 (`e488984`) — `TripDay.city/cityId/country`, `src/lib/trips.ts` helpers.
+- ✅ Phase 1 (`63656d3`) — `planMultiCityItinerary`/`splitDaysAcrossLegs` in
+  `itineraryPlanner.ts`, not called from anywhere yet.
+- ✅ Phase 2 (`084d9f4`) — `PlanPartial` is now `{legs, duration, dates}`; `parsePartial`
+  accepts both the legacy single-city shape and the new legs shape. `Plan.tsx` reads
+  `partial.legs[0]` everywhere it read `partial.city` -- pure refactor, verified live against
+  a real model response, no behavior change (the prompt still only ever emits one leg).
+- ✅ Phase 3 — `GATHER_SYSTEM_PROMPT` constant became `buildGatherSystemPrompt(today: Date)`
+  in `planFlow.ts`, called as `buildGatherSystemPrompt(new Date())` from `Plan.tsx`. Verified
+  live against the real model (not unit-testable — it's a prompt) with a Puppeteer script that
+  intercepts the `plan-agent` response: single city (Amman) unchanged, country → base-city
+  suggestion (Jordan → Amman + Wadi Musa), multi-city split that sums correctly (Rome+Florence,
+  Jordan+Egypt), vague/seasonal request → concrete named cities (warm+cheap December). **One
+  round of prompt tightening needed**: the first draft only told the agent to propose cities for
+  a *country* name, so "Bali" (a region, not a country) slipped through and just asked for
+  duration instead of naming Seminyak/Ubud/Canggu. Added an explicit region/island rule with a
+  worked example — re-tested and fixed. Lesson: when a prompt rule is scoped to one noun
+  category (here "country"), explicitly test the adjacent categories (region, island, area) too,
+  don't assume they're covered by the same wording.
+- ✅ Phase 4 — `Plan.tsx` now builds real multi-leg trips: `loadSites` fans `ensureCitySites` out
+  across every leg in parallel (a failed leg contributes no sites rather than failing the whole
+  trip); place selection is grouped per leg with `pickDefaultPlacesForLegs` (each leg gets its
+  own cap sized to its own day count, extracted to `src/lib/placeSelection.ts` so it's unit
+  tested); `buildTrip` now always calls `planMultiCityItinerary` (even for one leg — the wrapper
+  degrades to exactly `planItinerary`'s old behavior, verified by an "identical to direct call"
+  test), so every saved day now carries `city`/`cityId`/`country`, not just multi-leg ones. Day
+  titles (`buildDayLabelsSystemPrompt`) get each day's city so titles fit a leg the trip has
+  moved on to. `trips.city` stays the first leg's city, per the plan's data-model decision.
+  Verified end-to-end with a Puppeteer script driving the full chat flow (city → dates → party →
+  interests → pace → build) and inspecting the actual `updateTripStatus` payload: a single-city
+  Amman trip built 4 correctly-tagged days with no regression, and "Rome and Florence, 6 days"
+  built 6 days split 3/3 with the right city on each and no empty days. Trip Detail renders both
+  without errors — still as one flat day list with the first leg's city as the hero (that's
+  Phase 5's job, not touched yet).
+- ✅ Phase 5 — Trip Detail, map, cards, and customise all show multiple destinations now, using
+  the Phase 0 helpers (`tripDestinations`, `destinationsLabel`, `legsFromDays`): hero title,
+  map hero, `MyTrips` cards, and `CustomiseTrip`'s subtitle all show "Rome · Florence" instead of
+  just the first city; the itinerary gets a city heading wherever the destination changes
+  (`legsFromDays` groups the already-filtered day list); the Travel Guide tab now fetches and
+  renders tips **per destination** (`ensureCityTips` called once per leg, kept in a
+  `Record<cityId, CityTips>`) with a section heading per city; map day tabs read "Day 4 ·
+  Florence". All of this is gated on `tripDestinations(trip).length > 1` so a single-city trip
+  renders with zero extra headings -- verified byte-for-byte via Puppeteer (hero shows just
+  "Amman", zero itinerary headings, exactly 8 guide cards, same as before this phase).
+  **Real bug caught and fixed**: `SwapPanel` and `SiteDetailModal` were still scoped to
+  `trip.city` (the first leg) — swapping or viewing details on a *later* leg's stop would have
+  offered Rome alternatives for a Florence stop, and shown "Rome" as the city on a Florence site's
+  detail modal. Fixed by resolving the specific day's `city`/`cityId` (falling back to `trip.city`
+  when the day has none, i.e. every pre-multi-destination trip) and threading that through instead
+  of the trip-wide value. Also fixed a subtler one: `selectedSiteName` only stored the clicked
+  site's *name*, so two legs with a same-named stop would collide; now stores `{day, slotName}`
+  like `swapTarget` already did, and resolves the city from that specific day.
+  Verified live: built a fresh Rome+Florence trip and confirmed swapping "Ponte Vecchio" (a
+  Florence stop) offered only Florence alternatives (Uffizi, Piazzale Michelangelo, etc, zero Rome
+  places), and its site-detail modal showed "Florence", not "Rome".
+- ✅ Phase 6 — docs. Added a "Trip data model" section to `README.md` explaining the
+  `TripDay.city/cityId/country` shape, `trips.city` = first leg, the `src/lib/trips.ts`
+  helpers, and the day-scoping gotcha Phase 5 caught (resolve *that day's* city, not
+  `trip.city`, for any day-level UI). This entry is the closing note for the effort.
+
+**Done.** All 6 phases shipped to staging (`c2493ca` → `e488984` → `63656d3` → `084d9f4` →
+`bd69a1a` → `c605e7d` → `fd37ae8`). Not pushed to `main` yet — do that the same
+tree-replacement way as the 2026-09-12 launch below if `main` has diverged again, otherwise
+a normal merge is fine since both branches share history this time.
+
+**Deliberately left out of v1** (call these out before extending this further): editing
+the day split between legs in the UI; travel time/transport between legs; per-leg dates;
+mixing an existing trip's legs after creation; more than 4 legs. Also open per the plan
+doc: whether the agent should ever be allowed to pre-fill `dates` from chat text instead of
+always deferring to the calendar — left as "no" for v1.
+
+---
+
+## 2026-09-12 — Added an automated test suite as a deploy gate
+
+Set up [Vitest](https://vitest.dev) for unit tests, scoped to pure logic only (no
+DOM/browser tests yet — see the tradeoff note below). Wired into `package.json`'s
+`build` script as `vitest run && tsc -b && vite build`, so a failing test blocks the
+build — and since Netlify's build command *is* `npm run build`, a failing test blocks
+deploy too, with no separate CI system needed.
+
+- Config: `vitest.config.ts` (kept separate from `vite.config.ts` on purpose — these
+  tests don't need the React/Tailwind/PWA plugins).
+- First tests: `src/lib/geo.test.ts`, `src/lib/categories.test.ts` — covering
+  `slugify`, `haversineMeters`, `describeGeolocationError`, `normalizeCategory`,
+  `getDurationMinutes`, `formatDuration`. Several of these are exactly the functions
+  behind real bugs earlier this session (the non-Latin `slugify` fallback, category
+  normalization mismatches), which is why they were the starting point.
+- **Verified the gate actually works**, not just that tests pass: deliberately broke
+  one assertion and confirmed `npm run build` failed before ever reaching `tsc`/`vite
+  build`, then restored it and confirmed a clean build.
+- Scripts: `npm test` (run once), `npm run test:watch` (re-run on change).
+- See the README's "Testing" section for how to add more.
+
+**Deliberately out of scope for now**: end-to-end/browser tests (e.g. Playwright
+driving Explore → open a trip → swap a stop). Would catch more, but this app leans on
+real external services (Supabase, Anthropic, Wikipedia) that would need mocking to
+test reliably without flakiness or cost — worth layering on later, not a blocker for
+having *some* automated safety net now.
+
+---
+
 ## 2026-09-12 — Trip Detail / Explore redesign, staging → main launch
 
 ### Repo state going into this session
