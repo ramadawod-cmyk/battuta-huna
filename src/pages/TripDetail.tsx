@@ -39,7 +39,14 @@ function ItinerarySlotRow({
           {imageUrl && <img src={imageUrl} alt="" className="size-full object-cover" />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
+          <div className="flex items-center gap-[8px]">
+            <p className="font-heading font-semibold text-[16px] text-text-primary">{slot.name}</p>
+            {slot.kind === "activity" && (
+              <span className="shrink-0 rounded-[8px] bg-secondary-purple/15 text-secondary-purple text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
+                ACTIVITY
+              </span>
+            )}
+          </div>
           <p className="text-[13px] leading-[1.4] text-text-secondary mt-[6px]">{slot.description}</p>
         </div>
       </button>

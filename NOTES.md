@@ -9,6 +9,63 @@ its own later.
 
 ---
 
+## 2026-09-13 — Activities (in progress)
+
+Full plan in `ACTIVITIES-PLAN.md`. Adds a second AI-generated content type alongside sites —
+"go to the beach" / "go out for drinks" style experiences, not landmarks — in their own
+`activities` table (separate from `sites` on purpose: different taxonomy, different generation
+cadence, `is_area`/`area_name` fields sites don't need). Designed to normalize into a
+`Site`-shaped candidate at fetch time so the existing scheduler, place-selection ranking, and map
+need zero changes (same "wrap, don't rewrite" call as multi-destination).
+
+There are **two separate Supabase projects** for this app (staging and production) — every schema
+change has to be run on both by hand, there's no migration tooling in this repo. Forgetting the
+second one means staging works and production silently 404s/500s on activities.
+
+Progress:
+- ✅ Phase 0 (`e0190b2`) — `Activity` type, `kind?: "site"|"activity"` on `Site`/`TripSlot`,
+  `src/lib/activityTypes.ts` (`ACTIVITY_TYPES`, accents, `normalizeActivityType`).
+- ✅ Phase 1 (`5da2395`) — `ensureCityActivities` (`src/lib/activities.ts`), `getActivities`/
+  `upsertActivities` proxy actions. **Real gotcha hit and fixed**: the new `activities` table came
+  up with Row-Level Security enabled and zero policies, which silently denies all anon-key access
+  — inserts failed with a `42501` error, reads came back an empty array instead of erroring (easy
+  to misread as "generation produced nothing" rather than "everything is blocked"). Fixed with
+  `alter table activities disable row level security;` on both databases, matching whatever
+  `sites`/`cities` already have. **If a future new table's inserts fail with a `42501` Postgres
+  error code, check RLS before assuming the code is wrong.** Verified live against the staging DB
+  after the fix: generated real, distinct Beirut beaches and nightlife districts (Gemmayzeh, Mar
+  Mikhael) with correct `is_area`/`area_name`, and correctly returned zero Beach & Swim results
+  for landlocked Amman rather than hallucinating one — all 6 rows persisted and were readable back.
+- ✅ Phase 2 (`1a08190`) — `Plan.tsx`'s `loadSites` fans `ensureCityActivities` out per leg in
+  parallel with `ensureCitySites`, normalizing each `Activity` into a `Site`-shaped candidate
+  (`activityToCandidate`) before merging into the same pool. Verified live: a Beirut trip's
+  place-selection grid showed all 6 previously-generated activities alongside regular sites, with
+  zero scheduler/UI changes needed.
+- ✅ Phase 3 (`2518bb6`) — `INTEREST_TAGS` now spans `CATEGORIES` + `ACTIVITY_TYPES`; the
+  place-selection filter pills (previously hardcoded to just `CATEGORIES`) use the same combined
+  list so activities don't disappear under a filter; `PlaceCard` shows an `ACTIVITY` badge.
+  Verified live: picking "Nightlife & Drinks" as an interest correctly widened the default
+  selection to include matching activities (23 places, up from the unbiased baseline).
+- ✅ Phase 4 (`4a199b5`) — `siteToSlot()` carries `kind` through onto `TripSlot` so an
+  activity-sourced stop stays tagged all the way into the built itinerary; `TripDetail`'s itinerary
+  rows and `SwapPanel`'s alternatives list (extended to also fetch activities for the day's city)
+  both show the same badge. Verified live end to end: built a Beirut trip with "Nightlife & Drinks"
+  as an interest, got 5 activity-sourced stops in the finished itinerary (Souks of Beirut, Jeita
+  Grotto, Mar Mikhael Nightlife District, etc), all correctly badged on Trip Detail and in the swap
+  panel.
+- ✅ Phase 5 — docs. README's "Trip data model" section gets an activities paragraph. This entry
+  is the closing note.
+
+**Done.** All 6 phases shipped to staging. Not pushed to `main` yet.
+
+**Deliberately left out of v1**: teaching the conversational agent to extract activity intent
+from free text ("I want a beach day") — it stays scoped to destinations/duration; activities are
+only ever surfaced via the interests step and place-selection grid. Scheduling activities at a
+time-of-day-appropriate slot (nightlife in the evening) is also out of scope — `planItinerary` has
+no time-of-day awareness for anything today, sites included.
+
+---
+
 ## 2026-09-13 — Multi-destination trips (in progress)
 
 Full plan in `MULTI-DESTINATION-PLAN.md`. The two decisions that shape everything else:

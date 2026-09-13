@@ -1,3 +1,4 @@
+import { ACTIVITY_TYPES } from "./activityTypes";
 import { CATEGORIES } from "./categories";
 import { splitDaysAcrossLegs } from "./itineraryPlanner";
 import type { TripDay } from "./types";
@@ -150,4 +151,7 @@ export function parseDayLabels(text: string): string[] | null {
 
 export const GROUP_TYPES = ["Solo", "Couple", "Family", "Friends"];
 export const PACE_OPTIONS = ["Relaxed", "Strict schedule"];
-export const INTEREST_TAGS = CATEGORIES;
+// Spans both sites (CATEGORIES) and activities (ACTIVITY_TYPES) -- picking "Nightlife & Drinks"
+// here biases pickDefaultPlacesForLegs toward matching activities exactly like picking "History"
+// already biases it toward matching sites, with no extra ranking logic needed.
+export const INTEREST_TAGS = [...CATEGORIES, ...ACTIVITY_TYPES];

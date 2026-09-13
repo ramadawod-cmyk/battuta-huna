@@ -8,8 +8,8 @@ import BrandMark from "../components/BrandMark";
 import PlanDatePicker from "../components/PlanDatePicker";
 import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
+import { activityToCandidate, ensureCityActivities } from "../lib/activities";
 import { slugify } from "../lib/geo";
-import { CATEGORIES } from "../lib/categories";
 import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlanner";
 import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
 import { useAuth } from "../lib/AuthContext";
@@ -67,6 +67,11 @@ function PlaceCard({ site, active, onClick }: { site: Site; active: boolean; onC
       <div className="p-[16px]">
         <div className="flex items-center gap-[8px]">
           <p className="font-heading font-semibold text-[14px] text-text-primary">{site.name}</p>
+          {site.kind === "activity" && (
+            <span className="shrink-0 rounded-[8px] bg-secondary-purple/15 text-secondary-purple text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
+              ACTIVITY
+            </span>
+          )}
           {site.must_see && (
             <span className="shrink-0 rounded-[8px] bg-primary-orange/15 text-primary-orange text-[10px] font-bold tracking-[0.4px] px-[6px] py-[2px]">
               MUST-SEE
@@ -313,20 +318,34 @@ export default function Plan() {
     try {
       // Each leg fetches independently and in parallel; a failed leg (e.g. cold-start generation
       // error) contributes no sites rather than failing the whole trip -- the traveller can still
-      // plan around whichever destinations did come back.
+      // plan around whichever destinations did come back. Sites and activities are fetched in
+      // parallel per leg too, then merged into one candidate pool -- activityToCandidate makes an
+      // Activity look like a Site, so everything downstream (scheduler, ranking, cards) already
+      // knows how to handle it with zero changes.
       const perLeg = await Promise.all(
         p.legs.map(async (leg) => {
-          try {
-            return await ensureCitySites(slugify(leg.city), leg.city, leg.country_id, leg.country);
-          } catch (err) {
-            track("Places Suggested Failed", { city: leg.city, message: err instanceof Error ? err.message : String(err) });
-            return [] as Site[];
-          }
+          const cityId = slugify(leg.city);
+          const [siteResult, activityResult] = await Promise.all([
+            ensureCitySites(cityId, leg.city, leg.country_id, leg.country).catch((err) => {
+              track("Places Suggested Failed", { city: leg.city, message: err instanceof Error ? err.message : String(err) });
+              return [] as Site[];
+            }),
+            ensureCityActivities(cityId, leg.city, leg.country_id, leg.country).catch((err) => {
+              track("Activities Suggested Failed", { city: leg.city, message: err instanceof Error ? err.message : String(err) });
+              return [];
+            }),
+          ]);
+          return [...siteResult, ...activityResult.map(activityToCandidate)];
         }),
       );
       const result = perLeg.flat();
       setSites(result);
-      track("Places Suggested", { count: result.length, duration: p.duration, leg_count: p.legs.length });
+      track("Places Suggested", {
+        count: result.length,
+        activity_count: result.filter((s) => s.kind === "activity").length,
+        duration: p.duration,
+        leg_count: p.legs.length,
+      });
       if (result.length === 0) setError("Couldn't load places for this trip.");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Couldn't load places for this trip.";
@@ -619,7 +638,7 @@ export default function Plan() {
             Places ({selectedPlaces.size} selected)
           </p>
           <div className="flex flex-wrap gap-[8px] mt-[12px]">
-            {CATEGORIES.map((tag) => (
+            {INTEREST_TAGS.map((tag) => (
               <TagPill key={tag} label={tag} active={placeFilters.includes(tag)} onClick={() => togglePlaceFilter(tag)} />
             ))}
           </div>

@@ -3,10 +3,11 @@ import AllSitesListItem from "./AllSitesListItem";
 import closeIcon from "../assets/trip-swap/close-icon.svg";
 import askAiArrow from "../assets/trip-swap/ask-ai-arrow.svg";
 import { db, planAgent } from "../lib/api";
+import { activityToCandidate } from "../lib/activities";
 import { normalizeCategory, getDurationMinutes } from "../lib/categories";
 import { slugify } from "../lib/geo";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
-import type { Site, Trip, TripDay, TripSlot } from "../lib/types";
+import type { Activity, Site, Trip, TripDay, TripSlot } from "../lib/types";
 
 function AlternativeItem({ site, onClick }: { site: Site; onClick: () => void }) {
   const imageUrl = useWikiThumbnail(site.name);
@@ -17,6 +18,7 @@ function AlternativeItem({ site, onClick }: { site: Site; onClick: () => void })
       description={site.description}
       className="max-w-none"
       imageUrl={site.image_url || imageUrl}
+      badge={site.kind === "activity" ? "ACTIVITY" : undefined}
       onClick={onClick}
     />
   );
@@ -69,16 +71,20 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
   const dayCityId = currentDay?.cityId || slugify(dayCityName);
 
   useEffect(() => {
-    db("getSites", { cityId: dayCityId })
-      .then((sites: Site[]) => {
+    Promise.all([db("getSites", { cityId: dayCityId }), db("getActivities", { cityId: dayCityId })])
+      .then(([sites, activities]: [Site[], Activity[]]) => {
         const usedNames = new Set(
           trip.days.flatMap((d) => d.slots.filter((s) => !s._removed).map((s) => s.name)),
         );
-        setAlternatives(
-          (sites || [])
-            .filter((s) => !usedNames.has(s.name))
-            .map((s) => ({ ...s, category: normalizeCategory(s.category) })),
-        );
+        const siteCandidates = (sites || [])
+          .filter((s) => !usedNames.has(s.name))
+          .map((s) => ({ ...s, category: normalizeCategory(s.category) }));
+        // Not run through normalizeCategory -- that's the site taxonomy and would misclassify an
+        // activity type like "Beach & Swim" onto an unrelated site category.
+        const activityCandidates = (activities || [])
+          .filter((a) => !usedNames.has(a.name))
+          .map(activityToCandidate);
+        setAlternatives([...siteCandidates, ...activityCandidates]);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load alternatives"));
   }, [trip, day, slotName, dayCityId]);
@@ -117,6 +123,7 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
         lng: site.lng,
         mapUrl: site.map_url || `https://maps.google.com/?q=${encodeURIComponent(site.name)}`,
         durationMinutes: getDurationMinutes(site),
+        kind: site.kind,
       };
       const updatedDays = trip.days.map((d) =>
         d.day !== day ? d : { ...d, slots: d.slots.map((s) => (s.name === slotName ? newSlot : s)) },

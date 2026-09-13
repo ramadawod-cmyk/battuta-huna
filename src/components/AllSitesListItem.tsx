@@ -7,6 +7,9 @@ type AllSitesListItemProps = {
   description: string;
   className?: string;
   imageUrl?: string | null;
+  // Small pill next to the name -- e.g. "ACTIVITY" for an activity-sourced item. Omitted by every
+  // existing caller, so this is purely additive.
+  badge?: string;
   onClick?: () => void;
 };
 
@@ -16,6 +19,7 @@ export default function AllSitesListItem({
   description,
   className = "",
   imageUrl,
+  badge,
   onClick,
 }: AllSitesListItemProps) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -37,7 +41,14 @@ export default function AllSitesListItem({
         )}
       </div>
       <div>
-        <p className="font-heading font-semibold text-[15px] text-text-primary">{name}</p>
+        <div className="flex items-center gap-[6px]">
+          <p className="font-heading font-semibold text-[15px] text-text-primary">{name}</p>
+          {badge && (
+            <span className="shrink-0 rounded-[6px] bg-secondary-purple/15 text-secondary-purple text-[9px] font-bold tracking-[0.4px] px-[5px] py-[1px]">
+              {badge}
+            </span>
+          )}
+        </div>
         <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px] mt-[4px]">{category}</p>
         <p className="text-[12px] text-text-secondary mt-[6px]">{description}</p>
       </div>

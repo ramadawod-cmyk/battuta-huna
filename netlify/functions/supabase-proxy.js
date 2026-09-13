@@ -162,6 +162,20 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
+    // ── GET ACTIVITIES FOR CITY ───────────────────────
+    if (action === 'getActivities') {
+      const { cityId } = data;
+      const res = await request('GET', `/rest/v1/activities?city_id=eq.${cityId}&select=*&order=name`);
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
+    // ── UPSERT ACTIVITIES BATCH ───────────────────────
+    if (action === 'upsertActivities') {
+      const activities = data.activities;
+      const res = await request('POST', '/rest/v1/activities', activities, 'resolution=merge-duplicates');
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
     // ── CREATE DRAFT TRIP ────────────────────────────
     if (action === 'createDraftTrip') {
       const trip = { ...data.trip, user_id: deviceId, status: 'planning' };
