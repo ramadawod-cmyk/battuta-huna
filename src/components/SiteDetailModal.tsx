@@ -82,7 +82,7 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-[960px] max-h-[calc(100vh-32px)] overflow-y-auto rounded-[24px] bg-white p-[24px] sm:p-[32px] relative"
+        className="w-full max-w-[960px] max-h-[calc(100dvh-32px)] overflow-y-auto rounded-[24px] bg-white p-[24px] sm:p-[32px] relative"
         onClick={(e) => e.stopPropagation()}
       >
         <button
