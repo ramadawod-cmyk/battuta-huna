@@ -240,11 +240,36 @@ also fully Arabic when selected — no more "mixed language" caveat to test arou
   Phase 5 strings — fixed by polling for a specific Phase-5 string's presence in the bundle instead
   of just any hash change, which is the more reliable check going forward.
 
-### Phase 6 — Explore, AllSites, SiteDetailModal, PoiCard, TagPill
+### Phase 6 — Explore, AllSites, SiteDetailModal, PoiCard, TagPill — DONE
 Renders the bilingual site/activity content from Phase 2 for the first time — confirm the language
 toggle actually switches which field (`name` vs `name_ar`) gets displayed, not just the UI chrome
 around it. Category names (`CATEGORIES`, `ACTIVITY_TYPES`) get Arabic display labels; the
 underlying English strings stay as data keys (Supabase values, `normalizeCategory`, analytics).
+- `CATEGORY_LABEL_KEYS`/`ACTIVITY_TYPE_LABEL_KEYS` (categories.ts/activityTypes.ts) map each
+  canonical English value to a display-label key, same pattern as Plan.tsx's `GROUP_LABEL_KEYS`.
+  Wired into Explore's/AllSites' category filter pills, `PoiCard`/`AllSitesListItem`'s category
+  line, `SiteDetailModal`, and — closing a gap explicitly deferred from Phase 5 — Plan.tsx's
+  interest-tag pickers and the selecting-phase summary line.
+- `Explore`/`AllSites`/`PoiCard`/`AllSitesListItem` switch `name`/`description` to `name_ar`/
+  `description_ar` when the UI language is Arabic and the field is populated, falling back to
+  English otherwise (a site not yet backfilled stays readable, not blank).
+- `SiteDetailModal`'s on-demand long-description generation now asks for both languages in the
+  same call for a fresh site, and separately, opportunistically translates an already-cached
+  English-only long description into Arabic alone on next view (its own backfill, same shape as
+  Phase 2's) — without touching or re-generating the English a returning visitor already saw.
+  `saveLongDescription` (supabase-proxy.js) now persists `long_description_ar`.
+- RTL: `pr-`/`right-` → `pe-`/`end-` on the modal's close button, title, and the hero illustration;
+  `text-left` → `text-start` on `PlaceCard`, `PoiCard`, `AllSitesListItem`, `ModeChoice`. The photo
+  carousel's prev/next arrows stay physically left/right on purpose — a media scrubber follows
+  universal prev/next convention rather than mirroring with the page (documented in the component
+  as an intentional exception, not an oversight).
+- **Tests**: `CATEGORY_LABEL_KEYS`/`ACTIVITY_TYPE_LABEL_KEYS` resolve to a truthy string in both
+  `en`/`ar` for every canonical category/activity type. 113/113 passing.
+- Manual (verified live on staging, commit `2acfbd9`): downloaded the deployed bundle and confirmed
+  8 sampled Arabic strings shipped byte-correct. Directly exercised the extended
+  `saveLongDescription` action against a disposable test site (`test-city-qa-arabic`), confirming
+  `long_description_ar` persists and round-trips through `getSite` alongside the existing English
+  `long_description`.
 
 ### Phase 7 — Trip pages (`TripDetail`, `TripContent`, `TripMapBuilder`, `CustomiseTrip`,
 `SwapPanel`, `SharedTrip`)
