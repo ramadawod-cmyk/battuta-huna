@@ -9,7 +9,7 @@ its own later.
 
 ---
 
-## 2026-09-13 — Scoped multi-destination trips (not started)
+## 2026-09-13 — Multi-destination trips (in progress)
 
 Full plan in `MULTI-DESTINATION-PLAN.md`. The two decisions that shape everything else:
 carry `city`/`cityId`/`country` on each `TripDay` inside the existing JSON `days` column
@@ -17,6 +17,20 @@ carry `city`/`cityId`/`country` on each `TripDay` inside the existing JSON `days
 wrap the existing single-city scheduler per leg instead of rewriting it. Six phases, each
 shippable on its own; the prompt (Phase 3) can ship before the flow uses legs (Phase 4)
 because the parser accepts both the old and new `[PARTIAL]` shapes.
+
+Progress (update this line as phases land, don't add a new dated entry per phase --
+it's one continuous effort):
+- ✅ Phase 0 (`e488984`) — `TripDay.city/cityId/country`, `src/lib/trips.ts` helpers.
+- ✅ Phase 1 (`63656d3`) — `planMultiCityItinerary`/`splitDaysAcrossLegs` in
+  `itineraryPlanner.ts`, not called from anywhere yet.
+- ✅ Phase 2 (`084d9f4`) — `PlanPartial` is now `{legs, duration, dates}`; `parsePartial`
+  accepts both the legacy single-city shape and the new legs shape. `Plan.tsx` reads
+  `partial.legs[0]` everywhere it read `partial.city` -- pure refactor, verified live against
+  a real model response, no behavior change (the prompt still only ever emits one leg).
+- ⬜ Phase 3 — the date-aware, suggestion-capable prompt.
+- ⬜ Phase 4 — Plan flow builds multi-leg trips.
+- ⬜ Phase 5 — Trip Detail / cards / map / customise show multiple destinations.
+- ⬜ Phase 6 — docs.
 
 ---
 
