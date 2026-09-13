@@ -194,6 +194,23 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify({ updated: true }) };
     }
 
+    // ── SET TRIP VISIBILITY (public share toggle) ────
+    if (action === 'setTripVisibility') {
+      const { tripId, isPublic } = data;
+      const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}&user_id=eq.${deviceId}`, { is_public: !!isPublic });
+      return { statusCode: 200, headers, body: JSON.stringify({ updated: true }) };
+    }
+
+    // ── GET PUBLIC TRIP (read-only share view) ───────
+    // Scoped to is_public=eq.true so a private or nonexistent trip both return nothing -- probing
+    // random ids reveals no information about whether a trip exists at all.
+    if (action === 'getPublicTrip') {
+      const { tripId } = data;
+      const res = await request('GET', `/rest/v1/trips?id=eq.${tripId}&is_public=eq.true&select=*`);
+      const rows = res.body;
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
+    }
+
     // ── GET TRIPS ────────────────────────────────────
     if (action === 'getTrips') {
       const authUserId = data.authUserId;
