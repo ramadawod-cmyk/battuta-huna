@@ -34,7 +34,7 @@ const en = {
 
   "plan.heroEyebrow": "YOUR TRAVEL AI AGENT",
   "plan.heroTitle": "Where do you want to explore?",
-  "plan.heroSubtitle": "Tell Battuta where you're headed, and it plans the rest — sites, timing, and hidden gems, built around how you like to travel.",
+  "plan.heroSubtitle": "Tell Battuta where you're headed, and it plans the rest, sites, timing, and hidden gems, built around how you like to travel.",
   "plan.inputPlaceholder": "Try \"Plan a 5-day cultural trip to Amman for two\"",
   "plan.send": "Send",
   "plan.suggestion.umrah": "Umrah Trip",
