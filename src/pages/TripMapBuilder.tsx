@@ -73,10 +73,17 @@ export default function TripMapBuilder() {
   useEffect(() => {
     if (!mapEl || mapRef.current) return;
     mapRef.current = L.map(mapEl, { zoomControl: true }).setView([20, 0], 2);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(mapRef.current);
+    const geoapifyKey = import.meta.env.VITE_GEOAPIFY_KEY;
+    // Geoapify when configured -- OpenStreetMap's own public tile servers explicitly disallow
+    // sustained production traffic and will throttle/block it; falls back to OSM directly for
+    // local dev when no key is set, same pattern as buildViatorSearchUrl.
+    const tileUrl = geoapifyKey
+      ? `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${geoapifyKey}`
+      : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    const attribution = geoapifyKey
+      ? 'Powered by <a href="https://www.geoapify.com/" target="_blank">Geoapify</a> | &copy; OpenStreetMap <a href="https://www.openstreetmap.org/copyright" target="_blank">contributors</a>'
+      : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    L.tileLayer(tileUrl, { attribution, maxZoom: 20 }).addTo(mapRef.current);
     return () => {
       mapRef.current?.remove();
       mapRef.current = null;
