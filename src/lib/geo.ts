@@ -136,12 +136,9 @@ async function reverseGeocodeNominatim(lat: number, lng: number): Promise<RawAdd
 
 async function reverseGeocodeGeoapify(lat: number, lng: number, apiKey: string): Promise<RawAddress> {
   const res = await fetch(
-    `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&format=json&apiKey=${apiKey}`,
+    `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&format=json&lang=en&apiKey=${apiKey}`,
   );
   if (!res.ok) throw new Error("Reverse geocoding failed");
   const data = await res.json();
-  // format=json returns a flat `results` array; fall back to the GeoJSON `features[].properties`
-  // shape too in case the endpoint's behavior differs from what's documented.
-  const result = data.results?.[0] || data.features?.[0]?.properties || {};
-  return result;
+  return data.results?.[0] || {};
 }
