@@ -6,7 +6,7 @@ import { TripGuide, TripItinerary } from "../components/TripContent";
 import { db } from "../lib/api";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
 import { useTranslation } from "../lib/LanguageContext";
-import { GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
+import { BUDGET_LABEL_KEYS, GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { slugify } from "../lib/geo";
 import { publicDateLabel } from "../lib/tripSharing";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
@@ -24,7 +24,7 @@ import type { Trip } from "../lib/types";
 // this can't be used to probe which trip ids exist.
 export default function SharedTrip() {
   const { tripId } = useParams<{ tripId: string }>();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [tipsByCity, setTipsByCity] = useState<Record<string, CityTips>>({});
@@ -70,6 +70,7 @@ export default function SharedTrip() {
         publicDateLabel(trip),
         trip.group_type ? (GROUP_LABEL_KEYS[trip.group_type] ? t(GROUP_LABEL_KEYS[trip.group_type]) : trip.group_type).toUpperCase() : null,
         trip.pace ? (PACE_LABEL_KEYS[trip.pace] ? t(PACE_LABEL_KEYS[trip.pace]) : trip.pace).toUpperCase() : null,
+        trip.budget ? (BUDGET_LABEL_KEYS[trip.budget] ? t(BUDGET_LABEL_KEYS[trip.budget]) : trip.budget).toUpperCase() : null,
       ].filter(Boolean)
     : [];
 
@@ -123,6 +124,13 @@ export default function SharedTrip() {
                 />
               )}
             </div>
+
+            {/* Display-only -- unlike TripDetail, a stranger's view never generates this itself. */}
+            {(language === "ar" ? trip.weather_tip_ar || trip.weather_tip : trip.weather_tip) && (
+              <p className="text-[13px] text-text-secondary mt-[16px]">
+                {language === "ar" ? trip.weather_tip_ar || trip.weather_tip : trip.weather_tip}
+              </p>
+            )}
 
             <div className="flex gap-[12px] mt-[32px]">
               <button

@@ -5,6 +5,9 @@ import ar from "./i18n/ar";
 import en from "./i18n/en";
 import {
   buildGatherSystemPrompt,
+  BUDGET_LABEL_KEYS,
+  BUDGET_TIERS,
+  composeTravelerNotes,
   GROUP_LABEL_KEYS,
   GROUP_TYPES,
   INTEREST_TAGS,
@@ -227,5 +230,35 @@ describe("GROUP_LABEL_KEYS / PACE_LABEL_KEYS", () => {
       expect(en[key]).toBeTruthy();
       expect(ar[key]).toBeTruthy();
     }
+  });
+
+  it("has a display-label key for every canonical budget tier, resolvable in both languages", () => {
+    for (const tier of BUDGET_TIERS) {
+      const key = BUDGET_LABEL_KEYS[tier];
+      expect(key).toBeDefined();
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
+    }
+  });
+});
+
+describe("composeTravelerNotes", () => {
+  it("returns an empty string when both are empty", () => {
+    expect(composeTravelerNotes("", "")).toBe("");
+    expect(composeTravelerNotes("  ", "  ")).toBe("");
+  });
+
+  it("returns just the follow-up note when there are no family details", () => {
+    expect(composeTravelerNotes("Would love to see Petra.", "")).toBe("Would love to see Petra.");
+  });
+
+  it("returns just the family note, with its own sentence, when there's no follow-up", () => {
+    expect(composeTravelerNotes("", "2 kids, ages 4 and 7")).toBe("Traveling with: 2 kids, ages 4 and 7.");
+  });
+
+  it("combines both when present", () => {
+    expect(composeTravelerNotes("Would love to see Petra.", "2 kids, ages 4 and 7")).toBe(
+      "Traveling with: 2 kids, ages 4 and 7. Would love to see Petra.",
+    );
   });
 });

@@ -4,10 +4,11 @@ import BackLink from "../components/BackLink";
 import SiteDetailModal from "../components/SiteDetailModal";
 import SwapPanel from "../components/SwapPanel";
 import { TripGuide, TripItinerary } from "../components/TripContent";
-import { db } from "../lib/api";
+import { db, planAgent } from "../lib/api";
+import { ARABIC_VOICE_GUIDANCE } from "../lib/arabicVoice";
 import { useAuth } from "../lib/AuthContext";
 import { useTranslation } from "../lib/LanguageContext";
-import { GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
+import { BUDGET_LABEL_KEYS, GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { slugify } from "../lib/geo";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
@@ -20,11 +21,12 @@ import type { Trip, TripDay } from "../lib/types";
 export default function TripDetail() {
   const { tripId } = useParams<{ tripId: string }>();
   const { session, loading: authLoading } = useAuth();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [tipsByCity, setTipsByCity] = useState<Record<string, CityTips>>({});
   const [error, setError] = useState<string | null>(null);
+  const [generatingWeatherTip, setGeneratingWeatherTip] = useState(false);
   const heroImageUrl = useWikiThumbnail(trip?.city);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
@@ -74,6 +76,44 @@ export default function TripDetail() {
       .finally(() => setLoading(false));
   }, [authLoading, session?.user?.id, tripId]);
 
+  // Finishes a feature that's existed in the schema since trip sharing shipped but never had
+  // anything call it: lazily generates a bilingual weather/packing tip the first time a trip with
+  // none is viewed, the same "generate once, cache on the row" shape as SiteDetailModal's long
+  // description. Informed by whatever context Plan.tsx captured (budget, traveler notes) when the
+  // trip was built -- absent on any trip created before this existed, which is fine, it just means
+  // a shorter prompt.
+  useEffect(() => {
+    if (!trip || trip.weather_tip || generatingWeatherTip) return;
+    setGeneratingWeatherTip(true);
+    const system = `You are a travel assistant for Battuta. Write a short, practical weather and packing tip (2-3 sentences) for the trip described below, in both English and Arabic. No markdown, no bullet points, no em dashes. ${ARABIC_VOICE_GUIDANCE} Respond with ONLY a JSON object, no prose, no markdown fences: {"tip": string, "tipAr": string}.`;
+    const context = [
+      `Destination(s): ${destinationsLabel(trip)}`,
+      trip.dates ? `Travel dates: ${trip.dates}` : null,
+      trip.duration ? `Duration: ${trip.duration} days` : null,
+      trip.budget ? `Budget: ${trip.budget}` : null,
+      trip.traveler_notes ? `Traveler notes: ${trip.traveler_notes}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    planAgent(system, [{ role: "user", content: context }])
+      .then(async (text) => {
+        const start = text.indexOf("{");
+        const end = text.lastIndexOf("}");
+        if (start === -1 || end === -1) return;
+        const parsed = JSON.parse(text.slice(start, end + 1));
+        const tip = typeof parsed.tip === "string" ? parsed.tip.trim() : "";
+        const tipAr = typeof parsed.tipAr === "string" ? parsed.tipAr.trim() : null;
+        if (!tip) return;
+        setTrip((prev) => (prev ? { ...prev, weather_tip: tip, weather_tip_ar: tipAr } : prev));
+        await db("saveWeatherTip", { tripId: trip.id, weatherTip: tip, weatherTipAr: tipAr });
+      })
+      .catch(() => {
+        // Best-effort, same tolerance as every other on-demand generation in this app -- the trip
+        // just keeps showing no weather tip until a later visit tries again.
+      })
+      .finally(() => setGeneratingWeatherTip(false));
+  }, [trip, generatingWeatherTip]);
+
   if (loading) {
     return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">{t("tripDetail.loading")}</div>;
   }
@@ -91,6 +131,7 @@ export default function TripDetail() {
     trip.duration ? t("trip.daysUnit", { count: trip.duration }) : null,
     trip.group_type ? (GROUP_LABEL_KEYS[trip.group_type] ? t(GROUP_LABEL_KEYS[trip.group_type]) : trip.group_type).toUpperCase() : null,
     trip.pace ? (PACE_LABEL_KEYS[trip.pace] ? t(PACE_LABEL_KEYS[trip.pace]) : trip.pace).toUpperCase() : null,
+    trip.budget ? (BUDGET_LABEL_KEYS[trip.budget] ? t(BUDGET_LABEL_KEYS[trip.budget]) : trip.budget).toUpperCase() : null,
   ].filter(Boolean);
 
   async function copyShareLink(id: string) {
@@ -188,8 +229,10 @@ export default function TripDetail() {
         )}
       </div>
 
-      {trip.weather_tip && (
-        <p className="text-[13px] text-text-secondary mt-[16px]">{trip.weather_tip}</p>
+      {(language === "ar" ? trip.weather_tip_ar || trip.weather_tip : trip.weather_tip) && (
+        <p className="text-[13px] text-text-secondary mt-[16px]">
+          {language === "ar" ? trip.weather_tip_ar || trip.weather_tip : trip.weather_tip}
+        </p>
       )}
 
       <div className="flex gap-[12px] mt-[32px]">
