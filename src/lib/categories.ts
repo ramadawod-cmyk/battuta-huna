@@ -1,3 +1,6 @@
+import { ACTIVITY_TYPE_LABEL_KEYS, normalizeActivityType } from "./activityTypes";
+import type en from "./i18n/en";
+
 export const CATEGORIES = [
   "Sightseeing",
   "History",
@@ -8,6 +11,30 @@ export const CATEGORIES = [
   "Neighbourhood",
   "Architecture",
 ];
+
+// Display label only -- the English strings above stay the stored/data values everywhere
+// (normalizeCategory, Supabase, analytics). Same pattern as Plan.tsx's GROUP_LABEL_KEYS/
+// PACE_LABEL_KEYS.
+export const CATEGORY_LABEL_KEYS: Record<string, keyof typeof en> = {
+  "Sightseeing": "category.sightseeing",
+  "History": "category.history",
+  "Art & Culture": "category.artCulture",
+  "Spiritual": "category.spiritual",
+  "Food & Market": "category.foodMarket",
+  "Nature": "category.nature",
+  "Neighbourhood": "category.neighbourhood",
+  "Architecture": "category.architecture",
+};
+
+/**
+ * A stored `category` string on a trip slot can be either a site category or (for an
+ * activity-derived slot) a raw activity_type -- activityToCandidate deliberately skips
+ * normalizeCategory, so it isn't guaranteed to already be canonical. Resolves either kind to its
+ * display-label key, falling back through normalizeActivityType for anything not found verbatim.
+ */
+export function categoryOrActivityLabelKey(value: string): keyof typeof en {
+  return CATEGORY_LABEL_KEYS[value] ?? ACTIVITY_TYPE_LABEL_KEYS[value] ?? ACTIVITY_TYPE_LABEL_KEYS[normalizeActivityType(value)];
+}
 
 // Same 4-color accent set used for the trip travel guide icons (src/lib/guideMeta.ts) -- cycled
 // across the 8 site categories so filter pills are visually distinguishable at a glance.

@@ -67,12 +67,14 @@ exports.handler = async function(event) {
 
     // ── SAVE LONG DESCRIPTION ────────────────────────
     if (action === 'saveLongDescription') {
-      const { siteId, name, cityId, longDescription } = data;
+      const { siteId, name, cityId, longDescription, longDescriptionAr } = data;
+      const patch = { long_description: longDescription, review_status: 'ai_complete' };
+      if (longDescriptionAr) patch.long_description_ar = longDescriptionAr;
       let res;
       if (name && cityId) {
-        res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { long_description: longDescription, review_status: 'ai_complete' });
+        res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, patch);
       } else {
-        res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, { long_description: longDescription, review_status: 'ai_complete' });
+        res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, patch);
       }
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
@@ -88,6 +90,20 @@ exports.handler = async function(event) {
     if (action === 'saveSiteMeta') {
       const { name, cityId, mustSee, durationMinutes } = data;
       const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { must_see: mustSee, duration_minutes: durationMinutes });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
+    // ── SAVE SITE TRANSLATION (Arabic backfill) ──────
+    if (action === 'saveSiteTranslation') {
+      const { name, cityId, nameAr, descriptionAr } = data;
+      const res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { name_ar: nameAr, description_ar: descriptionAr });
+      return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
+    }
+
+    // ── SAVE ACTIVITY TRANSLATION (Arabic backfill) ──
+    if (action === 'saveActivityTranslation') {
+      const { name, cityId, nameAr, descriptionAr } = data;
+      const res = await request('PATCH', `/rest/v1/activities?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, { name_ar: nameAr, description_ar: descriptionAr });
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 

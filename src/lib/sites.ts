@@ -1,4 +1,5 @@
 import { db, planAgent } from "./api";
+import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 import { CATEGORIES, normalizeCategory } from "./categories";
 import { slugify, haversineMeters } from "./geo";
 import { track } from "./analytics";
@@ -6,9 +7,11 @@ import type { Site } from "./types";
 
 type GeneratedPoi = {
   name: string;
+  nameAr: string;
   category: string;
   tags: string[];
   description: string;
+  descriptionAr: string;
   lat: number;
   lng: number;
   mustSee?: boolean;
@@ -41,7 +44,7 @@ const BATCH_COUNT = 12;
 const NEAR_DUPLICATE_METERS = 150;
 
 async function generatePoiBatch(cityName: string, countryName: string, focus: string, count: number): Promise<GeneratedPoi[]> {
-  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (10-14 words, warm editorial tone, no markdown), "lat": number, "lng": number, "mustSee": boolean (true only for iconic, unmissable landmarks a first-time visitor shouldn't skip), "durationMinutes": number (typical time a visitor spends here, in minutes)}.`;
+  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. ${ARABIC_VOICE_GUIDANCE} Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "nameAr": string (the place's real Arabic name if one exists, otherwise a natural Arabic rendering), "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (10-14 words, warm editorial tone, no markdown), "descriptionAr": string (10-14 words), "lat": number, "lng": number, "mustSee": boolean (true only for iconic, unmissable landmarks a first-time visitor shouldn't skip), "durationMinutes": number (typical time a visitor spends here, in minutes)}.`;
 
   const text = await planAgent(system, [
     { role: "user", content: `Generate ${count} points of interest for ${cityName}, ${countryName}.` },
@@ -111,6 +114,7 @@ export async function ensureCitySites(
   const existing: Site[] = (await db("getSites", { cityId })) || [];
   if (existing.length >= TARGET_SITE_COUNT) {
     backfillSiteMeta(cityId, cityName, existing);
+    backfillSiteTranslations(cityId, cityName, existing);
     // Normalize category for display/filtering only — don't rewrite existing DB rows just for this.
     return existing.map((site) => ({ ...site, category: normalizeCategory(site.category) }));
   }
@@ -124,9 +128,11 @@ export async function ensureCitySites(
       id: `${cityId}-${slugify(poi.name)}`,
       city_id: cityId,
       name: poi.name,
+      name_ar: poi.nameAr || null,
       category: poi.category,
       tags: poi.tags,
       description: poi.description,
+      description_ar: poi.descriptionAr || null,
       lat: poi.lat,
       lng: poi.lng,
       map_url: `https://maps.google.com/?q=${encodeURIComponent(poi.name + ", " + cityName)}`,
@@ -137,7 +143,10 @@ export async function ensureCitySites(
     }));
 
     if (newSites.length > 0) await db("upsertSites", { sites: newSites });
-    if (existing.length > 0) backfillSiteMeta(cityId, cityName, existing);
+    if (existing.length > 0) {
+      backfillSiteMeta(cityId, cityName, existing);
+      backfillSiteTranslations(cityId, cityName, existing);
+    }
     track("New City Cold Start", {
       city_id: cityId,
       source: "ai_generated",
@@ -192,6 +201,56 @@ async function backfillSiteMeta(cityId: string, cityName: string, sites: Site[])
         db("saveSiteMeta", { name: meta.name, cityId, mustSee: !!meta.mustSee, durationMinutes: meta.durationMinutes }).catch(
           () => {},
         ),
+      );
+    }
+  }
+  await Promise.allSettled(patches);
+}
+
+/** True for a site that predates bilingual generation and hasn't been backfilled yet. */
+export function needsArabicTranslation(site: { name_ar?: string | null }): boolean {
+  return !site.name_ar;
+}
+
+type SiteTranslation = { name: string; nameAr: string; descriptionAr: string };
+
+const TRANSLATION_BATCH_SIZE = 8;
+
+async function translateSiteBatch(cityName: string, sites: Site[]): Promise<SiteTranslation[]> {
+  const system = `You are a professional Arabic translator for Battuta, a cultural-discovery app. ${ARABIC_VOICE_GUIDANCE} Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string (must match input exactly), "nameAr": string, "descriptionAr": string}.`;
+  const places = sites.map((s) => ({ name: s.name, description: s.description }));
+  const text = await planAgent(system, [
+    { role: "user", content: `Places in ${cityName}: ${JSON.stringify(places)}` },
+  ]);
+  return extractJsonArray(text) as SiteTranslation[];
+}
+
+/**
+ * Best-effort, fire-and-forget backfill for sites cached before bilingual content existed. Same
+ * shape as backfillSiteMeta -- never awaited by callers, failures are swallowed. Runs whenever a
+ * city with "enough" cached sites is visited, not as a one-time mass migration (see
+ * ARABIC-LOCALIZATION-PLAN.md decision 9): a city nobody revisits stays English-only indefinitely,
+ * which is an accepted eventual-consistency tradeoff, not a bug.
+ */
+async function backfillSiteTranslations(cityId: string, cityName: string, sites: Site[]): Promise<void> {
+  const stale = sites.filter(needsArabicTranslation);
+  if (stale.length === 0) return;
+
+  const batches: Site[][] = [];
+  for (let i = 0; i < stale.length; i += TRANSLATION_BATCH_SIZE) batches.push(stale.slice(i, i + TRANSLATION_BATCH_SIZE));
+
+  const results = await Promise.allSettled(batches.map((batch) => translateSiteBatch(cityName, batch)));
+  const patches: Promise<unknown>[] = [];
+  for (const result of results) {
+    if (result.status !== "fulfilled") continue;
+    for (const translation of result.value) {
+      patches.push(
+        db("saveSiteTranslation", {
+          name: translation.name,
+          cityId,
+          nameAr: translation.nameAr,
+          descriptionAr: translation.descriptionAr,
+        }).catch(() => {}),
       );
     }
   }

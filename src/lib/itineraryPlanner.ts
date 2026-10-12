@@ -82,6 +82,9 @@ function siteToSlot(site: Site, time: string): TripSlot {
     mapUrl: site.map_url || `https://maps.google.com/?q=${encodeURIComponent(site.name)}`,
     durationMinutes: getDurationMinutes(site),
     kind: site.kind,
+    // Snapshotted here, not looked up live -- see the note on TripSlot.nameAr in types.ts.
+    nameAr: site.name_ar,
+    descriptionAr: site.description_ar,
   };
 }
 

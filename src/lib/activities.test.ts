@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { activityToCandidate, dedupeActivitiesByName, toActivityRow } from "./activities";
+import { activityToCandidate, dedupeActivitiesByName, needsArabicTranslation, toActivityRow } from "./activities";
 import type { Activity } from "./types";
 
 function makeGenerated(overrides: Partial<Parameters<typeof toActivityRow>[2]> & { name: string }) {
   return {
     activityType: "Beach & Swim",
     description: "A lovely spot.",
+    nameAr: "اسم تجريبي",
+    descriptionAr: "وصف تجريبي.",
     tags: ["relaxing"],
     lat: 1,
     lng: 2,
@@ -113,5 +115,23 @@ describe("activityToCandidate", () => {
     expect(candidate.lat).toBe(activity.lat);
     expect(candidate.lng).toBe(activity.lng);
     expect(candidate.duration_minutes).toBe(180);
+  });
+
+  it("carries name_ar and description_ar through onto the candidate", () => {
+    const candidate = activityToCandidate({ ...activity, name_ar: "اسم", description_ar: "وصف" });
+    expect(candidate.name_ar).toBe("اسم");
+    expect(candidate.description_ar).toBe("وصف");
+  });
+});
+
+describe("needsArabicTranslation", () => {
+  it("is true when name_ar is missing, null, or empty", () => {
+    expect(needsArabicTranslation({})).toBe(true);
+    expect(needsArabicTranslation({ name_ar: null })).toBe(true);
+    expect(needsArabicTranslation({ name_ar: "" })).toBe(true);
+  });
+
+  it("is false once name_ar is populated", () => {
+    expect(needsArabicTranslation({ name_ar: "اسم" })).toBe(false);
   });
 });

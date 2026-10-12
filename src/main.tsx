@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './lib/AuthContext'
 import { CityProvider } from './lib/CityContext'
+import { LanguageProvider } from './lib/LanguageContext'
 import { initAnalytics } from './lib/analytics'
 
 initAnalytics()
@@ -12,11 +13,13 @@ initAnalytics()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <CityProvider>
-          <App />
-        </CityProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <CityProvider>
+            <App />
+          </CityProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   </StrictMode>,
 )

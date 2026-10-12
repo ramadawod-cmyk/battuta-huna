@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import BrandMark from "./BrandMark";
+import { useTranslation } from "../lib/LanguageContext";
 
 function HomeIcon({ className }: { className?: string }) {
   return (
@@ -59,20 +60,25 @@ function BlogIcon({ className }: { className?: string }) {
 }
 
 const NAV_ITEMS = [
-  { label: "Explore", path: "/explore", Icon: HomeIcon },
-  { label: "Plan", path: "/plan", Icon: HeartIcon },
-  { label: "My Trips", path: "/my-trips", Icon: BookingsIcon },
-  { label: "About", path: "/about", Icon: InfoIcon },
-  { label: "Blog", path: "/blog", Icon: BlogIcon },
+  { labelKey: "sidebar.explore" as const, path: "/explore", Icon: HomeIcon },
+  { labelKey: "sidebar.plan" as const, path: "/plan", Icon: HeartIcon },
+  { labelKey: "sidebar.myTrips" as const, path: "/my-trips", Icon: BookingsIcon },
+  { labelKey: "sidebar.about" as const, path: "/about", Icon: InfoIcon },
+  { labelKey: "sidebar.blog" as const, path: "/blog", Icon: BlogIcon },
 ];
 
-const SETTINGS_ITEM = { label: "Settings", path: "/settings", Icon: ProfileIcon };
+const SETTINGS_ITEM = { labelKey: "sidebar.settings" as const, path: "/settings", Icon: ProfileIcon };
 
 function DesktopSidebar() {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   return (
-    <aside className="hidden md:flex w-[220px] lg:w-[260px] h-screen shrink-0 bg-white border-r border-text-primary/15 sticky top-0 flex-col">
+    // border-e (logical, not border-r): the sidebar visually flips to the screen's right edge
+    // under dir="rtl" (flexbox's "row" direction is direction-aware, no extra class needed for
+    // that part) -- border-e keeps the border on the edge facing the main content in either
+    // direction instead of staying pinned to the physical right and ending up on the outside.
+    <aside className="hidden md:flex w-[220px] lg:w-[260px] h-screen shrink-0 bg-white border-e border-text-primary/15 sticky top-0 flex-col">
       <div className="flex items-center gap-[8px] px-[24px] lg:px-[32px] pt-[32px]">
         <BrandMark className="text-text-primary shrink-0" />
         <p className="font-heading font-semibold text-[20px] text-text-primary">Battuta</p>
@@ -91,7 +97,7 @@ function DesktopSidebar() {
             >
               <item.Icon className={active ? "text-secondary-purple" : "text-text-secondary"} />
               <span className={`text-[14px] ${active ? "font-medium text-text-primary" : "text-text-secondary"}`}>
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </Link>
           );
@@ -111,7 +117,7 @@ function DesktopSidebar() {
               pathname === SETTINGS_ITEM.path ? "font-medium text-text-primary" : "text-text-secondary"
             }`}
           >
-            {SETTINGS_ITEM.label}
+            {t(SETTINGS_ITEM.labelKey)}
           </span>
         </Link>
       </div>
@@ -140,6 +146,7 @@ function CloseIcon({ className }: { className?: string }) {
 
 function MobileHeader() {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -151,7 +158,7 @@ function MobileHeader() {
         </Link>
         <button
           type="button"
-          aria-label={open ? "Close menu" : "Open menu"}
+          aria-label={open ? t("sidebar.closeMenu") : t("sidebar.openMenu")}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
           className="flex items-center justify-center size-[40px] rounded-full text-text-primary hover:bg-surface-lavender/60 transition-colors"
@@ -179,7 +186,7 @@ function MobileHeader() {
               >
                 <item.Icon className={active ? "text-secondary-purple" : "text-text-secondary"} />
                 <span className={`text-[16px] ${active ? "font-medium text-text-primary" : "text-text-secondary"}`}>
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
               </Link>
             );

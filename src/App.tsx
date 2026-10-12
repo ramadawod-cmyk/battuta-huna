@@ -1,6 +1,5 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
-import Landing from "./pages/Landing";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
@@ -22,7 +21,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<Navigate to="/plan" replace />} />
       <Route path="/shared/:tripId" element={<SharedTrip />} />
 
       <Route path="/about" element={<Layout><About /></Layout>} />

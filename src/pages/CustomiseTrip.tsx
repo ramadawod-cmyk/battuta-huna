@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import BackLink from "../components/BackLink";
 import Button from "../components/Button";
 import TagPill from "../components/TagPill";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
-import { GROUP_TYPES, PACE_OPTIONS } from "../lib/planFlow";
+import { useTranslation } from "../lib/LanguageContext";
+import { GROUP_TYPES, PACE_OPTIONS, GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import { destinationsLabel } from "../lib/trips";
@@ -14,6 +16,7 @@ export default function CustomiseTrip() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,16 +34,16 @@ export default function CustomiseTrip() {
     setError(null);
     db("getTrips", session?.user?.id ? { authUserId: session.user.id } : {})
       .then((trips: Trip[]) => {
-        const found = (trips || []).find((t) => t.id === tripId) || null;
+        const found = (trips || []).find((tr) => tr.id === tripId) || null;
         setTrip(found);
         if (!found) {
-          setError("Trip not found.");
+          setError(t("trip.notFound"));
           return;
         }
         if (found.group_type) setGroupType(found.group_type);
         if (found.pace) setPace(found.pace);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load trip"))
+      .catch((err) => setError(err instanceof Error ? err.message : t("trip.loadFailed")))
       .finally(() => setLoading(false));
   }, [authLoading, session?.user?.id, tripId]);
 
@@ -52,7 +55,7 @@ export default function CustomiseTrip() {
       track("Trip Details Submitted", { group_type: groupType, pace, trip_id: tripId, source: "customise" });
       navigate(`/trip/${tripId}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't save your changes.";
+      const message = err instanceof Error ? err.message : t("customise.saveFailed");
       setError(message);
       track("Trip Save Failed", { trip_id: tripId, message, source: "customise" });
       setSaving(false);
@@ -60,49 +63,48 @@ export default function CustomiseTrip() {
   }
 
   if (loading) {
-    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] text-text-secondary">Loading…</div>;
+    return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] text-text-secondary">{t("common.loading")}</div>;
   }
 
   if (error && !trip) {
     return (
       <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
         <p className="text-text-primary">{error}</p>
-        <Link to="/my-trips" className="text-[13px] font-medium text-text-secondary mt-[16px] inline-block">
-          ← Back to My Trips
-        </Link>
+        <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary mt-[16px]" />
       </div>
     );
   }
 
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px] max-w-[1180px]">
-      <Link to={`/trip/${tripId}`} className="font-medium text-[13px] text-text-secondary hover:text-text-primary">
-        ← Back to Trip
-      </Link>
+      <BackLink to={`/trip/${tripId}`} labelKey="common.backToTrip" className="font-medium text-[13px] text-text-secondary hover:text-text-primary" />
 
-      <h1 className="font-heading font-semibold text-[28px] text-text-primary mt-[16px]">Customise your trip</h1>
+      <h1 className="font-heading font-semibold text-[28px] text-text-primary mt-[16px]">{t("customise.title")}</h1>
       <p className="text-[14px] text-text-secondary mt-[6px]">
-        {trip && (trip.duration ? `${trip.duration} days in ${destinationsLabel(trip)}` : destinationsLabel(trip))}
+        {trip &&
+          (trip.duration
+            ? t("customise.durationInCity", { count: trip.duration, city: destinationsLabel(trip) })
+            : destinationsLabel(trip))}
       </p>
 
-      <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] mt-[32px]">GROUP TYPE</p>
+      <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] mt-[32px]">{t("customise.groupTypeLabel")}</p>
       <div className="flex flex-wrap gap-[10px] mt-[12px] max-w-[700px]">
         {GROUP_TYPES.map((type) => (
-          <TagPill key={type} label={type} active={groupType === type} onClick={() => setGroupType(type)} />
+          <TagPill key={type} label={t(GROUP_LABEL_KEYS[type])} active={groupType === type} onClick={() => setGroupType(type)} />
         ))}
       </div>
 
-      <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] mt-[32px]">PACE</p>
+      <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] mt-[32px]">{t("customise.paceLabel")}</p>
       <div className="flex flex-wrap gap-[10px] mt-[12px] max-w-[700px]">
         {PACE_OPTIONS.map((option) => (
-          <TagPill key={option} label={option} active={pace === option} onClick={() => setPace(option)} />
+          <TagPill key={option} label={t(PACE_LABEL_KEYS[option])} active={pace === option} onClick={() => setPace(option)} />
         ))}
       </div>
 
       {error && <p className="text-primary-orange text-[13px] mt-[24px]">{error}</p>}
 
       <Button variant="orange" className="!w-full sm:!w-[300px] !h-[52px] mt-[40px]" disabled={saving} onClick={handleSave}>
-        {saving ? "SAVING…" : "SAVE CHANGES"}
+        {saving ? t("customise.saving") : t("customise.saveChanges")}
       </Button>
     </div>
   );

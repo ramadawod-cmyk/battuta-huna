@@ -1,7 +1,16 @@
 import { ACTIVITY_TYPES } from "./activityTypes";
+import battutaChatAgentRules from "./agent-rules/battuta-chat-agent.md?raw";
+import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 import { CATEGORIES } from "./categories";
+import type en from "./i18n/en";
+import type { Language } from "./i18n/translate";
 import { splitDaysAcrossLegs } from "./itineraryPlanner";
 import type { TripDay } from "./types";
+
+// battuta-chat-agent.md IS the system prompt (edit it directly, not this file, to change the
+// agent's wording/rules) -- strip its editorial HTML-comment header before it ever reaches the
+// model, and fill in the two placeholders it documents.
+const BATTUTA_CHAT_AGENT_TEMPLATE = battutaChatAgentRules.replace(/<!--[\s\S]*?-->/g, "").trim();
 
 export type PlanLeg = {
   city: string;
@@ -26,23 +35,15 @@ function formatToday(today: Date): string {
  * the traveller for it, and can suggest actual destinations instead of only accepting ones the
  * traveller already named. See MULTI-DESTINATION-PLAN.md Phase 3 for the full rationale.
  */
-export function buildGatherSystemPrompt(today: Date): string {
-  return `You are Battuta, a warm and concise travel-planning assistant. Today is ${formatToday(today)}. Your job is to figure out where the traveller wants to go and how many days the trip will be, in about 2-4 short exchanges. Keep replies to 1-3 sentences, no markdown, no emojis, no em dashes.
-
-Rules:
-- If they already name a specific city or cities, confirm and move on — don't second-guess a clear answer.
-- If they name a country instead of a city, propose the one or two best base cities for it with a one-line reason each (e.g. Jordan → Amman, and Wadi Musa for Petra), then ask which they'd like — unless the country obviously has one clear hub, in which case just confirm that city without a round-trip.
-- If they name a region, island, or area that isn't itself a city (e.g. Bali, Tuscany, the Amalfi Coast), immediately propose 2-3 specific towns within it with a short reason each (e.g. Bali → Seminyak for beach clubs and nightlife, Ubud for rice terraces and quiet, Canggu for surf and cafes) in the same reply — don't just acknowledge the name and ask a follow-up question first.
-- If they're vague about where ("somewhere relaxing", "good food, not too touristy"), suggest 2-3 concrete cities with a short reason each, tailored to what they said — mood, budget, region, and today's date for seasonal fit — then ask them to pick.
-- Never accept a country, region, or area name alone as a final answer without proposing actual cities/towns first.
-- A trip can span multiple cities or countries. If the traveller wants that, turn it into an ordered list of destinations. Cap it at 4 destinations — if they ask for more than that in a trip too short to do them justice, say so and suggest trimming the list.
-- Don't ask about specific travel dates — a calendar handles that separately right after this. Use today's date to reason about relative time and seasonality, but never ask the traveller to name exact dates.
-- Duration (total number of days) is always required before you're done.
-- Once the destination(s) and duration are both settled, stop asking questions and end your reply with a machine-readable block on its own line:
-[PARTIAL]{"legs":[{"city":"City Name","country":"Country Name","country_id":"lowercase-slug","days":number of days for this leg}],"duration":total number of days,"dates":null}[/PARTIAL]
-- For a single-destination trip, "legs" has exactly one entry and its "days" equals "duration". For multiple destinations, split "duration" across the legs sensibly (more days for the destination that deserves them) so the "days" values add up to "duration".
-- Always include each leg's country and a lowercase hyphenated country_id slug.
-- Everything before the [PARTIAL] block is shown to the user as your reply — keep it natural and friendly.`;
+export function buildGatherSystemPrompt(today: Date, language: Language = "en"): string {
+  const languageInstruction =
+    language === "ar"
+      ? `Reply to the traveller in Arabic. ${ARABIC_VOICE_GUIDANCE} `
+      : "";
+  return BATTUTA_CHAT_AGENT_TEMPLATE.replace("{{TODAY}}", formatToday(today)).replace(
+    "{{LANGUAGE_INSTRUCTION}}",
+    languageInstruction,
+  );
 }
 
 const MAX_LEGS = 4;
@@ -123,26 +124,36 @@ export type ItineraryResult = {
 // by planItinerary() in ./itineraryPlanner — proximity- and time-budget-aware, so days can no
 // longer come back overloaded or empty (the old per-day AI call couldn't see other days' picks).
 // The AI's only remaining job here is writing a short, evocative title per day.
+// Day titles are always generated bilingually in one call, regardless of the current UI language
+// (same one-call-both-languages approach as sites/activities/tips -- see decision 6) -- so a
+// built trip's titles are ready to show in either language whenever it's later viewed or shared.
+export type DayLabel = { label: string; labelAr: string };
+
 export function buildDayLabelsSystemPrompt(destination: string, days: TripDay[], notes?: string): string {
   // Each day carries its own city for a multi-leg trip (see planMultiCityItinerary), so the model
   // can title "Day 4" with Florence in mind even though the trip overall spans Rome and Florence.
   const daysJson = JSON.stringify(
     days.map((d) => ({ day: d.day, city: d.city, stops: d.slots.map((s) => s.name) })),
   );
-  return `You are Battuta, a travel-planning assistant. For a trip to ${destination}, write a short, evocative title (3-5 words, no "Day N" prefix) for each day below, based on its stops and (if given) its city.${notes ? ` Traveler notes: ${notes}` : ""}
+  return `You are Battuta, a travel-planning assistant. For a trip to ${destination}, write a short, evocative title (3-5 words, no "Day N" prefix) for each day below, based on its stops and (if given) its city, in both English and Arabic.${notes ? ` Traveler notes: ${notes}` : ""} ${ARABIC_VOICE_GUIDANCE}
 
 Days: ${daysJson}
 
-Output ONLY a JSON array of ${days.length} strings, in day order, no other text. Example: ["Old Town & Markets", "Coastal Escape"]`;
+Output ONLY a JSON array of ${days.length} objects, in day order, no other text. Each item: {"label": string (English title), "labelAr": string (Arabic title)}. Example: [{"label": "Old Town & Markets", "labelAr": "البلدة القديمة والأسواق"}, {"label": "Coastal Escape", "labelAr": "هروب إلى الساحل"}]`;
 }
 
-export function parseDayLabels(text: string): string[] | null {
+export function parseDayLabels(text: string): DayLabel[] | null {
   const start = text.indexOf("[");
   const end = text.lastIndexOf("]");
   if (start === -1 || end === -1 || end < start) return null;
   try {
     const parsed = JSON.parse(text.slice(start, end + 1));
-    if (!Array.isArray(parsed) || !parsed.every((v) => typeof v === "string")) return null;
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.every((v) => v && typeof v.label === "string" && typeof v.labelAr === "string")
+    ) {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -155,3 +166,18 @@ export const PACE_OPTIONS = ["Relaxed", "Strict schedule"];
 // here biases pickDefaultPlacesForLegs toward matching activities exactly like picking "History"
 // already biases it toward matching sites, with no extra ranking logic needed.
 export const INTEREST_TAGS = [...CATEGORIES, ...ACTIVITY_TYPES];
+
+// GROUP_TYPES/PACE_OPTIONS are stored verbatim in Supabase (trip.group_type/pace) and matched
+// against elsewhere -- these map each canonical English value to its display label key only, so
+// every page showing them (Plan.tsx, CustomiseTrip.tsx) translates consistently without
+// duplicating the map.
+export const GROUP_LABEL_KEYS: Record<string, keyof typeof en> = {
+  Solo: "plan.group.solo",
+  Couple: "plan.group.couple",
+  Family: "plan.group.family",
+  Friends: "plan.group.friends",
+};
+export const PACE_LABEL_KEYS: Record<string, keyof typeof en> = {
+  Relaxed: "plan.pace.relaxed",
+  "Strict schedule": "plan.pace.strict",
+};

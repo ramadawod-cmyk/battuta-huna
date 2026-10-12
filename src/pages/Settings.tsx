@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../components/ToggleSwitch";
 import { useAuth } from "../lib/AuthContext";
 import { useCity } from "../lib/CityContext";
+import { useTranslation } from "../lib/LanguageContext";
+import { LANGUAGES, LANGUAGE_NAMES } from "../lib/i18n/translate";
 import { getSettings, setSettings, getNotifiedIds, clearNotifiedIds } from "../lib/settings";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
@@ -51,6 +53,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const { session, signOut } = useAuth();
   const { city, sites } = useCity();
+  const { language, setLanguage, t } = useTranslation();
   const initial = getSettings();
   const [notifications, setNotifications] = useState(initial.notif);
   const [inAppToasts, setInAppToasts] = useState(true);
@@ -117,6 +120,35 @@ export default function Settings() {
                     SIGN IN
                   </button>
                 )
+              }
+            />
+          </div>
+
+          <div className="flex flex-col gap-[20px]">
+            <SectionLabel>Preferences</SectionLabel>
+            <Row
+              title={t("settings.language")}
+              description={t("settings.languageDescription")}
+              control={
+                <div className="flex gap-[6px] shrink-0">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => {
+                        setLanguage(lang);
+                        track("Setting Changed", { setting: "language", value: lang });
+                      }}
+                      className={`h-[36px] px-[14px] rounded-[12px] text-[13px] font-medium transition-colors ${
+                        language === lang
+                          ? "bg-secondary-purple text-white"
+                          : "border border-secondary-purple/40 text-text-secondary hover:bg-surface-lavender/60"
+                      }`}
+                    >
+                      {LANGUAGE_NAMES[lang]}
+                    </button>
+                  ))}
+                </div>
               }
             />
           </div>

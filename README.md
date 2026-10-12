@@ -83,6 +83,63 @@ explicitly out of scope) and `NOTES.md` for a real bug the rollout caught (a "th
 confirmation silently doing nothing when a dependent step — clipboard write — failed
 independently of the state change it was meant to confirm).
 
+## Arabic localization (i18n, RTL, bilingual content)
+
+The app supports English and Arabic, full RTL mirror. Three separate mechanisms work
+together — mixing them up is the most common way to ship an English string into the
+Arabic UI or a garbled RTL layout:
+
+**1. UI chrome strings** — `src/lib/i18n/en.ts`/`ar.ts` are flat, namespaced dictionaries
+(`"plan.errGeneric"`, `"tripDetail.share"`, …). `ar.ts` is typed as `const ar: typeof en`,
+so a missing or extra key is a compile error, not a silent runtime fallback.
+`src/lib/LanguageContext.tsx`'s `useTranslation()` hook gives every component
+`{ language, dir, setLanguage, t }` — call `t("some.key", { vars })` for any
+user-facing string. Never hardcode English UI text in a component; add a key instead,
+even for a one-off string.
+
+**2. RTL layout** — prefer Tailwind's logical property utilities (`ps-`/`pe-`, `border-s`/
+`border-e`, `start-`/`end-`, `text-start`) over their physical equivalents (`pl-`/`pr-`,
+`left-`/`right-`, `text-left`) — they flip automatically with `dir` and need no `rtl:`
+variant. CSS flexbox's `flex-start`/`flex-end` (Tailwind's `justify-start`/`items-end`
+etc.) are already direction-aware too. Reach for an explicit `rtl:`/`ltr:` variant only
+for a literal visual mirror, like an icon (`rtl:scale-x-[-1]`) — and note that Tailwind
+v4's `scale-*` utilities set the CSS `scale` property, not `transform`, so check the right
+one when verifying in DevTools. Two non-obvious cases worth knowing about before you hit
+them again: a chat bubble's "tail" corner radius must point at whichever side is
+structurally correct (the avatar/self-end side), so use the logical corner utilities
+(`rounded-ss`/`rounded-se`/`rounded-es`/`rounded-ee`) there, not `rounded-bl`/`rounded-br`;
+and a photo carousel's prev/next arrows are a deliberate **exception** — left physically
+left/right on purpose, since a media scrubber follows universal convention rather than
+mirroring with text direction.
+
+**3. Bilingual content** — sites, activities, city tips, and day titles are generated in
+**both languages in the same AI call** (a `nameAr`/`descriptionAr`/`labelAr` field
+alongside the English one), not via a separate translation pass — this keeps AI call count
+flat and guarantees both languages describe the same underlying fact. Every prompt that
+produces Arabic text references the single shared tone fragment `ARABIC_VOICE_GUIDANCE`
+(`src/lib/arabicVoice.ts`) — edit the tone there, never at an individual call site, or the
+voice will drift between features. Content cached before this existed gets backfilled
+**opportunistically** (fire-and-forget, on next view — see `backfillSiteTranslations` in
+`src/lib/sites.ts` for the pattern), not eagerly, so a city nobody revisits just stays
+English-only indefinitely; that's an accepted tradeoff, not a bug. A trip's slot/day
+content is **snapshotted** at build time (`nameAr`/`descriptionAr`/`labelAr` live on the
+`TripSlot`/`TripDay` themselves, not looked up live), so a `/shared` link renders correctly
+in whichever language the *viewer* has selected, independent of which language the trip
+was built in or the owner's own language.
+
+Fixed taxonomies (`CATEGORIES`, `ACTIVITY_TYPES`, `GROUP_TYPES`, `PACE_OPTIONS`) are a
+different case: the English string stays the canonical stored/matched value everywhere
+(Supabase, `normalizeCategory`, analytics) — only the **display label** is translated, via
+a `*_LABEL_KEYS: Record<string, keyof typeof en>` map (`CATEGORY_LABEL_KEYS`,
+`ACTIVITY_TYPE_LABEL_KEYS` in `categories.ts`/`activityTypes.ts`; `GROUP_LABEL_KEYS`/
+`PACE_LABEL_KEYS` in `planFlow.ts`). A trip slot's stored `category` can be *either* kind
+(an activity-derived slot's category is a raw `activity_type`, since `activityToCandidate`
+deliberately skips `normalizeCategory`) — use `categoryOrActivityLabelKey` (categories.ts)
+wherever a slot's category needs a display label, not a direct `CATEGORY_LABEL_KEYS` lookup.
+
+See `ARABIC-LOCALIZATION-PLAN.md` for the full phase-by-phase rollout and design decisions,
+and `NOTES.md` for real bugs the rollout caught along the way.
+
 ## Testing
 
 Unit tests run on [Vitest](https://vitest.dev) and live next to the code they test, as

@@ -3,9 +3,10 @@ import TagPill from "../components/TagPill";
 import PoiCard from "../components/PoiCard";
 import SiteDetailModal from "../components/SiteDetailModal";
 import { useCity } from "../lib/CityContext";
+import { useTranslation } from "../lib/LanguageContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { haversineMeters, getCurrentPosition } from "../lib/geo";
-import { CATEGORIES as SITE_CATEGORIES, CATEGORY_ACCENTS, normalizeCategory } from "../lib/categories";
+import { CATEGORIES as SITE_CATEGORIES, CATEGORY_ACCENTS, CATEGORY_LABEL_KEYS, normalizeCategory } from "../lib/categories";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Site } from "../lib/types";
@@ -30,13 +31,16 @@ function PoiCardWithImage({
   distance: string;
   onClick: () => void;
 }) {
+  const { t, language } = useTranslation();
   const imageUrl = useWikiThumbnail(site.name);
+  const name = language === "ar" && site.name_ar ? site.name_ar : site.name;
+  const description = language === "ar" && site.description_ar ? site.description_ar : site.description;
   return (
     <PoiCard
-      name={site.name}
+      name={name}
       distance={distance}
-      category={site.category.toUpperCase()}
-      description={site.description}
+      category={t(CATEGORY_LABEL_KEYS[normalizeCategory(site.category)]).toUpperCase()}
+      description={description}
       imageUrl={site.image_url || imageUrl}
       categoryAccent={CATEGORY_ACCENTS[normalizeCategory(site.category)]}
       onClick={onClick}
@@ -46,6 +50,7 @@ function PoiCardWithImage({
 
 export default function Explore() {
   const { city, sites, heroImageUrl, status, error, locate } = useCity();
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState("All");
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
@@ -100,9 +105,9 @@ export default function Explore() {
   return (
     <div className="px-4 sm:px-6 md:px-8 lg:px-[32px] py-6 md:py-[32px] max-w-[1260px]">
       <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-text-primary">
-        {city?.name || "Locating…"}
+        {city?.name || t("explore.locating")}
       </p>
-      <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">CULTURAL DISCOVERY</p>
+      <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{t("explore.culturalDiscovery")}</p>
 
       <div className="relative bg-secondary-purple rounded-[24px] w-full h-[320px] overflow-hidden mt-[16px]">
         {displayedHeroUrl ? (
@@ -127,39 +132,38 @@ export default function Explore() {
 
       <div className="bg-surface-lavender rounded-[16px] mt-[24px] px-[24px] py-[14px]">
         <p className="font-medium text-[11px] text-secondary-purple tracking-[0.44px]">
-          {status === "locating" && "LOCATING YOU"}
-          {status === "loading-sites" && "DISCOVERING SITES"}
-          {status === "ready" && "NEARBY"}
-          {status === "error" && "LOCATION UNAVAILABLE"}
-          {status === "idle" && "LOCATING YOU"}
+          {status === "locating" && t("explore.statusLocatingYou")}
+          {status === "loading-sites" && t("explore.statusDiscoveringSites")}
+          {status === "ready" && t("explore.statusNearby")}
+          {status === "error" && t("explore.statusLocationUnavailable")}
+          {status === "idle" && t("explore.statusLocatingYou")}
         </p>
         <p className="text-[14px] text-text-secondary mt-[4px]">
-          {status === "locating" && "Finding your place in the world…"}
-          {status === "loading-sites" &&
-            "Battuta is gathering cultural sites for your city for the first time — this can take a moment."}
-          {status === "ready" && `${sites.length} sites within range`}
-          {status === "error" && (error || "Couldn't detect your location.")}
-          {status === "idle" && "Finding your place in the world…"}
+          {status === "locating" && t("explore.findingPlace")}
+          {status === "loading-sites" && t("explore.gatheringSites")}
+          {status === "ready" && t("explore.sitesWithinRange", { count: sites.length })}
+          {status === "error" && (error || t("explore.locationUnavailable"))}
+          {status === "idle" && t("explore.findingPlace")}
         </p>
         {status === "error" && (
           <button
             onClick={locate}
             className="mt-[10px] bg-secondary-purple text-white text-[12px] font-medium rounded-[16px] px-[14px] py-[6px]"
           >
-            Try again
+            {t("explore.tryAgain")}
           </button>
         )}
       </div>
 
       <p className="font-medium text-[12px] text-text-primary tracking-[0.48px] mt-[20px]">
-        NEARBY · WITHIN RANGE{city?.locality ? ` · ${city.locality.toUpperCase()}` : ""}
+        {t("explore.nearbyWithinRange")}{city?.locality ? ` · ${city.locality.toUpperCase()}` : ""}
       </p>
 
       <div className="flex gap-[10px] mt-[16px] flex-wrap">
         {CATEGORIES.map((cat) => (
           <TagPill
             key={cat}
-            label={cat}
+            label={cat === "All" ? t("explore.allCategories") : t(CATEGORY_LABEL_KEYS[cat])}
             active={activeCategory === cat}
             accent={CATEGORY_ACCENTS[cat]}
             onClick={() => {
@@ -180,7 +184,7 @@ export default function Explore() {
           />
         ))}
         {status === "ready" && sitesWithDistance.length === 0 && (
-          <p className="text-text-secondary text-[14px]">No sites found for this category yet.</p>
+          <p className="text-text-secondary text-[14px]">{t("explore.noSitesForCategory")}</p>
         )}
       </div>
 

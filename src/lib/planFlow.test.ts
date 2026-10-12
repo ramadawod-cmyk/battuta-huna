@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_TYPES } from "./activityTypes";
 import { CATEGORIES } from "./categories";
-import { INTEREST_TAGS, parsePartial } from "./planFlow";
+import ar from "./i18n/ar";
+import en from "./i18n/en";
+import {
+  buildGatherSystemPrompt,
+  GROUP_LABEL_KEYS,
+  GROUP_TYPES,
+  INTEREST_TAGS,
+  PACE_LABEL_KEYS,
+  PACE_OPTIONS,
+  parseDayLabels,
+  parsePartial,
+} from "./planFlow";
 
 describe("INTEREST_TAGS", () => {
   it("spans both site categories and activity types, so either can be picked as an interest", () => {
@@ -148,5 +159,73 @@ describe("parsePartial", () => {
       wrap(JSON.stringify({ legs: [{ city: "Rome", days: 3 }, { city: "Florence", days: 2 }] })),
     );
     expect(partial?.duration).toBe(5);
+  });
+});
+
+describe("buildGatherSystemPrompt", () => {
+  it("defaults to no language instruction and stays out of the way for English", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-01-01"));
+    expect(prompt).not.toContain("Reply to the traveller in Arabic");
+  });
+
+  it("instructs the agent to reply in Arabic when language is ar", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-01-01"), "ar");
+    expect(prompt).toContain("Reply to the traveller in Arabic");
+  });
+
+  it("always requires the [PARTIAL] block's city/country fields to stay English", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-01-01"), "ar");
+    expect(prompt).toMatch(/must always be in English/);
+  });
+
+  it("fills in today's date and never leaks the agent-rules file's editorial comment or raw placeholders", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-03-15"));
+    expect(prompt).toContain("Sunday, March 15, 2026");
+    expect(prompt).not.toContain("<!--");
+    expect(prompt).not.toContain("{{TODAY}}");
+    expect(prompt).not.toContain("{{LANGUAGE_INSTRUCTION}}");
+  });
+});
+
+describe("parseDayLabels", () => {
+  it("parses a bilingual array of {label, labelAr} objects", () => {
+    const text = '[{"label":"Old Town & Markets","labelAr":"البلدة القديمة والأسواق"},{"label":"Coastal Escape","labelAr":"هروب إلى الساحل"}]';
+    const labels = parseDayLabels(text);
+    expect(labels).toEqual([
+      { label: "Old Town & Markets", labelAr: "البلدة القديمة والأسواق" },
+      { label: "Coastal Escape", labelAr: "هروب إلى الساحل" },
+    ]);
+  });
+
+  it("returns null for the old plain-string-array shape", () => {
+    expect(parseDayLabels('["Old Town & Markets", "Coastal Escape"]')).toBeNull();
+  });
+
+  it("returns null when a label is missing its Arabic sibling", () => {
+    expect(parseDayLabels('[{"label":"Old Town & Markets"}]')).toBeNull();
+  });
+
+  it("returns null for malformed input", () => {
+    expect(parseDayLabels("not json at all")).toBeNull();
+  });
+});
+
+describe("GROUP_LABEL_KEYS / PACE_LABEL_KEYS", () => {
+  it("has a display-label key for every canonical group type, resolvable in both languages", () => {
+    for (const type of GROUP_TYPES) {
+      const key = GROUP_LABEL_KEYS[type];
+      expect(key).toBeDefined();
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
+    }
+  });
+
+  it("has a display-label key for every canonical pace option, resolvable in both languages", () => {
+    for (const option of PACE_OPTIONS) {
+      const key = PACE_LABEL_KEYS[option];
+      expect(key).toBeDefined();
+      expect(en[key]).toBeTruthy();
+      expect(ar[key]).toBeTruthy();
+    }
   });
 });
