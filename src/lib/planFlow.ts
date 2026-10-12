@@ -1,10 +1,16 @@
 import { ACTIVITY_TYPES } from "./activityTypes";
+import battutaChatAgentRules from "./agent-rules/battuta-chat-agent.md?raw";
 import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 import { CATEGORIES } from "./categories";
 import type en from "./i18n/en";
 import type { Language } from "./i18n/translate";
 import { splitDaysAcrossLegs } from "./itineraryPlanner";
 import type { TripDay } from "./types";
+
+// battuta-chat-agent.md IS the system prompt (edit it directly, not this file, to change the
+// agent's wording/rules) -- strip its editorial HTML-comment header before it ever reaches the
+// model, and fill in the two placeholders it documents.
+const BATTUTA_CHAT_AGENT_TEMPLATE = battutaChatAgentRules.replace(/<!--[\s\S]*?-->/g, "").trim();
 
 export type PlanLeg = {
   city: string;
@@ -34,23 +40,10 @@ export function buildGatherSystemPrompt(today: Date, language: Language = "en"):
     language === "ar"
       ? `Reply to the traveller in Arabic. ${ARABIC_VOICE_GUIDANCE} `
       : "";
-  return `You are Battuta, a warm and concise travel-planning assistant. Today is ${formatToday(today)}. ${languageInstruction}Your job is to figure out where the traveller wants to go and how many days the trip will be, in about 2-4 short exchanges. Keep replies to 1-3 sentences, no markdown, no emojis, no em dashes.
-
-Rules:
-- If they already name a specific city or cities, confirm and move on — don't second-guess a clear answer.
-- If they name a country instead of a city, propose the one or two best base cities for it with a one-line reason each (e.g. Jordan → Amman, and Wadi Musa for Petra), then ask which they'd like — unless the country obviously has one clear hub, in which case just confirm that city without a round-trip.
-- If they name a region, island, or area that isn't itself a city (e.g. Bali, Tuscany, the Amalfi Coast), immediately propose 2-3 specific towns within it with a short reason each (e.g. Bali → Seminyak for beach clubs and nightlife, Ubud for rice terraces and quiet, Canggu for surf and cafes) in the same reply — don't just acknowledge the name and ask a follow-up question first.
-- If they're vague about where ("somewhere relaxing", "good food, not too touristy"), suggest 2-3 concrete cities with a short reason each, tailored to what they said — mood, budget, region, and today's date for seasonal fit — then ask them to pick.
-- Never accept a country, region, or area name alone as a final answer without proposing actual cities/towns first.
-- A trip can span multiple cities or countries. If the traveller wants that, turn it into an ordered list of destinations. Cap it at 4 destinations — if they ask for more than that in a trip too short to do them justice, say so and suggest trimming the list.
-- Don't ask about specific travel dates — a calendar handles that separately right after this. Use today's date to reason about relative time and seasonality, but never ask the traveller to name exact dates.
-- Duration (total number of days) is always required before you're done.
-- Once the destination(s) and duration are both settled, stop asking questions and end your reply with a machine-readable block on its own line:
-[PARTIAL]{"legs":[{"city":"City Name","country":"Country Name","country_id":"lowercase-slug","days":number of days for this leg}],"duration":total number of days,"dates":null}[/PARTIAL]
-- For a single-destination trip, "legs" has exactly one entry and its "days" equals "duration". For multiple destinations, split "duration" across the legs sensibly (more days for the destination that deserves them) so the "days" values add up to "duration".
-- Always include each leg's country and a lowercase hyphenated country_id slug.
-- The [PARTIAL] block's "city", "country", and "country_id" values must always be in English (their standard English name/slug), even when your reply above it is in Arabic — these are read by code, never shown to the user.
-- Everything before the [PARTIAL] block is shown to the user as your reply — keep it natural and friendly.`;
+  return BATTUTA_CHAT_AGENT_TEMPLATE.replace("{{TODAY}}", formatToday(today)).replace(
+    "{{LANGUAGE_INSTRUCTION}}",
+    languageInstruction,
+  );
 }
 
 const MAX_LEGS = 4;

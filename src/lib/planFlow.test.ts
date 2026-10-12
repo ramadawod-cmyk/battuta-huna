@@ -177,6 +177,14 @@ describe("buildGatherSystemPrompt", () => {
     const prompt = buildGatherSystemPrompt(new Date("2026-01-01"), "ar");
     expect(prompt).toMatch(/must always be in English/);
   });
+
+  it("fills in today's date and never leaks the agent-rules file's editorial comment or raw placeholders", () => {
+    const prompt = buildGatherSystemPrompt(new Date("2026-03-15"));
+    expect(prompt).toContain("Sunday, March 15, 2026");
+    expect(prompt).not.toContain("<!--");
+    expect(prompt).not.toContain("{{TODAY}}");
+    expect(prompt).not.toContain("{{LANGUAGE_INSTRUCTION}}");
+  });
 });
 
 describe("parseDayLabels", () => {
