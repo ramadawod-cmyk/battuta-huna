@@ -113,6 +113,16 @@ export type Trip = {
   days: TripDay[];
   status: "planning" | "ready";
   weather_tip?: string | null;
+  // Bilingual sibling of weather_tip, generated in the same call -- see TripDetail's
+  // weather-tip effect. Absent on any trip created before this existed.
+  weather_tip_ar?: string | null;
+  // Context captured once at trip-creation time (Plan.tsx) and never re-asked -- budget/
+  // origin_city are advisory (prose/tone for AI calls, not a site filter, since sites have no
+  // price-tier data); traveler_notes combines the "anything to not miss" answer with any family
+  // details given, and is what the family-suitability filter and the weather tip are built from.
+  budget?: string | null;
+  origin_city?: string | null;
+  traveler_notes?: string | null;
   created_at: string;
   // Absent/false on every trip created before sharing existed -- treat as private. See
   // TRIP-SHARING-PLAN.md: the trip's own id doubles as the share token once this is true.

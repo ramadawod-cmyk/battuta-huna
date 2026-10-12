@@ -181,3 +181,26 @@ export const PACE_LABEL_KEYS: Record<string, keyof typeof en> = {
   Relaxed: "plan.pace.relaxed",
   "Strict schedule": "plan.pace.strict",
 };
+
+// Advisory only -- stored verbatim on the trip and used as prose context for AI calls (weather
+// tip, day labels), not a site filter: sites/activities have no price-tier data to filter by.
+export const BUDGET_TIERS = ["Budget-friendly", "Mid-range", "Luxury"];
+export const BUDGET_LABEL_KEYS: Record<string, keyof typeof en> = {
+  "Budget-friendly": "plan.budget.budgetFriendly",
+  "Mid-range": "plan.budget.midRange",
+  Luxury: "plan.budget.luxury",
+};
+
+/**
+ * Combines the two free-text answers the gather flow collects (the existing "anything you don't
+ * want to miss" follow-up and, only for a Family party, who's joining) into one string persisted
+ * on the trip as `traveler_notes` -- the single piece of context the family-suitability filter
+ * and the weather-tip generator both read. Either half can be empty.
+ */
+export function composeTravelerNotes(followupNotes: string, familyNotes: string): string {
+  const family = familyNotes.trim();
+  const followup = followupNotes.trim();
+  if (family && followup) return `Traveling with: ${family}. ${followup}`;
+  if (family) return `Traveling with: ${family}.`;
+  return followup;
+}

@@ -6,7 +6,7 @@ import TagPill from "../components/TagPill";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useTranslation } from "../lib/LanguageContext";
-import { GROUP_TYPES, PACE_OPTIONS, GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
+import { GROUP_TYPES, PACE_OPTIONS, BUDGET_TIERS, GROUP_LABEL_KEYS, PACE_LABEL_KEYS, BUDGET_LABEL_KEYS } from "../lib/planFlow";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import { destinationsLabel } from "../lib/trips";
@@ -25,6 +25,7 @@ export default function CustomiseTrip() {
 
   const [groupType, setGroupType] = useState(GROUP_TYPES[1]);
   const [pace, setPace] = useState(PACE_OPTIONS[0]);
+  const [budget, setBudget] = useState<string | null>(null);
 
   useTrackScreen("customise_trip");
 
@@ -42,6 +43,7 @@ export default function CustomiseTrip() {
         }
         if (found.group_type) setGroupType(found.group_type);
         if (found.pace) setPace(found.pace);
+        if (found.budget) setBudget(found.budget);
       })
       .catch((err) => setError(err instanceof Error ? err.message : t("trip.loadFailed")))
       .finally(() => setLoading(false));
@@ -51,8 +53,8 @@ export default function CustomiseTrip() {
     setSaving(true);
     setError(null);
     try {
-      await db("updateTripStatus", { tripId, groupType, pace });
-      track("Trip Details Submitted", { group_type: groupType, pace, trip_id: tripId, source: "customise" });
+      await db("updateTripStatus", { tripId, groupType, pace, budget });
+      track("Trip Details Submitted", { group_type: groupType, pace, budget, trip_id: tripId, source: "customise" });
       navigate(`/trip/${tripId}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : t("customise.saveFailed");
@@ -98,6 +100,13 @@ export default function CustomiseTrip() {
       <div className="flex flex-wrap gap-[10px] mt-[12px] max-w-[700px]">
         {PACE_OPTIONS.map((option) => (
           <TagPill key={option} label={t(PACE_LABEL_KEYS[option])} active={pace === option} onClick={() => setPace(option)} />
+        ))}
+      </div>
+
+      <p className="font-medium text-[11px] text-primary-orange tracking-[0.44px] mt-[32px]">{t("customise.budgetLabel")}</p>
+      <div className="flex flex-wrap gap-[10px] mt-[12px] max-w-[700px]">
+        {BUDGET_TIERS.map((tier) => (
+          <TagPill key={tier} label={t(BUDGET_LABEL_KEYS[tier])} active={budget === tier} onClick={() => setBudget(tier)} />
         ))}
       </div>
 

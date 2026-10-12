@@ -13,6 +13,7 @@ import { categoryOrActivityLabelKey } from "../lib/categories";
 import { slugify } from "../lib/geo";
 import { planMultiCityItinerary, type ItineraryLeg } from "../lib/itineraryPlanner";
 import { pickDefaultPlacesForLegs } from "../lib/placeSelection";
+import { filterUnsuitableForFamily } from "../lib/tripContextFiltering";
 import { useAuth } from "../lib/AuthContext";
 import { useTranslation } from "../lib/LanguageContext";
 import type en from "../lib/i18n/en";
@@ -29,9 +30,12 @@ import {
   type ItineraryResult,
   GROUP_TYPES,
   PACE_OPTIONS,
+  BUDGET_TIERS,
   GROUP_LABEL_KEYS,
   PACE_LABEL_KEYS,
+  BUDGET_LABEL_KEYS,
   INTEREST_TAGS,
+  composeTravelerNotes,
 } from "../lib/planFlow";
 import type { Site } from "../lib/types";
 
@@ -49,7 +53,7 @@ const SUGGESTION_KEYS: (keyof typeof en)[] = [
 
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
-type Step = "city" | "dates" | "followup" | "party" | "interests" | "pace" | "mode";
+type Step = "city" | "dates" | "followup" | "party" | "familyDetails" | "tripExtras" | "interests" | "pace" | "mode";
 
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -111,23 +115,80 @@ function BotRow({ children }: { children: ReactNode }) {
 function PillChoice({
   options,
   labelFor,
+  isActive,
   onSelect,
 }: {
   options: string[];
   labelFor?: (option: string) => string;
+  // Omitted by party/pace, which advance to the next step the instant a pill is tapped, so there's
+  // never a "currently selected" pill to highlight. tripExtras's budget pill is different -- the
+  // user can change their mind before hitting Continue, so it needs visible active state.
+  isActive?: (option: string) => boolean;
   onSelect: (option: string) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-[10px] max-w-[420px]">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          onClick={() => onSelect(opt)}
-          className="bg-white border border-secondary-purple rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium text-text-primary hover:bg-surface-lavender/60 transition-colors"
-        >
-          {labelFor ? labelFor(opt) : opt}
-        </button>
-      ))}
+      {options.map((opt) => {
+        const active = isActive?.(opt) ?? false;
+        return (
+          <button
+            key={opt}
+            onClick={() => onSelect(opt)}
+            className={`rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium transition-colors ${
+              active
+                ? "bg-secondary-purple text-white"
+                : "bg-white border border-secondary-purple text-text-primary hover:bg-surface-lavender/60"
+            }`}
+          >
+            {labelFor ? labelFor(opt) : opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function TripExtrasChoice({
+  budget,
+  originCity,
+  onSelectBudget,
+  onOriginChange,
+  onContinue,
+}: {
+  budget: string | null;
+  originCity: string;
+  onSelectBudget: (budget: string) => void;
+  onOriginChange: (value: string) => void;
+  onContinue: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-[16px] max-w-[420px]">
+      <div>
+        <p className="text-[11px] font-medium text-text-secondary mb-[8px]">{t("plan.budgetLabel")}</p>
+        <PillChoice
+          options={BUDGET_TIERS}
+          labelFor={(b) => t(BUDGET_LABEL_KEYS[b])}
+          isActive={(b) => b === budget}
+          onSelect={onSelectBudget}
+        />
+      </div>
+      <div>
+        <p className="text-[11px] font-medium text-text-secondary mb-[8px]">{t("plan.originLabel")}</p>
+        <input
+          type="text"
+          value={originCity}
+          onChange={(e) => onOriginChange(e.target.value)}
+          placeholder={t("plan.originPlaceholder")}
+          className="w-full h-[44px] rounded-[14px] bg-surface-lavender ps-[16px] pe-[16px] text-[13px] text-text-primary placeholder:text-text-secondary outline-none"
+        />
+      </div>
+      <button
+        onClick={onContinue}
+        className="self-start bg-primary-orange text-white text-[13px] font-bold tracking-[0.5px] rounded-[14px] px-[20px] py-[10px]"
+      >
+        {t("plan.continue")}
+      </button>
     </div>
   );
 }
@@ -207,6 +268,9 @@ export default function Plan() {
   const [partial, setPartial] = useState<PlanPartial | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [followupNotes, setFollowupNotes] = useState("");
+  const [familyNotes, setFamilyNotes] = useState("");
+  const [budget, setBudget] = useState<string | null>(null);
+  const [originCity, setOriginCity] = useState("");
 
   const [sites, setSites] = useState<Site[]>([]);
   const [loadingSites, setLoadingSites] = useState(false);
@@ -232,6 +296,28 @@ export default function Plan() {
     if (sites.length === 0 || userTouchedPlacesRef.current) return;
     setSelectedPlaces(pickDefaultPlacesForLegs(sites, partial?.legs || [], interests));
   }, [sites, interests, partial?.legs]);
+
+  // Narrow, additional pass on top of the default selection above: only runs when the traveller
+  // actually gave family details, and only ever removes from the auto-build default -- never
+  // touches a user's own manual picks in browse mode (userTouchedPlacesRef bails it out, both
+  // before it starts and if the user starts picking while it's still in flight).
+  useEffect(() => {
+    if (!familyNotes.trim() || sites.length === 0 || userTouchedPlacesRef.current) return;
+    let cancelled = false;
+    filterUnsuitableForFamily(familyNotes, sites)
+      .then((excludedNames) => {
+        if (cancelled || userTouchedPlacesRef.current || excludedNames.length === 0) return;
+        setSelectedPlaces((prev) => {
+          const next = new Set(prev);
+          for (const name of excludedNames) next.delete(name);
+          return next;
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [sites, familyNotes]);
 
   function askStep(next: Step, question: string) {
     setStep(next);
@@ -300,7 +386,28 @@ export default function Plan() {
 
   function selectParty(g: string) {
     setGroupType(g);
-    answerStep(t(GROUP_LABEL_KEYS[g]), "interests", t("plan.q.interests"));
+    // Only a Family party gets asked who's joining -- Solo/Couple/Friends skip straight to
+    // tripExtras, so the flow doesn't ask an irrelevant question just to always ask something.
+    if (g === "Family") {
+      answerStep(t(GROUP_LABEL_KEYS[g]), "familyDetails", t("plan.q.familyDetails"));
+    } else {
+      answerStep(t(GROUP_LABEL_KEYS[g]), "tripExtras", t("plan.q.tripExtras"));
+    }
+  }
+
+  function submitFamilyDetails(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = input.trim();
+    setFamilyNotes(trimmed);
+    setInput("");
+    answerStep(trimmed || t("plan.noFamilyDetails"), "tripExtras", t("plan.q.tripExtras"));
+  }
+
+  function continueTripExtras() {
+    const label =
+      [budget ? t(BUDGET_LABEL_KEYS[budget]) : null, originCity.trim() || null].filter(Boolean).join(" · ") ||
+      t("plan.noTripExtras");
+    answerStep(label, "interests", t("plan.q.interests"));
   }
 
   function continueInterests() {
@@ -457,6 +564,9 @@ export default function Plan() {
           duration: itinerary.duration,
           group_type: groupType,
           pace,
+          budget,
+          origin_city: originCity.trim() || null,
+          traveler_notes: composeTravelerNotes(followupNotes, familyNotes) || null,
           days: [],
           auth_user_id: session?.user?.id || null,
         },
@@ -534,7 +644,7 @@ export default function Plan() {
   }
 
   if (phase === "chat") {
-    const showTextInput = step === "city" || step === "followup";
+    const showTextInput = step === "city" || step === "followup" || step === "familyDetails";
     return (
       <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col h-[calc(100dvh-60px)] md:h-[calc(100dvh-120px)]">
         {step === "dates" && partial && (
@@ -591,6 +701,18 @@ export default function Plan() {
               </BotRow>
             )}
 
+            {!sending && step === "tripExtras" && (
+              <BotRow>
+                <TripExtrasChoice
+                  budget={budget}
+                  originCity={originCity}
+                  onSelectBudget={setBudget}
+                  onOriginChange={setOriginCity}
+                  onContinue={continueTripExtras}
+                />
+              </BotRow>
+            )}
+
             {!sending && step === "interests" && (
               <BotRow>
                 <InterestChoice selected={interests} onToggle={toggleInterest} onContinue={continueInterests} />
@@ -616,13 +738,25 @@ export default function Plan() {
           {showTextInput && (
             <form
               className="relative shrink-0 px-[20px] sm:px-[24px] py-[16px] border-t border-text-primary/10"
-              onSubmit={step === "city" ? (e) => { e.preventDefault(); sendMessage(input); } : submitFollowup}
+              onSubmit={
+                step === "city"
+                  ? (e) => { e.preventDefault(); sendMessage(input); }
+                  : step === "familyDetails"
+                    ? submitFamilyDetails
+                    : submitFollowup
+              }
             >
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={step === "city" ? t("plan.replyPlaceholder") : t("plan.followupPlaceholder")}
+                placeholder={
+                  step === "city"
+                    ? t("plan.replyPlaceholder")
+                    : step === "familyDetails"
+                      ? t("plan.familyDetailsPlaceholder")
+                      : t("plan.followupPlaceholder")
+                }
                 className="w-full h-[52px] rounded-[18px] bg-surface-lavender ps-[20px] pe-[64px] text-[15px] text-text-primary placeholder:text-text-secondary outline-none"
               />
               <button
@@ -648,6 +782,7 @@ export default function Plan() {
       <p className="text-[13px] text-text-secondary mt-[6px]">
         {t("plan.durationLabel", { count: partial?.duration ?? 0 })} · {partial?.dates || t("plan.flexibleDates")} ·{" "}
         {t(GROUP_LABEL_KEYS[groupType])} · {t(PACE_LABEL_KEYS[pace])}
+        {budget ? ` · ${t(BUDGET_LABEL_KEYS[budget])}` : ""}
         {interests.length > 0 ? ` · ${interests.map((tag) => t(categoryOrActivityLabelKey(tag))).join(", ")}` : ""}
       </p>
 

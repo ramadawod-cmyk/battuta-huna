@@ -132,8 +132,10 @@ exports.handler = async function(event) {
 
     // ── SAVE WEATHER TIP ─────────────────────────────
     if (action === 'saveWeatherTip') {
-      const { tripId, weatherTip } = data;
-      const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}`, { weather_tip: weatherTip });
+      const { tripId, weatherTip, weatherTipAr } = data;
+      const patch = { weather_tip: weatherTip };
+      if (weatherTipAr) patch.weather_tip_ar = weatherTipAr;
+      const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}`, patch);
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
 
@@ -201,11 +203,12 @@ exports.handler = async function(event) {
 
     // ── UPDATE TRIP STATUS ───────────────────────────
     if (action === 'updateTripStatus') {
-      const { tripId, status, days, groupType, pace } = data;
+      const { tripId, status, days, groupType, pace, budget } = data;
       const patch = { status };
       if (days) patch.days = days;
       if (groupType) patch.group_type = groupType;
       if (pace) patch.pace = pace;
+      if (budget) patch.budget = budget;
       const res = await request('PATCH', `/rest/v1/trips?id=eq.${tripId}&user_id=eq.${deviceId}`, patch);
       return { statusCode: 200, headers, body: JSON.stringify({ updated: true }) };
     }
