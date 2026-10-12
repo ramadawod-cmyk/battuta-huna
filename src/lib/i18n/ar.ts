@@ -19,14 +19,7 @@ const ar: typeof en = {
   "common.backToTrip": "العودة إلى الرحلة",
   "common.backToBlog": "العودة إلى المدونة",
 
-  "landing.getStarted": "ابدأ الآن",
-  "landing.toggleMenu": "تبديل القائمة",
-  "landing.quote": "السفر يترك الإنسان بلا كلام، ثم يحوّله إلى راوي حكايات.",
-  "landing.quoteAuthor": "— ابن بطوطة",
   "landing.startPlanning": "ابدأ في التخطيط لرحلتك",
-  "landing.statSites": "آلاف المواقع الثقافية",
-  "landing.statExplorers": "أكثر من 12,000 مستكشف",
-  "landing.statRating": "تقييم المستخدمين 4.8",
 
   "auth.backToApp": "العودة إلى التطبيق",
   "auth.title": "احفظ رحلتك",

@@ -17,7 +17,7 @@ export default defineConfig({
         short_name: 'Battuta',
         description:
           "AI-powered trip planning and cultural discovery — get notified when you're near significant cultural sites.",
-        start_url: '/',
+        start_url: '/plan',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#6155cc',

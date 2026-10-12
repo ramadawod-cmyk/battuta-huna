@@ -19,14 +19,7 @@ const en = {
   "common.backToTrip": "Back to Trip",
   "common.backToBlog": "Back to Blog",
 
-  "landing.getStarted": "Get Started",
-  "landing.toggleMenu": "Toggle menu",
-  "landing.quote": "Traveling, it leaves you speechless, then turns you into a storyteller.",
-  "landing.quoteAuthor": "— Ibn Battuta",
   "landing.startPlanning": "Start Planning your Trip",
-  "landing.statSites": "Thousands of Cultural Sites",
-  "landing.statExplorers": "12,000+ Explorers",
-  "landing.statRating": "4.8 User Rating",
 
   "auth.backToApp": "Back to app",
   "auth.title": "Save your trip",
