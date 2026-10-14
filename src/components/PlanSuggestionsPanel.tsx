@@ -50,17 +50,18 @@ function SuggestionCard({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="relative bg-white border border-secondary-purple rounded-[20px] p-[16px]">
-      <div className="flex gap-3">
-        <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
-          {imageUrl ? (
-            <img src={imageUrl} alt="" className="size-full object-cover" />
-          ) : (
-            <ImagePlaceholder />
-          )}
-        </div>
+    <div className="relative bg-white border border-secondary-purple rounded-[20px] p-[16px] flex gap-3">
+      {/* self-stretch spans the image down the full left side, next to the subtitle too, not just the title row */}
+      <div className="bg-surface-lavender rounded-[12px] w-[72px] self-stretch shrink-0 overflow-hidden">
+        {imageUrl ? (
+          <img src={imageUrl} alt="" className="size-full object-cover" />
+        ) : (
+          <ImagePlaceholder />
+        )}
+      </div>
+      <div className="min-w-0 flex-1 flex flex-col">
         {/* pe-8 reserves room for a future top-right action (like/more) button, not added yet */}
-        <button type="button" className="text-start min-w-0 flex-1 pe-8" onClick={onClick}>
+        <button type="button" className="text-start pe-8" onClick={onClick}>
           <p className="font-heading font-semibold text-[15px] text-text-primary leading-tight">{title}</p>
           {category && (
             <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
@@ -68,16 +69,16 @@ function SuggestionCard({
             </p>
           )}
         </button>
-      </div>
-      <p className="text-[12px] leading-[1.5] text-text-primary mt-[12px] line-clamp-2">{subtitle}</p>
-      <div className="flex justify-end mt-[8px]">
-        <button
-          type="button"
-          onClick={onClick}
-          className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
-        >
-          {t("poiCard.viewMore")}
-        </button>
+        <p className="text-[12px] leading-[1.5] text-text-primary mt-[8px] line-clamp-2">{subtitle}</p>
+        <div className="flex justify-end mt-[8px]">
+          <button
+            type="button"
+            onClick={onClick}
+            className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
+          >
+            {t("poiCard.viewMore")}
+          </button>
+        </div>
       </div>
     </div>
   );

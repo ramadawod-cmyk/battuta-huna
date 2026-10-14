@@ -34,37 +34,38 @@ export default function PoiCard({
   const { t } = useTranslation();
   const [imgFailed, setImgFailed] = useState(false);
   return (
-    <div className={`relative bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full p-[19px] ${className}`}>
-      <div className="flex gap-4">
-        <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
-          {imageUrl && !imgFailed ? (
-            <img
-              src={imageUrl}
-              alt={name}
-              onError={() => setImgFailed(true)}
-              className="size-full object-cover"
-            />
-          ) : (
-            <ImagePlaceholder />
-          )}
-        </div>
+    <div className={`relative bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full p-[19px] flex gap-4 ${className}`}>
+      {/* self-stretch spans the image down the full left side, next to the description too, not just the name row */}
+      <div className="bg-surface-lavender rounded-[12px] w-[90px] self-stretch shrink-0 overflow-hidden">
+        {imageUrl && !imgFailed ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            onError={() => setImgFailed(true)}
+            className="size-full object-cover"
+          />
+        ) : (
+          <ImagePlaceholder />
+        )}
+      </div>
+      <div className="min-w-0 flex-1 flex flex-col">
         {/* pe-8 reserves room for a future top-right action (like/more) button, not added yet */}
-        <button className="text-start min-w-0 flex-1 pe-8" onClick={onClick}>
+        <button className="text-start pe-8" onClick={onClick}>
           <p className="font-heading font-semibold text-[17px] text-text-primary">{name}</p>
           <p className="font-medium text-[10px] text-text-secondary tracking-[0.4px] mt-[5px]">{distance}</p>
           <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
             {category}
           </p>
         </button>
-      </div>
-      <p className="text-[13px] leading-[1.5] text-text-primary mt-[16px] line-clamp-2">{description}</p>
-      <div className="flex justify-end mt-[8px]">
-        <button
-          onClick={onClick}
-          className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
-        >
-          {t("poiCard.viewMore")}
-        </button>
+        <p className="text-[13px] leading-[1.5] text-text-primary mt-[12px] line-clamp-2">{description}</p>
+        <div className="flex justify-end mt-[8px]">
+          <button
+            onClick={onClick}
+            className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
+          >
+            {t("poiCard.viewMore")}
+          </button>
+        </div>
       </div>
     </div>
   );

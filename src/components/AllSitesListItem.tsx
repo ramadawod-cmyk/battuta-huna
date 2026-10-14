@@ -26,9 +26,10 @@ export default function AllSitesListItem({
   return (
     <button
       onClick={onClick}
-      className={`relative text-start flex gap-[16px] items-start bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
+      className={`relative text-start flex gap-[16px] bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
     >
-      <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
+      {/* self-stretch spans the image down the full left side, next to the description too, not just the name row */}
+      <div className="bg-surface-lavender rounded-[12px] w-[60px] self-stretch shrink-0 overflow-hidden">
         {imageUrl && !imgFailed ? (
           <img
             src={imageUrl}
