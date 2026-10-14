@@ -7,6 +7,12 @@ const FOCUS =
   "Focus on the single most popular, iconic highlights overall -- the handful of things a " +
   "first-time visitor would recognize immediately.";
 
+/** `getSites`' default order is alphabetical by name, not importance -- must_see-first gives an
+ * actually representative "top sites" preview instead of whatever sorts first in the alphabet. */
+function byMustSeeFirst(sites: Site[]): Site[] {
+  return [...sites].sort((a, b) => Number(!!b.must_see) - Number(!!a.must_see));
+}
+
 /**
  * A fast, lightweight alternative to `ensureCitySites` for places that only need to SHOW a
  * handful of sites (e.g. a preview panel), not build out a full itinerary-ready catalog.
@@ -26,7 +32,9 @@ export async function ensureTopSitesPreview(
 ): Promise<Site[]> {
   const existing: Site[] = (await db("getSites", { cityId })) || [];
   if (existing.length >= count) {
-    return existing.slice(0, count).map((site) => ({ ...site, category: normalizeCategory(site.category) }));
+    return byMustSeeFirst(existing)
+      .slice(0, count)
+      .map((site) => ({ ...site, category: normalizeCategory(site.category) }));
   }
 
   const needed = count - existing.length;
@@ -63,7 +71,7 @@ export async function ensureTopSitesPreview(
     const newSites = fresh.map((poi) => buildSiteRow(cityId, cityName, poi));
 
     if (newSites.length > 0) await db("upsertSites", { sites: newSites }).catch(() => {});
-    return [...existing, ...newSites].slice(0, count) as Site[];
+    return byMustSeeFirst([...existing, ...newSites] as Site[]).slice(0, count);
   } catch {
     // A failed preview generation isn't worth surfacing an error for -- just show whatever's
     // already cached (even an empty list), the same tolerant fallback ensureCitySites itself uses.
