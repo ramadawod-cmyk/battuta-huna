@@ -5,7 +5,7 @@ import { slugify, haversineMeters } from "./geo";
 import { track } from "./analytics";
 import type { Site } from "./types";
 
-type GeneratedPoi = {
+export type GeneratedPoi = {
   name: string;
   nameAr: string;
   category: string;
@@ -35,15 +35,15 @@ function extractJsonArray(text: string): unknown[] {
 // retry), producing only 12 candidate places for what should've been ~20+. Re-measured directly
 // against the Anthropic API with the current (8-field) schema: 3-item batches ran 5.7-7.2s (still
 // too close to the cap for comfort), 2-item batches ran a consistent 3.6-4.0s — a real margin.
-const BATCH_SIZE = 2;
+export const BATCH_SIZE = 2;
 const BATCH_COUNT = 12;
 // Independent parallel batches can't see each other's picks, so the same landmark sometimes comes
 // back twice under different names (e.g. "Notre-Dame Cathedral" and "Cathédrale Notre-Dame de
 // Paris" from two different batches, at effectively identical coordinates) — exact-name dedup
 // alone misses that. Treat two POIs within this radius of each other as the same place.
-const NEAR_DUPLICATE_METERS = 150;
+export const NEAR_DUPLICATE_METERS = 150;
 
-async function generatePoiBatch(cityName: string, countryName: string, focus: string, count: number): Promise<GeneratedPoi[]> {
+export async function generatePoiBatch(cityName: string, countryName: string, focus: string, count: number): Promise<GeneratedPoi[]> {
   const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. ${ARABIC_VOICE_GUIDANCE} Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "nameAr": string (the place's real Arabic name if one exists, otherwise a natural Arabic rendering), "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (10-14 words, warm editorial tone, no markdown), "descriptionAr": string (10-14 words), "lat": number, "lng": number, "mustSee": boolean (true only for iconic, unmissable landmarks a first-time visitor shouldn't skip), "durationMinutes": number (typical time a visitor spends here, in minutes)}.`;
 
   const text = await planAgent(system, [
@@ -53,7 +53,7 @@ async function generatePoiBatch(cityName: string, countryName: string, focus: st
   return pois.map((poi) => ({ ...poi, category: normalizeCategory(poi.category) }));
 }
 
-function isNearDuplicate(poi: { lat: number; lng: number }, against: { lat: number; lng: number }[]): boolean {
+export function isNearDuplicate(poi: { lat: number; lng: number }, against: { lat: number; lng: number }[]): boolean {
   return against.some((p) => haversineMeters(p.lat, p.lng, poi.lat, poi.lng) < NEAR_DUPLICATE_METERS);
 }
 
@@ -95,6 +95,27 @@ async function generatePois(cityName: string, countryName: string, avoid: Site[]
   return accepted;
 }
 
+/** Maps one AI-generated POI into the row shape `upsertSites` expects, shared by the full cold-start generator and the lightweight preview generator so both populate the exact same table the exact same way. */
+export function buildSiteRow(cityId: string, cityName: string, poi: GeneratedPoi) {
+  return {
+    id: `${cityId}-${slugify(poi.name)}`,
+    city_id: cityId,
+    name: poi.name,
+    name_ar: poi.nameAr || null,
+    category: poi.category,
+    tags: poi.tags,
+    description: poi.description,
+    description_ar: poi.descriptionAr || null,
+    lat: poi.lat,
+    lng: poi.lng,
+    map_url: `https://maps.google.com/?q=${encodeURIComponent(poi.name + ", " + cityName)}`,
+    source: "ai",
+    review_status: "ai_complete",
+    must_see: poi.mustSee ?? false,
+    duration_minutes: poi.durationMinutes ?? null,
+  };
+}
+
 // Below this many cached places, a multi-day trip runs out of candidates partway through and later
 // days come back sparse or empty (a real 6-day trip against a city stuck at 12 cached sites did
 // exactly that). Cities under the target get topped up with a fresh generation pass on next visit.
@@ -124,23 +145,7 @@ export async function ensureCitySites(
 
   try {
     const generated = await generatePois(cityName, countryName, existing);
-    const newSites = generated.map((poi) => ({
-      id: `${cityId}-${slugify(poi.name)}`,
-      city_id: cityId,
-      name: poi.name,
-      name_ar: poi.nameAr || null,
-      category: poi.category,
-      tags: poi.tags,
-      description: poi.description,
-      description_ar: poi.descriptionAr || null,
-      lat: poi.lat,
-      lng: poi.lng,
-      map_url: `https://maps.google.com/?q=${encodeURIComponent(poi.name + ", " + cityName)}`,
-      source: "ai",
-      review_status: "ai_complete",
-      must_see: poi.mustSee ?? false,
-      duration_minutes: poi.durationMinutes ?? null,
-    }));
+    const newSites = generated.map((poi) => buildSiteRow(cityId, cityName, poi));
 
     if (newSites.length > 0) await db("upsertSites", { sites: newSites });
     if (existing.length > 0) {

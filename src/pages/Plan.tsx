@@ -51,6 +51,13 @@ const SUGGESTION_KEYS: (keyof typeof en)[] = [
   "plan.suggestion.couples",
 ];
 
+// Unlike the other suggestion chips (a mood/group type, no implied destination), Umrah names a
+// fixed, unambiguous destination -- the suggestions panel can know this the instant it's clicked,
+// without waiting on the chat to work through duration/leg-split questions first.
+const SUGGESTION_DESTINATION_HINTS: Partial<Record<keyof typeof en, PlanLeg>> = {
+  "plan.suggestion.umrah": { city: "Mecca", country: "Saudi Arabia", country_id: "saudi-arabia", days: 0 },
+};
+
 
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
 type Phase = "landing" | "chat" | "selecting" | "building";
@@ -267,6 +274,12 @@ export default function Plan() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [partial, setPartial] = useState<PlanPartial | null>(null);
+  // Set the instant a suggestion chip with an already-known destination (currently just Umrah --
+  // Mecca/Madina aren't ambiguous the way "Flying Solo" is) is clicked, so the suggestions panel
+  // doesn't sit on stale "near you" results for the 1-2 turns the chat still needs before it has
+  // enough (duration, single-city-or-both) to emit the real [PARTIAL] block. `partial` always wins
+  // once the chat catches up -- see the `partial?.legs[0] ?? destinationHint` below.
+  const [destinationHint, setDestinationHint] = useState<PlanLeg | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [followupNotes, setFollowupNotes] = useState("");
   const [familyNotes, setFamilyNotes] = useState("");
@@ -633,7 +646,11 @@ export default function Plan() {
           {SUGGESTION_KEYS.map((key) => (
             <button
               key={key}
-              onClick={() => sendMessage(t(key))}
+              onClick={() => {
+                const hint = SUGGESTION_DESTINATION_HINTS[key];
+                if (hint) setDestinationHint(hint);
+                sendMessage(t(key));
+              }}
               className="bg-white border border-secondary-purple rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium text-text-primary"
             >
               {t(key)}
@@ -774,7 +791,7 @@ export default function Plan() {
         </div>
 
         <div className="hidden lg:block w-[320px] shrink-0 h-full overflow-y-auto">
-          <PlanSuggestionsPanel destination={partial?.legs[0] ?? null} />
+          <PlanSuggestionsPanel destination={partial?.legs[0] ?? destinationHint} />
         </div>
       </div>
     );
