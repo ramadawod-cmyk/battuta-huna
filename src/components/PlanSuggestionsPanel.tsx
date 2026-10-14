@@ -50,16 +50,8 @@ function SuggestionCard({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="bg-white border border-secondary-purple rounded-[20px] p-[16px]">
-      <div className="flex justify-between gap-3">
-        <button type="button" className="text-start min-w-0" onClick={onClick}>
-          <p className="font-heading font-semibold text-[15px] text-text-primary leading-tight">{title}</p>
-          {category && (
-            <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
-              {category}
-            </p>
-          )}
-        </button>
+    <div className="relative bg-white border border-secondary-purple rounded-[20px] p-[16px]">
+      <div className="flex gap-3">
         <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
           {imageUrl ? (
             <img src={imageUrl} alt="" className="size-full object-cover" />
@@ -67,6 +59,15 @@ function SuggestionCard({
             <ImagePlaceholder />
           )}
         </div>
+        {/* pe-8 reserves room for a future top-right action (like/more) button, not added yet */}
+        <button type="button" className="text-start min-w-0 flex-1 pe-8" onClick={onClick}>
+          <p className="font-heading font-semibold text-[15px] text-text-primary leading-tight">{title}</p>
+          {category && (
+            <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
+              {category}
+            </p>
+          )}
+        </button>
       </div>
       <p className="text-[12px] leading-[1.5] text-text-primary mt-[12px] line-clamp-2">{subtitle}</p>
       <div className="flex justify-end mt-[8px]">
