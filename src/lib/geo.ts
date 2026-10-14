@@ -87,22 +87,21 @@ function nearestMajorCity(lat: number, lng: number): string | null {
   return null;
 }
 
-/** Reverse-geocode lat/lng to a city via Nominatim (OpenStreetMap), same provider the legacy PWA uses. */
+/**
+ * Reverse-geocode lat/lng to a city. Uses Geoapify when VITE_GEOAPIFY_KEY is configured -- same
+ * reasoning as the tile swap in TripMapBuilder.tsx, Nominatim's public server isn't meant for
+ * sustained production traffic. Falls back to Nominatim directly for local dev with no key set.
+ */
 export async function reverseGeocodeCity(lat: number, lng: number): Promise<ReverseGeocodeResult> {
-  const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) throw new Error("Reverse geocoding failed");
-  const data = await res.json();
-  const address = data.address || {};
-  const countryName: string | undefined = address.country;
+  const geoapifyKey = import.meta.env.VITE_GEOAPIFY_KEY;
+  const address = geoapifyKey ? await reverseGeocodeGeoapify(lat, lng, geoapifyKey) : await reverseGeocodeNominatim(lat, lng);
+  const countryName = address.country;
 
-  const preciseName: string | undefined = address.city || address.town || address.village;
+  const preciseName = address.city || address.town || address.village;
   const cityName = nearestMajorCity(lat, lng) || preciseName || address.county;
   if (!cityName) throw new Error("Could not determine a city from your location");
 
-  const fineGrained: string | undefined =
-    address.suburb || address.neighbourhood || address.city_district || preciseName || address.county;
+  const fineGrained = address.suburb || address.neighbourhood || address.district || preciseName || address.county;
   const locality = fineGrained && fineGrained !== cityName ? fineGrained : null;
 
   return {
@@ -112,4 +111,34 @@ export async function reverseGeocodeCity(lat: number, lng: number): Promise<Reve
     countryName: countryName || "Unknown",
     locality,
   };
+}
+
+type RawAddress = {
+  country?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  county?: string;
+  suburb?: string;
+  neighbourhood?: string;
+  district?: string;
+};
+
+async function reverseGeocodeNominatim(lat: number, lng: number): Promise<RawAddress> {
+  const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error("Reverse geocoding failed");
+  const data = await res.json();
+  const address = data.address || {};
+  return { ...address, district: address.city_district };
+}
+
+async function reverseGeocodeGeoapify(lat: number, lng: number, apiKey: string): Promise<RawAddress> {
+  const res = await fetch(
+    `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&format=json&lang=en&apiKey=${apiKey}`,
+  );
+  if (!res.ok) throw new Error("Reverse geocoding failed");
+  const data = await res.json();
+  return data.results?.[0] || {};
 }
