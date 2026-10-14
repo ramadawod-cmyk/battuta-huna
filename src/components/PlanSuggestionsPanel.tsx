@@ -4,7 +4,8 @@ import { useCity } from "../lib/CityContext";
 import { useTranslation } from "../lib/LanguageContext";
 import { ensureTopSitesPreview } from "../lib/sitesPreview";
 import { ensurePopularDestinations, type PopularDestination } from "../lib/popularDestinations";
-import { useWikiThumbnail } from "../lib/useWikiThumbnail";
+import { ensureCityHeroImage } from "../lib/cityHero";
+import { ensureSiteImage } from "../lib/siteImage";
 import { slugify } from "../lib/geo";
 import { track } from "../lib/analytics";
 import ImagePlaceholder from "./ImagePlaceholder";
@@ -24,20 +25,16 @@ function exploreUrl(
 }
 
 function SuggestionCard({
-  imageQuery,
-  fallbackImageUrl,
+  imageUrl,
   title,
   subtitle,
   onClick,
 }: {
-  imageQuery: string;
-  fallbackImageUrl?: string | null;
+  imageUrl: string | null;
   title: string;
   subtitle: string;
   onClick: () => void;
 }) {
-  const wikiImage = useWikiThumbnail(imageQuery);
-  const imageUrl = fallbackImageUrl || wikiImage;
   return (
     <button
       type="button"
@@ -57,6 +54,57 @@ function SuggestionCard({
       </div>
     </button>
   );
+}
+
+/** Resolves + persists its own hero image (see ensureCityHeroImage) before rendering a card. */
+function DestinationCard({
+  destination,
+  title,
+  subtitle,
+  onClick,
+}: {
+  destination: PopularDestination;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const cityId = slugify(destination.city);
+    const countryId = slugify(destination.country);
+    ensureCityHeroImage(cityId, destination.city, countryId, destination.country).then((url) => {
+      if (!cancelled) setImageUrl(url);
+    });
+    return () => { cancelled = true; };
+  }, [destination.city, destination.country]);
+
+  return <SuggestionCard imageUrl={imageUrl} title={title} subtitle={subtitle} onClick={onClick} />;
+}
+
+/** Resolves + persists its own image (see ensureSiteImage) before rendering a card. */
+function SiteCard({
+  site,
+  cityId,
+  title,
+  subtitle,
+  onClick,
+}: {
+  site: Site;
+  cityId: string;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(site.image_url || null);
+  useEffect(() => {
+    if (site.image_url) return;
+    let cancelled = false;
+    ensureSiteImage(site, cityId).then((url) => { if (!cancelled) setImageUrl(url); });
+    return () => { cancelled = true; };
+  }, [site.id, site.image_url, cityId]);
+
+  return <SuggestionCard imageUrl={imageUrl} title={title} subtitle={subtitle} onClick={onClick} />;
 }
 
 function PanelSkeleton() {
@@ -114,10 +162,10 @@ export default function PlanSuggestionsPanel({ destination }: { destination: Pla
         {citySites?.length === 0 && <p className="text-[12px] text-text-secondary">{t("plan.panel.noSites")}</p>}
         <div className="flex flex-col gap-[12px]">
           {citySites?.map((site) => (
-            <SuggestionCard
+            <SiteCard
               key={site.id}
-              imageQuery={site.name}
-              fallbackImageUrl={site.image_url}
+              site={site}
+              cityId={cityId}
               title={(language === "ar" && site.name_ar) || site.name}
               subtitle={(language === "ar" && site.description_ar) || site.description}
               onClick={() => {
@@ -144,9 +192,9 @@ export default function PlanSuggestionsPanel({ destination }: { destination: Pla
           const dCityId = slugify(d.city);
           const dCountryId = slugify(d.country);
           return (
-            <SuggestionCard
+            <DestinationCard
               key={d.city}
-              imageQuery={d.city}
+              destination={d}
               title={language === "ar" ? d.cityAr : d.city}
               subtitle={language === "ar" ? d.reasonAr : d.reason}
               onClick={() => {
