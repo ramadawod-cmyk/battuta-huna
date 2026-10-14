@@ -6,6 +6,7 @@ import TagPill from "../components/TagPill";
 import Button from "../components/Button";
 import BrandMark from "../components/BrandMark";
 import PlanDatePicker from "../components/PlanDatePicker";
+import PlanSuggestionsPanel from "../components/PlanSuggestionsPanel";
 import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { activityToCandidate, ensureCityActivities } from "../lib/activities";
@@ -646,13 +647,14 @@ export default function Plan() {
   if (phase === "chat") {
     const showTextInput = step === "city" || step === "followup" || step === "familyDetails";
     return (
-      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col h-[calc(100dvh-60px)] md:h-[calc(100dvh-120px)]">
+      <div className="flex gap-[24px] lg:gap-[32px] items-start px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] h-[calc(100dvh-60px)] md:h-[100dvh]">
         {step === "dates" && partial && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4">
             <PlanDatePicker duration={partial.duration || 1} onConfirm={confirmDates} />
           </div>
         )}
 
+        <div className="flex flex-col flex-1 min-w-0 max-w-[760px] h-full">
         <div className="flex flex-col flex-1 min-h-0 rounded-[24px] border border-secondary-purple/25 bg-white shadow-[0px_16px_40px_0px_rgba(48,48,48,0.06)] overflow-hidden">
           <div className="flex items-center gap-[12px] px-[20px] sm:px-[24px] h-[68px] shrink-0 border-b border-text-primary/10">
             <div className="size-[38px] rounded-full bg-secondary-purple flex items-center justify-center shrink-0">
@@ -768,6 +770,11 @@ export default function Plan() {
               </button>
             </form>
           )}
+        </div>
+        </div>
+
+        <div className="hidden lg:block w-[320px] shrink-0 h-full overflow-y-auto">
+          <PlanSuggestionsPanel destination={partial?.legs[0] ?? null} />
         </div>
       </div>
     );

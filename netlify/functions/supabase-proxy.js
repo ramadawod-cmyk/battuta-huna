@@ -152,6 +152,20 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
+    // ── GET POPULAR DESTINATIONS (cached) ────────────
+    if (action === 'getPopularDestinations') {
+      const { originCityId } = data;
+      const res = await request('GET', `/rest/v1/popular_destinations_cache?origin_city_id=eq.${encodeURIComponent(originCityId)}&select=destinations`);
+      const rows = res.body;
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
+    }
+
+    // ── UPSERT POPULAR DESTINATIONS (AI generated) ───
+    if (action === 'upsertPopularDestinations') {
+      const res = await request('POST', '/rest/v1/popular_destinations_cache', data.row, 'resolution=merge-duplicates');
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
     // ── UPSERT COUNTRY ───────────────────────────────
     if (action === 'upsertCountry') {
       const country = data.country;

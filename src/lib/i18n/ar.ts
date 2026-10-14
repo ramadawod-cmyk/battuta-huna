@@ -125,6 +125,16 @@ const ar: typeof en = {
   "explore.tryAgain": "حاول مرة أخرى",
   "explore.nearbyWithinRange": "قريب منك ضمن النطاق",
   "explore.noSitesForCategory": "لا توجد مواقع لهذه الفئة بعد.",
+  "explore.statusExploring": "استكشاف",
+  "explore.sitesInCity": "{count} موقع لاستكشافه",
+  "explore.topSitesIn": "أفضل المواقع في {city}",
+  "explore.gatheringSitesFor": "يجمع بطوطة المواقع الثقافية في {city} لأول مرة، قد يستغرق هذا لحظة.",
+  "explore.loadFailed": "تعذّر تحميل هذه الوجهة الآن.",
+
+  "plan.panel.popularFrom": "وجهات شائعة من {city}",
+  "plan.panel.popularGeneric": "وجهات شائعة",
+  "plan.panel.popularIn": "الأشهر في {city}",
+  "plan.panel.noSites": "لم نعثر على مواقع لهذه الوجهة بعد.",
 
   "allSites.title": "كل المواقع",
   "allSites.searchPlaceholder": "ابحث في المواقع أو الفئات…",
