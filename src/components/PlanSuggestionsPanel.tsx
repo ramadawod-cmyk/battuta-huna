@@ -9,8 +9,16 @@ import { ensureSiteImage } from "../lib/siteImage";
 import { slugify } from "../lib/geo";
 import { track } from "../lib/analytics";
 import ImagePlaceholder from "./ImagePlaceholder";
+import { CATEGORY_ACCENTS, CATEGORY_LABEL_KEYS, normalizeCategory, type CategoryAccent } from "../lib/categories";
 import type { PlanLeg } from "../lib/planFlow";
 import type { Site } from "../lib/types";
+
+const CATEGORY_TEXT_CLASSES: Record<CategoryAccent, string> = {
+  purple: "text-secondary-purple",
+  orange: "text-primary-orange",
+  coral: "text-error",
+  teal: "text-tertiary-teal",
+};
 
 function exploreUrl(
   cityId: string,
@@ -24,35 +32,53 @@ function exploreUrl(
   return `/explore?${params.toString()}`;
 }
 
+/** Styled to match PoiCard (used on the Explore page) so the panel feels like the same app. */
 function SuggestionCard({
   imageUrl,
   title,
   subtitle,
+  category,
+  categoryAccent = "purple",
   onClick,
 }: {
   imageUrl: string | null;
   title: string;
   subtitle: string;
+  category?: string;
+  categoryAccent?: CategoryAccent;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-start w-full bg-white border border-secondary-purple rounded-[20px] overflow-hidden hover:bg-surface-lavender/40 transition-colors"
-    >
-      <div className="relative w-full h-[90px] bg-surface-lavender">
-        {imageUrl ? (
-          <img src={imageUrl} alt="" className="absolute inset-0 size-full object-cover" />
-        ) : (
-          <ImagePlaceholder />
-        )}
+    <div className="bg-white border border-secondary-purple rounded-[20px] p-[16px]">
+      <div className="flex justify-between gap-3">
+        <button type="button" className="text-start min-w-0" onClick={onClick}>
+          <p className="font-heading font-semibold text-[15px] text-text-primary leading-tight">{title}</p>
+          {category && (
+            <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
+              {category}
+            </p>
+          )}
+        </button>
+        <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
+          {imageUrl ? (
+            <img src={imageUrl} alt="" className="size-full object-cover" />
+          ) : (
+            <ImagePlaceholder />
+          )}
+        </div>
       </div>
-      <div className="p-[14px]">
-        <p className="font-heading font-semibold text-[14px] text-text-primary leading-tight">{title}</p>
-        <p className="text-[12px] text-text-secondary mt-[4px] leading-[1.4] line-clamp-2">{subtitle}</p>
+      <p className="text-[12px] leading-[1.5] text-text-primary mt-[12px] line-clamp-2">{subtitle}</p>
+      <div className="flex justify-end mt-[8px]">
+        <button
+          type="button"
+          onClick={onClick}
+          className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
+        >
+          {t("poiCard.viewMore")}
+        </button>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -96,6 +122,7 @@ function SiteCard({
   subtitle: string;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string | null>(site.image_url || null);
   useEffect(() => {
     if (site.image_url) return;
@@ -104,7 +131,17 @@ function SiteCard({
     return () => { cancelled = true; };
   }, [site.id, site.image_url, cityId]);
 
-  return <SuggestionCard imageUrl={imageUrl} title={title} subtitle={subtitle} onClick={onClick} />;
+  const category = normalizeCategory(site.category);
+  return (
+    <SuggestionCard
+      imageUrl={imageUrl}
+      title={title}
+      subtitle={subtitle}
+      category={t(CATEGORY_LABEL_KEYS[category]).toUpperCase()}
+      categoryAccent={CATEGORY_ACCENTS[category]}
+      onClick={onClick}
+    />
+  );
 }
 
 function PanelSkeleton() {
