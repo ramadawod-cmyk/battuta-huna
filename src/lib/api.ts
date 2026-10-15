@@ -70,3 +70,15 @@ export async function wikiImagesBySearch(search: string): Promise<WikiImage[]> {
   const data = await res.json();
   return data.images || [];
 }
+
+export type UnsplashCityImage = { url: string; creditName: string | null; creditUrl: string | null };
+
+/** Unsplash city photo lookup -- the Access Key stays server-side in the Netlify function, never shipped to the client. */
+export async function unsplashCityImage(cityName: string, countryName?: string): Promise<UnsplashCityImage | null> {
+  const params = new URLSearchParams({ city: cityName });
+  if (countryName) params.set("country", countryName);
+  const res = await fetch(`/.netlify/functions/unsplash-image?${params.toString()}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data?.url ? data : null;
+}

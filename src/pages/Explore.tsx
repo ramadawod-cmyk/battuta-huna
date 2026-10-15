@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import TagPill from "../components/TagPill";
 import PoiCard from "../components/PoiCard";
 import SiteDetailModal from "../components/SiteDetailModal";
+import UnsplashCredit from "../components/UnsplashCredit";
 import { useCity } from "../lib/CityContext";
 import { useTranslation } from "../lib/LanguageContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
@@ -167,6 +168,9 @@ export default function Explore() {
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-r from-[#2d2a5c] to-secondary-purple" />
+        )}
+        {heroImagePrimaryOk && !override && homeCity.heroImageCredit && (
+          <UnsplashCredit name={homeCity.heroImageCredit.name} profileUrl={homeCity.heroImageCredit.profileUrl} />
         )}
       </div>
 

@@ -9,6 +9,7 @@ import { ensureSiteImage } from "../lib/siteImage";
 import { slugify } from "../lib/geo";
 import { track } from "../lib/analytics";
 import ImagePlaceholder from "./ImagePlaceholder";
+import UnsplashCredit from "./UnsplashCredit";
 import { CATEGORY_ACCENTS, CATEGORY_LABEL_KEYS, normalizeCategory, type CategoryAccent } from "../lib/categories";
 import type { PlanLeg } from "../lib/planFlow";
 import type { Site } from "../lib/types";
@@ -35,6 +36,7 @@ function exploreUrl(
 /** Styled to match PoiCard (used on the Explore page) so the panel feels like the same app. */
 function SuggestionCard({
   imageUrl,
+  imageCredit,
   title,
   subtitle,
   category,
@@ -42,6 +44,7 @@ function SuggestionCard({
   onClick,
 }: {
   imageUrl: string | null;
+  imageCredit?: { name: string; profileUrl: string } | null;
   title: string;
   subtitle: string;
   category?: string;
@@ -53,12 +56,13 @@ function SuggestionCard({
     <div className="relative bg-white border border-secondary-purple rounded-[20px] p-[16px] flex flex-col">
       <div className="flex gap-3">
         {/* aspect-square + self-stretch: a square that matches the height of the title/subtitle block beside it, not the view-more link below */}
-        <div className="bg-surface-lavender rounded-[12px] aspect-square self-stretch shrink-0 overflow-hidden">
+        <div className="relative bg-surface-lavender rounded-[12px] aspect-square self-stretch shrink-0 overflow-hidden">
           {imageUrl ? (
             <img src={imageUrl} alt="" className="size-full object-cover" />
           ) : (
             <ImagePlaceholder />
           )}
+          {imageCredit && <UnsplashCredit name={imageCredit.name} profileUrl={imageCredit.profileUrl} compact />}
         </div>
         <div className="min-w-0 flex-1 flex flex-col">
           {/* pe-8 reserves room for a future top-right action (like/more) button, not added yet */}
@@ -98,18 +102,21 @@ function DestinationCard({
   subtitle: string;
   onClick: () => void;
 }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [image, setImage] = useState<{ url: string; creditName: string | null; creditUrl: string | null } | null>(null);
   useEffect(() => {
     let cancelled = false;
     const cityId = slugify(destination.city);
     const countryId = slugify(destination.country);
-    ensureCityHeroImage(cityId, destination.city, countryId, destination.country).then((url) => {
-      if (!cancelled) setImageUrl(url);
+    ensureCityHeroImage(cityId, destination.city, countryId, destination.country).then((result) => {
+      if (!cancelled) setImage(result);
     });
     return () => { cancelled = true; };
   }, [destination.city, destination.country]);
 
-  return <SuggestionCard imageUrl={imageUrl} title={title} subtitle={subtitle} onClick={onClick} />;
+  const imageCredit = image?.creditName && image?.creditUrl ? { name: image.creditName, profileUrl: image.creditUrl } : null;
+  return (
+    <SuggestionCard imageUrl={image?.url ?? null} imageCredit={imageCredit} title={title} subtitle={subtitle} onClick={onClick} />
+  );
 }
 
 /** Resolves + persists its own image (see ensureSiteImage) before rendering a card. */
