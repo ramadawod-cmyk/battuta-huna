@@ -28,8 +28,8 @@ export default function AllSitesListItem({
       onClick={onClick}
       className={`relative text-start flex gap-[16px] bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
     >
-      {/* self-stretch spans the image down the full left side, next to the description too, not just the name row */}
-      <div className="bg-surface-lavender rounded-[12px] w-[60px] self-stretch shrink-0 overflow-hidden">
+      {/* aspect-square + self-stretch: a square that matches the height of the name/category/description block beside it */}
+      <div className="bg-surface-lavender rounded-[12px] aspect-square self-stretch shrink-0 overflow-hidden">
         {imageUrl && !imgFailed ? (
           <img
             src={imageUrl}
