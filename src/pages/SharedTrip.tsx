@@ -2,15 +2,16 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import BrandMark from "../components/BrandMark";
 import SiteDetailModal from "../components/SiteDetailModal";
+import UnsplashCredit from "../components/UnsplashCredit";
 import { TripGuide, TripItinerary } from "../components/TripContent";
 import { db } from "../lib/api";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
+import { useCityHeroImage } from "../lib/cityHero";
 import { useTranslation } from "../lib/LanguageContext";
 import { BUDGET_LABEL_KEYS, GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { slugify } from "../lib/geo";
 import { publicDateLabel } from "../lib/tripSharing";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
-import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import type { Trip } from "../lib/types";
@@ -31,14 +32,15 @@ export default function SharedTrip() {
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
   const [selectedSite, setSelectedSite] = useState<{ day: number; slotName: string } | null>(null);
-  const heroImageUrl = useWikiThumbnail(trip?.city);
-  const [heroImageFailed, setHeroImageFailed] = useState(false);
+  const primaryDestination = trip ? tripDestinations(trip)[0] : null;
+  const hero = useCityHeroImage(
+    primaryDestination?.cityId,
+    primaryDestination?.city,
+    primaryDestination?.country ? slugify(primaryDestination.country) : undefined,
+    primaryDestination?.country,
+  );
 
   useTrackScreen("shared_trip");
-
-  useEffect(() => {
-    setHeroImageFailed(false);
-  }, [heroImageUrl]);
 
   useEffect(() => {
     setLoading(true);
@@ -115,14 +117,15 @@ export default function SharedTrip() {
             </p>
 
             <div className="relative mt-[16px] bg-secondary-purple rounded-[24px] w-full h-[200px] sm:h-[240px] overflow-hidden">
-              {heroImageUrl && !heroImageFailed && (
+              {hero.displayedUrl && (
                 <img
-                  src={heroImageUrl}
+                  src={hero.displayedUrl}
                   alt={trip.city}
-                  onError={() => setHeroImageFailed(true)}
+                  onError={hero.onImgError}
                   className="absolute inset-0 size-full object-cover"
                 />
               )}
+              {hero.credit && <UnsplashCredit name={hero.credit.name} profileUrl={hero.credit.profileUrl} />}
             </div>
 
             {/* Display-only -- unlike TripDetail, a stranger's view never generates this itself. */}

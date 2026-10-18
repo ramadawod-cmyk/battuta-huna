@@ -11,7 +11,8 @@ import { useTranslation } from "../lib/LanguageContext";
 import { BUDGET_LABEL_KEYS, GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { slugify } from "../lib/geo";
 import { ensureCityTips, type CityTips } from "../lib/cityTips";
-import { useWikiThumbnail } from "../lib/useWikiThumbnail";
+import { useCityHeroImage } from "../lib/cityHero";
+import UnsplashCredit from "../components/UnsplashCredit";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import { shareUrl } from "../lib/tripSharing";
@@ -27,8 +28,13 @@ export default function TripDetail() {
   const [tipsByCity, setTipsByCity] = useState<Record<string, CityTips>>({});
   const [error, setError] = useState<string | null>(null);
   const [generatingWeatherTip, setGeneratingWeatherTip] = useState(false);
-  const heroImageUrl = useWikiThumbnail(trip?.city);
-  const [heroImageFailed, setHeroImageFailed] = useState(false);
+  const primaryDestination = trip ? tripDestinations(trip)[0] : null;
+  const hero = useCityHeroImage(
+    primaryDestination?.cityId,
+    primaryDestination?.city,
+    primaryDestination?.country ? slugify(primaryDestination.country) : undefined,
+    primaryDestination?.country,
+  );
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
   const [swapTarget, setSwapTarget] = useState<{ day: number; slotName: string } | null>(null);
@@ -38,10 +44,6 @@ export default function TripDetail() {
   const [linkCopied, setLinkCopied] = useState<{ url: string; copied: boolean } | null>(null);
 
   useTrackScreen("trip_detail");
-
-  useEffect(() => {
-    setHeroImageFailed(false);
-  }, [heroImageUrl]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -219,14 +221,15 @@ export default function TripDetail() {
       {shareError && <p className="text-primary-orange text-[12px] mt-[8px]">{shareError}</p>}
 
       <div className="relative mt-[16px] bg-secondary-purple rounded-[24px] w-full h-[200px] sm:h-[240px] overflow-hidden">
-        {heroImageUrl && !heroImageFailed && (
+        {hero.displayedUrl && (
           <img
-            src={heroImageUrl}
+            src={hero.displayedUrl}
             alt={trip.city}
-            onError={() => setHeroImageFailed(true)}
+            onError={hero.onImgError}
             className="absolute inset-0 size-full object-cover"
           />
         )}
+        {hero.credit && <UnsplashCredit name={hero.credit.name} profileUrl={hero.credit.profileUrl} />}
       </div>
 
       {(language === "ar" ? trip.weather_tip_ar || trip.weather_tip : trip.weather_tip) && (
