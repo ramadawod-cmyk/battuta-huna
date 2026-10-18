@@ -125,6 +125,16 @@ const en = {
   "explore.tryAgain": "Try again",
   "explore.nearbyWithinRange": "NEARBY · WITHIN RANGE",
   "explore.noSitesForCategory": "No sites found for this category yet.",
+  "explore.statusExploring": "EXPLORING",
+  "explore.sitesInCity": "{count} sites to explore",
+  "explore.topSitesIn": "Top sites in {city}",
+  "explore.gatheringSitesFor": "Battuta is gathering cultural sites for {city} for the first time — this can take a moment.",
+  "explore.loadFailed": "Couldn't load this destination right now.",
+
+  "plan.panel.popularFrom": "Popular destinations from {city}",
+  "plan.panel.popularGeneric": "Popular destinations",
+  "plan.panel.popularIn": "Popular in {city}",
+  "plan.panel.noSites": "No sites found yet for this destination.",
 
   "allSites.title": "All Sites",
   "allSites.searchPlaceholder": "Search sites, categories…",

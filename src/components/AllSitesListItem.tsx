@@ -26,9 +26,10 @@ export default function AllSitesListItem({
   return (
     <button
       onClick={onClick}
-      className={`text-start flex gap-[16px] items-start bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
+      className={`relative text-start flex gap-[16px] bg-white border border-secondary-purple rounded-[20px] w-full max-w-[358px] p-[19px] ${className}`}
     >
-      <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
+      {/* aspect-square + self-stretch: a square that matches the height of the name/category/description block beside it */}
+      <div className="bg-surface-lavender rounded-[12px] aspect-square self-stretch shrink-0 overflow-hidden">
         {imageUrl && !imgFailed ? (
           <img
             src={imageUrl}
@@ -40,7 +41,8 @@ export default function AllSitesListItem({
           <ImagePlaceholder />
         )}
       </div>
-      <div>
+      {/* pe-8 reserves room for a future top-right action (like/more) button, not added yet */}
+      <div className="min-w-0 flex-1 pe-8">
         <div className="flex items-center gap-[6px]">
           <p className="font-heading font-semibold text-[15px] text-text-primary">{name}</p>
           {badge && (

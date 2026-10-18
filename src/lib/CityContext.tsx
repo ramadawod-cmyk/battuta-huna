@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { getCurrentPosition, reverseGeocodeCity, describeGeolocationError } from "./geo";
 import { ensureCitySites } from "./sites";
-import { db, wikiImageByTitle } from "./api";
+import { ensureCityHeroImage } from "./cityHero";
 import { track } from "./analytics";
 import type { Site } from "./types";
 
@@ -17,10 +17,13 @@ type CurrentCity = {
 
 type CityStatus = "idle" | "locating" | "loading-sites" | "ready" | "error";
 
+type HeroImageCredit = { name: string; profileUrl: string } | null;
+
 type CityContextValue = {
   city: CurrentCity | null;
   sites: Site[];
   heroImageUrl: string | null;
+  heroImageCredit: HeroImageCredit;
   status: CityStatus;
   error: string | null;
   locate: () => Promise<void>;
@@ -30,21 +33,11 @@ const CityContext = createContext<CityContextValue>({
   city: null,
   sites: [],
   heroImageUrl: null,
+  heroImageCredit: null,
   status: "idle",
   error: null,
   locate: async () => {},
 });
-
-async function resolveHeroImage(c: CurrentCity): Promise<string | null> {
-  try {
-    const hero = await db("getCityHero", { cityId: c.id });
-    if (hero?.hero_image_url) return hero.hero_image_url;
-  } catch {
-    // fall through to wiki lookup
-  }
-  const wiki = await wikiImageByTitle(c.name).catch(() => null);
-  return wiki?.url || null;
-}
 
 function loadStoredCity(): CurrentCity | null {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -60,6 +53,7 @@ export function CityProvider({ children }: { children: ReactNode }) {
   const [city, setCity] = useState<CurrentCity | null>(() => loadStoredCity());
   const [sites, setSites] = useState<Site[]>([]);
   const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
+  const [heroImageCredit, setHeroImageCredit] = useState<HeroImageCredit>(null);
   const [status, setStatus] = useState<CityStatus>(() => (loadStoredCity() ? "loading-sites" : "idle"));
   const [error, setError] = useState<string | null>(null);
   // Guards against duplicate concurrent loads for the same city — e.g. React StrictMode's
@@ -72,7 +66,13 @@ export function CityProvider({ children }: { children: ReactNode }) {
     loadingCityIdRef.current = c.id;
     setStatus("loading-sites");
     setHeroImageUrl(null);
-    resolveHeroImage(c).then(setHeroImageUrl);
+    setHeroImageCredit(null);
+    ensureCityHeroImage(c.id, c.name, c.countryId, c.countryName).then((result) => {
+      setHeroImageUrl(result?.url ?? null);
+      setHeroImageCredit(
+        result?.creditName && result?.creditUrl ? { name: result.creditName, profileUrl: result.creditUrl } : null,
+      );
+    });
     try {
       const result = await ensureCitySites(c.id, c.name, c.countryId, c.countryName);
       setSites(result);
@@ -144,7 +144,7 @@ export function CityProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <CityContext.Provider value={{ city, sites, heroImageUrl, status, error, locate }}>
+    <CityContext.Provider value={{ city, sites, heroImageUrl, heroImageCredit, status, error, locate }}>
       {children}
     </CityContext.Provider>
   );

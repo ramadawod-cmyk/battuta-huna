@@ -6,6 +6,7 @@ import TagPill from "../components/TagPill";
 import Button from "../components/Button";
 import BrandMark from "../components/BrandMark";
 import PlanDatePicker from "../components/PlanDatePicker";
+import PlanSuggestionsPanel from "../components/PlanSuggestionsPanel";
 import { planAgent, db } from "../lib/api";
 import { ensureCitySites } from "../lib/sites";
 import { activityToCandidate, ensureCityActivities } from "../lib/activities";
@@ -49,6 +50,13 @@ const SUGGESTION_KEYS: (keyof typeof en)[] = [
   "plan.suggestion.family",
   "plan.suggestion.couples",
 ];
+
+// Unlike the other suggestion chips (a mood/group type, no implied destination), Umrah names a
+// fixed, unambiguous destination -- the suggestions panel can know this the instant it's clicked,
+// without waiting on the chat to work through duration/leg-split questions first.
+const SUGGESTION_DESTINATION_HINTS: Partial<Record<keyof typeof en, PlanLeg>> = {
+  "plan.suggestion.umrah": { city: "Mecca", country: "Saudi Arabia", country_id: "saudi-arabia", days: 0 },
+};
 
 
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
@@ -266,6 +274,12 @@ export default function Plan() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [partial, setPartial] = useState<PlanPartial | null>(null);
+  // Set the instant a suggestion chip with an already-known destination (currently just Umrah --
+  // Mecca/Madina aren't ambiguous the way "Flying Solo" is) is clicked, so the suggestions panel
+  // doesn't sit on stale "near you" results for the 1-2 turns the chat still needs before it has
+  // enough (duration, single-city-or-both) to emit the real [PARTIAL] block. `partial` always wins
+  // once the chat catches up -- see the `partial?.legs[0] ?? destinationHint` below.
+  const [destinationHint, setDestinationHint] = useState<PlanLeg | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [followupNotes, setFollowupNotes] = useState("");
   const [familyNotes, setFamilyNotes] = useState("");
@@ -632,7 +646,11 @@ export default function Plan() {
           {SUGGESTION_KEYS.map((key) => (
             <button
               key={key}
-              onClick={() => sendMessage(t(key))}
+              onClick={() => {
+                const hint = SUGGESTION_DESTINATION_HINTS[key];
+                if (hint) setDestinationHint(hint);
+                sendMessage(t(key));
+              }}
               className="bg-white border border-secondary-purple rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium text-text-primary"
             >
               {t(key)}
@@ -646,13 +664,14 @@ export default function Plan() {
   if (phase === "chat") {
     const showTextInput = step === "city" || step === "followup" || step === "familyDetails";
     return (
-      <div className="px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] max-w-[760px] flex flex-col h-[calc(100dvh-60px)] md:h-[calc(100dvh-120px)]">
+      <div className="flex gap-[24px] lg:gap-[32px] items-start px-4 sm:px-10 md:px-16 lg:px-[80px] py-6 sm:py-10 md:py-[60px] h-[calc(100dvh-60px)] md:h-[100dvh]">
         {step === "dates" && partial && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4">
             <PlanDatePicker duration={partial.duration || 1} onConfirm={confirmDates} />
           </div>
         )}
 
+        <div className="flex flex-col flex-1 min-w-0 max-w-[760px] h-full">
         <div className="flex flex-col flex-1 min-h-0 rounded-[24px] border border-secondary-purple/25 bg-white shadow-[0px_16px_40px_0px_rgba(48,48,48,0.06)] overflow-hidden">
           <div className="flex items-center gap-[12px] px-[20px] sm:px-[24px] h-[68px] shrink-0 border-b border-text-primary/10">
             <div className="size-[38px] rounded-full bg-secondary-purple flex items-center justify-center shrink-0">
@@ -768,6 +787,11 @@ export default function Plan() {
               </button>
             </form>
           )}
+        </div>
+        </div>
+
+        <div className="hidden lg:block w-[320px] shrink-0 h-full overflow-y-auto">
+          <PlanSuggestionsPanel destination={partial?.legs[0] ?? destinationHint} />
         </div>
       </div>
     );

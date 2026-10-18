@@ -110,7 +110,7 @@ exports.handler = async function(event) {
     // ── GET CITY HERO ────────────────────────────────
     if (action === 'getCityHero') {
       const { cityId } = data;
-      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=hero_image_url`);
+      const res = await request('GET', `/rest/v1/cities?id=eq.${cityId}&select=hero_image_url,hero_image_credit_name,hero_image_credit_url`);
       const rows = res.body;
       return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
     }
@@ -149,6 +149,20 @@ exports.handler = async function(event) {
     if (action === 'getSites') {
       const { cityId } = data;
       const res = await request('GET', `/rest/v1/sites?city_id=eq.${cityId}&select=*&order=name`);
+      return { statusCode: 200, headers, body: JSON.stringify(res.body) };
+    }
+
+    // ── GET POPULAR DESTINATIONS (cached) ────────────
+    if (action === 'getPopularDestinations') {
+      const { originCityId } = data;
+      const res = await request('GET', `/rest/v1/popular_destinations_cache?origin_city_id=eq.${encodeURIComponent(originCityId)}&select=destinations`);
+      const rows = res.body;
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
+    }
+
+    // ── UPSERT POPULAR DESTINATIONS (AI generated) ───
+    if (action === 'upsertPopularDestinations') {
+      const res = await request('POST', '/rest/v1/popular_destinations_cache', data.row, 'resolution=merge-duplicates');
       return { statusCode: 200, headers, body: JSON.stringify(res.body) };
     }
 
@@ -261,8 +275,12 @@ exports.handler = async function(event) {
 
     // ── UPDATE CITY HERO IMAGE ───────────────────────
     if (action === 'updateCityHero') {
-      const { cityId, heroImageUrl } = data;
-      const res = await request('PATCH', `/rest/v1/cities?id=eq.${cityId}`, { hero_image_url: heroImageUrl });
+      const { cityId, heroImageUrl, creditName, creditUrl } = data;
+      const res = await request('PATCH', `/rest/v1/cities?id=eq.${cityId}`, {
+        hero_image_url: heroImageUrl,
+        hero_image_credit_name: creditName ?? null,
+        hero_image_credit_url: creditUrl ?? null,
+      });
       return { statusCode: 200, headers, body: JSON.stringify({ updated: true }) };
     }
 
