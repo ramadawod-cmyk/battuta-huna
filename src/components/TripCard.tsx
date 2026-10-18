@@ -1,27 +1,35 @@
+import UnsplashCredit from "./UnsplashCredit";
+
 type TripCardProps = {
   city: string;
   meta: string;
   tags: string[];
   className?: string;
   imageUrl?: string | null;
+  imageCredit?: { name: string; profileUrl: string } | null;
+  onImageError?: () => void;
   onClick?: () => void;
 };
 
-export default function TripCard({ city, meta, tags, className = "", imageUrl, onClick }: TripCardProps) {
+export default function TripCard({ city, meta, tags, className = "", imageUrl, imageCredit, onImageError, onClick }: TripCardProps) {
   return (
     <button
       onClick={onClick}
       className={`text-start bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full overflow-hidden ${className}`}
     >
-      <div className="bg-surface-lavender h-[140px]">
+      <div className="relative bg-surface-lavender h-[140px]">
         {imageUrl && (
           <img
             src={imageUrl}
             alt={city}
-            onError={(e) => (e.currentTarget.style.display = "none")}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              onImageError?.();
+            }}
             className="size-full object-cover"
           />
         )}
+        {imageCredit && <UnsplashCredit name={imageCredit.name} profileUrl={imageCredit.profileUrl} compact />}
       </div>
       <div className="p-[19px]">
         <p className="font-heading font-semibold text-[17px] text-text-primary">{city}</p>

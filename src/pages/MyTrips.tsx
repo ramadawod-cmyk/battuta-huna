@@ -7,10 +7,11 @@ import { useTranslation } from "../lib/LanguageContext";
 import { categoryOrActivityLabelKey } from "../lib/categories";
 import { GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import type en from "../lib/i18n/en";
-import { useWikiThumbnail } from "../lib/useWikiThumbnail";
+import { useCityHeroImage } from "../lib/cityHero";
+import { slugify } from "../lib/geo";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
-import { destinationsLabel } from "../lib/trips";
+import { destinationsLabel, tripDestinations } from "../lib/trips";
 import type { Trip } from "../lib/types";
 
 function tripMeta(trip: Trip, t: (key: keyof typeof en, vars?: Record<string, string | number>) => string): string {
@@ -35,13 +36,21 @@ function tripTags(trip: Trip): string[] {
 
 function TripCardWithImage({ trip, onClick }: { trip: Trip; onClick: () => void }) {
   const { t } = useTranslation();
-  const imageUrl = useWikiThumbnail(trip.city);
+  const primaryDestination = tripDestinations(trip)[0];
+  const hero = useCityHeroImage(
+    primaryDestination?.cityId,
+    primaryDestination?.city,
+    primaryDestination?.country ? slugify(primaryDestination.country) : undefined,
+    primaryDestination?.country,
+  );
   return (
     <TripCard
       city={destinationsLabel(trip)}
       meta={tripMeta(trip, t)}
       tags={tripTags(trip).map((tag) => t(categoryOrActivityLabelKey(tag)))}
-      imageUrl={imageUrl}
+      imageUrl={hero.displayedUrl}
+      imageCredit={hero.credit}
+      onImageError={hero.onImgError}
       onClick={onClick}
     />
   );
