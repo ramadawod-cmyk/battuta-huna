@@ -55,8 +55,7 @@ function SuggestionCard({
   return (
     <div className="relative bg-white border border-secondary-purple rounded-[20px] p-[16px] flex flex-col">
       <div className="flex gap-3">
-        {/* aspect-square + self-stretch: a square that matches the height of the title/subtitle block beside it, not the view-more link below */}
-        <div className="relative bg-surface-lavender rounded-[12px] aspect-square self-stretch shrink-0 overflow-hidden">
+        <div className="relative bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
           {imageUrl ? (
             <img src={imageUrl} alt="" className="size-full object-cover" />
           ) : (
