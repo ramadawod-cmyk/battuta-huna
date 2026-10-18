@@ -34,7 +34,7 @@ export default function PoiCard({
   const { t } = useTranslation();
   const [imgFailed, setImgFailed] = useState(false);
   return (
-    <div className={`relative bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full p-[19px] ${className}`}>
+    <div className={`relative bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] w-[358px] max-w-full p-[19px] ${className}`}>
       <div className="flex gap-4">
         <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
           {imageUrl && !imgFailed ? (

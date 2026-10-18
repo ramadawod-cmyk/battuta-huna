@@ -144,7 +144,7 @@ export default function Explore() {
   );
 
   return (
-    <div className="px-4 sm:px-6 md:px-8 lg:px-[32px] py-6 md:py-[32px] max-w-[1260px]">
+    <div className="bg-surface-grey min-h-screen px-4 sm:px-6 md:px-8 lg:px-[32px] py-6 md:py-[32px] max-w-[1260px]">
       <p className="font-heading font-semibold text-[20px] sm:text-[24px] text-text-primary">
         {city?.name || t("explore.locating")}
       </p>
