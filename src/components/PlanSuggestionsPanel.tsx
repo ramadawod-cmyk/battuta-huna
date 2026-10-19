@@ -10,6 +10,7 @@ import { slugify } from "../lib/geo";
 import { track } from "../lib/analytics";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { CATEGORY_ACCENTS, CATEGORY_LABEL_KEYS, normalizeCategory, type CategoryAccent } from "../lib/categories";
+import { SUGGESTION_TAG_LABEL_KEYS, normalizeSuggestionTags, type SuggestionTag } from "../lib/suggestionTags";
 import type { PlanLeg } from "../lib/planFlow";
 import type { Site } from "../lib/types";
 
@@ -39,6 +40,7 @@ function SuggestionCard({
   subtitle,
   category,
   categoryAccent = "purple",
+  tags = [],
   onClick,
 }: {
   imageUrl: string | null;
@@ -46,6 +48,7 @@ function SuggestionCard({
   subtitle: string;
   category?: string;
   categoryAccent?: CategoryAccent;
+  tags?: SuggestionTag[];
   onClick: () => void;
 }) {
   const { t } = useTranslation();
@@ -70,6 +73,18 @@ function SuggestionCard({
             )}
           </button>
           <p className="text-[12px] leading-[1.5] text-text-primary mt-[8px] line-clamp-2">{subtitle}</p>
+          {tags.length > 0 && (
+            <div className="flex gap-[8px] mt-[9px] flex-wrap">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="bg-surface-lavender text-secondary-purple text-[10px] font-medium tracking-[0.4px] rounded-[20px] px-[10px] py-[4px]"
+                >
+                  {t(SUGGESTION_TAG_LABEL_KEYS[tag])}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex justify-end mt-[8px]">
@@ -114,7 +129,15 @@ function DestinationCard({
     return () => { cancelled = true; };
   }, [destination.city, destination.country]);
 
-  return <SuggestionCard imageUrl={imageUrl} title={title} subtitle={subtitle} onClick={onClick} />;
+  return (
+    <SuggestionCard
+      imageUrl={imageUrl}
+      title={title}
+      subtitle={subtitle}
+      tags={normalizeSuggestionTags(destination.tags)}
+      onClick={onClick}
+    />
+  );
 }
 
 /** Resolves + persists its own image (see ensureSiteImage) before rendering a card. */
@@ -148,6 +171,7 @@ function SiteCard({
       subtitle={subtitle}
       category={t(CATEGORY_LABEL_KEYS[category]).toUpperCase()}
       categoryAccent={CATEGORY_ACCENTS[category]}
+      tags={normalizeSuggestionTags(site.tags)}
       onClick={onClick}
     />
   );
