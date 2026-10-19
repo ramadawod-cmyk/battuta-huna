@@ -53,6 +53,10 @@ describe("parsePartial", () => {
       legs: [{ city: "Amman", country: "Jordan", country_id: "jordan", days: 5 }],
       duration: 5,
       dates: null,
+      groupType: null,
+      familyDetails: null,
+      budget: null,
+      originCity: null,
     });
   });
 
@@ -76,6 +80,10 @@ describe("parsePartial", () => {
       ],
       duration: 5,
       dates: null,
+      groupType: null,
+      familyDetails: null,
+      budget: null,
+      originCity: null,
     });
   });
 
@@ -162,6 +170,51 @@ describe("parsePartial", () => {
       wrap(JSON.stringify({ legs: [{ city: "Rome", days: 3 }, { city: "Florence", days: 2 }] })),
     );
     expect(partial?.duration).toBe(5);
+  });
+
+  it("carries forward groupType, familyDetails, budget, and originCity when all are given", () => {
+    const { partial } = parsePartial(
+      wrap(
+        JSON.stringify({
+          city: "Istanbul",
+          country: "Turkey",
+          country_id: "turkey",
+          duration: 3,
+          groupType: "Family",
+          familyDetails: "2 adults, kids aged 3 and 5",
+          budget: "Budget-friendly",
+          originCity: "Amman",
+        }),
+      ),
+    );
+    expect(partial?.groupType).toBe("Family");
+    expect(partial?.familyDetails).toBe("2 adults, kids aged 3 and 5");
+    expect(partial?.budget).toBe("Budget-friendly");
+    expect(partial?.originCity).toBe("Amman");
+  });
+
+  it("drops groupType/budget values outside the known vocabulary instead of passing them through", () => {
+    const { partial } = parsePartial(
+      wrap(JSON.stringify({ city: "Rome", duration: 3, groupType: "Honeymoon", budget: "Cheap" })),
+    );
+    expect(partial?.groupType).toBeNull();
+    expect(partial?.budget).toBeNull();
+  });
+
+  it("drops familyDetails when groupType isn't Family, even if the model supplies it anyway", () => {
+    const { partial } = parsePartial(
+      wrap(JSON.stringify({ city: "Rome", duration: 3, groupType: "Couple", familyDetails: "kids aged 3 and 5" })),
+    );
+    expect(partial?.groupType).toBe("Couple");
+    expect(partial?.familyDetails).toBeNull();
+  });
+
+  it("leaves the carry-forward fields null when the model doesn't include them at all", () => {
+    const { partial } = parsePartial(wrap(JSON.stringify({ city: "Rome", duration: 3 })));
+    expect(partial?.groupType).toBeNull();
+    expect(partial?.familyDetails).toBeNull();
+    expect(partial?.budget).toBeNull();
+    expect(partial?.originCity).toBeNull();
   });
 });
 

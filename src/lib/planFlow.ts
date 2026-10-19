@@ -23,6 +23,14 @@ export type PlanPartial = {
   legs: PlanLeg[];
   duration: number;
   dates?: string | null;
+  // Carried forward from the free-text gathering phase (see battuta-chat-agent.md's optional
+  // [PARTIAL] fields) so Plan.tsx's structured follow-up steps never have to re-ask something the
+  // traveller already volunteered before the destination was settled. Null/absent whenever the
+  // model didn't have a confident answer -- never a guess.
+  groupType?: string | null;
+  familyDetails?: string | null;
+  budget?: string | null;
+  originCity?: string | null;
 };
 
 function formatToday(today: Date): string {
@@ -105,8 +113,27 @@ export function parsePartial(text: string): { partial: PlanPartial | null; clean
     ? legs.map((leg, i) => ({ ...leg, days: splitDaysAcrossLegs(duration, legs.length)[i] }))
     : legs;
 
+  // Each of these is only trusted when it matches the exact closed vocabulary the rest of the app
+  // already uses (GROUP_TYPES/BUDGET_TIERS) -- anything else the model might emit is dropped rather
+  // than passed through as a freeform value Plan.tsx's pills/payload wouldn't recognize.
+  const groupType = typeof raw.groupType === "string" && GROUP_TYPES.includes(raw.groupType) ? raw.groupType : null;
+  const budget = typeof raw.budget === "string" && BUDGET_TIERS.includes(raw.budget) ? raw.budget : null;
+  const familyDetails =
+    groupType === "Family" && typeof raw.familyDetails === "string" && raw.familyDetails.trim()
+      ? raw.familyDetails.trim()
+      : null;
+  const originCity = typeof raw.originCity === "string" && raw.originCity.trim() ? raw.originCity.trim() : null;
+
   return {
-    partial: { legs: finalLegs, duration, dates: typeof raw.dates === "string" ? raw.dates : null },
+    partial: {
+      legs: finalLegs,
+      duration,
+      dates: typeof raw.dates === "string" ? raw.dates : null,
+      groupType,
+      familyDetails,
+      budget,
+      originCity,
+    },
     cleanText,
   };
 }
