@@ -41,6 +41,7 @@ function SuggestionCard({
   category,
   categoryAccent = "purple",
   tags = [],
+  actionLabel,
   onClick,
 }: {
   imageUrl: string | null;
@@ -49,6 +50,8 @@ function SuggestionCard({
   category?: string;
   categoryAccent?: CategoryAccent;
   tags?: SuggestionTag[];
+  // Defaults to "View more" (for sites); destination suggestions override this to "Plan trip".
+  actionLabel?: string;
   onClick: () => void;
 }) {
   const { t } = useTranslation();
@@ -93,7 +96,7 @@ function SuggestionCard({
           onClick={onClick}
           className="text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
         >
-          {t("poiCard.viewMore")}
+          {actionLabel || t("poiCard.viewMore")}
         </button>
       </div>
     </div>
@@ -118,6 +121,7 @@ function DestinationCard({
   subtitle: string;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -135,6 +139,7 @@ function DestinationCard({
       title={title}
       subtitle={subtitle}
       tags={normalizeSuggestionTags(destination.tags)}
+      actionLabel={t("plan.panel.planTrip")}
       onClick={onClick}
     />
   );
@@ -187,7 +192,16 @@ function PanelSkeleton() {
   );
 }
 
-export default function PlanSuggestionsPanel({ destination }: { destination: PlanLeg | null }) {
+export default function PlanSuggestionsPanel({
+  destination,
+  onSelectDestination,
+}: {
+  destination: PlanLeg | null;
+  // Suggested-city cards (no destination chosen yet) hand the pick back to Plan.tsx instead of
+  // navigating away, so it can drop the city straight into the chat. Omitted entirely on the
+  // "Popular in {city}" branch (destination already known), where site cards still go to Explore.
+  onSelectDestination?: (destination: PopularDestination) => void;
+}) {
   const navigate = useNavigate();
   const { t, language } = useTranslation();
   const { city: homeCity, status: homeStatus, locate } = useCity();
@@ -269,7 +283,8 @@ export default function PlanSuggestionsPanel({ destination }: { destination: Pla
               subtitle={language === "ar" ? d.reasonAr : d.reason}
               onClick={() => {
                 track("Destination Suggestion Clicked", { city_id: dCityId, city_name: d.city, source: "plan_panel" });
-                navigate(exploreUrl(dCityId, d.city, dCountryId, d.country));
+                if (onSelectDestination) onSelectDestination(d);
+                else navigate(exploreUrl(dCityId, d.city, dCountryId, d.country));
               }}
             />
           );

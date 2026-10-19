@@ -41,6 +41,7 @@ const en = {
   "plan.suggestion.solo": "Flying Solo",
   "plan.suggestion.family": "Family Vacation",
   "plan.suggestion.couples": "Couples Getaway",
+  "plan.suggestion.visitCity": "Plan a trip to {city}",
   "plan.replyPlaceholder": "Reply to Battuta…",
   "plan.followupPlaceholder": "e.g. want to see Petra, or nothing specific",
   "plan.continue": "CONTINUE",
@@ -136,6 +137,7 @@ const en = {
   "plan.panel.popularGeneric": "Popular destinations",
   "plan.panel.popularIn": "Popular in {city}",
   "plan.panel.noSites": "No sites found yet for this destination.",
+  "plan.panel.planTrip": "Plan trip",
 
   "allSites.title": "All Sites",
   "allSites.searchPlaceholder": "Search sites, categories…",
