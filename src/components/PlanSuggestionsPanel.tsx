@@ -50,7 +50,7 @@ function SuggestionCard({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="relative bg-white border border-secondary-purple rounded-[20px] p-[16px] flex flex-col">
+    <div className="relative bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] p-[16px] flex flex-col">
       <div className="flex gap-3">
         <div className="relative bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
           {imageUrl ? (
