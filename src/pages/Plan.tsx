@@ -38,6 +38,7 @@ import {
   INTEREST_TAGS,
   composeTravelerNotes,
 } from "../lib/planFlow";
+import type { PopularDestination } from "../lib/popularDestinations";
 import type { Site } from "../lib/types";
 
 function legsLabel(legs: PlanLeg[]): string {
@@ -382,6 +383,20 @@ export default function Plan() {
     }
   }
 
+  // Tapping "Plan trip" on a suggested-city card: known destination, so the panel can switch to
+  // its site list immediately (same hint mechanism as SUGGESTION_DESTINATION_HINTS) while the
+  // chat still asks dates/followups -- sendMessage drives it into the normal chat flow from there.
+  function handleSelectDestination(destination: PopularDestination) {
+    setDestinationHint({
+      city: destination.city,
+      country: destination.country,
+      country_id: slugify(destination.country),
+      days: 0,
+    });
+    const cityName = language === "ar" && destination.cityAr ? destination.cityAr : destination.city;
+    sendMessage(t("plan.suggestion.visitCity", { city: cityName }));
+  }
+
   function submitFollowup(e: FormEvent) {
     e.preventDefault();
     const trimmed = input.trim();
@@ -662,7 +677,7 @@ export default function Plan() {
           </div>
 
           <div className="hidden lg:block w-[320px] shrink-0">
-            <PlanSuggestionsPanel destination={null} />
+            <PlanSuggestionsPanel destination={null} onSelectDestination={handleSelectDestination} />
           </div>
         </div>
       </div>
@@ -799,7 +814,10 @@ export default function Plan() {
         </div>
 
         <div className="hidden lg:block w-[320px] shrink-0 h-full overflow-y-auto">
-          <PlanSuggestionsPanel destination={partial?.legs[0] ?? destinationHint} />
+          <PlanSuggestionsPanel
+            destination={partial?.legs[0] ?? destinationHint}
+            onSelectDestination={handleSelectDestination}
+          />
         </div>
       </div>
     );

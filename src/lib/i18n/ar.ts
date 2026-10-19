@@ -41,6 +41,7 @@ const ar: typeof en = {
   "plan.suggestion.solo": "سفر منفرد",
   "plan.suggestion.family": "عطلة عائلية",
   "plan.suggestion.couples": "رحلة للأزواج",
+  "plan.suggestion.visitCity": "خطّط رحلة إلى {city}",
   "plan.replyPlaceholder": "اكتب ردك لبطوطة…",
   "plan.followupPlaceholder": "مثلاً: أريد زيارة البتراء، أو لا شيء محدد",
   "plan.continue": "متابعة",
@@ -136,6 +137,7 @@ const ar: typeof en = {
   "plan.panel.popularGeneric": "وجهات شائعة",
   "plan.panel.popularIn": "الأشهر في {city}",
   "plan.panel.noSites": "لم نعثر على مواقع لهذه الوجهة بعد.",
+  "plan.panel.planTrip": "خطّط رحلة",
 
   "allSites.title": "كل المواقع",
   "allSites.searchPlaceholder": "ابحث في المواقع أو الفئات…",
