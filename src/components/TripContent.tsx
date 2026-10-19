@@ -126,7 +126,10 @@ export function TripItinerary({
             <p className="font-heading font-semibold text-[19px] text-text-primary">{leg.city}</p>
           )}
           {leg.days.map((day) => (
-            <div key={day.day}>
+            <div
+              key={day.day}
+              className="bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] p-[18px] sm:p-[22px]"
+            >
               <div className="flex items-center gap-[8px]">
                 <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
                   {(language === "ar" && day.labelAr) || day.label || t("trip.dayFallback", { number: day.day })}
@@ -142,7 +145,7 @@ export function TripItinerary({
                   </Link>
                 )}
               </div>
-              <div className="flex flex-col mt-[16px]">
+              <div className="flex flex-col mt-[12px] divide-y divide-border/60">
                 {day.slots
                   .filter((slot) => !slot._removed)
                   .map((slot) => (
