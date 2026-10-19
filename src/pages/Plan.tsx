@@ -289,7 +289,10 @@ export default function Plan() {
 
   const [sites, setSites] = useState<Site[]>([]);
   const [loadingSites, setLoadingSites] = useState(false);
-  const [groupType, setGroupType] = useState(GROUP_TYPES[1]);
+  // null (not a GROUP_TYPES default) until either the chat already extracted it (see sendMessage)
+  // or the traveller picks a pill in the "party" step -- distinguishing "not known yet" from "the
+  // default happens to be Couple" is what lets the step chain decide whether to skip that question.
+  const [groupType, setGroupType] = useState<string | null>(null);
   const [pace, setPace] = useState(PACE_OPTIONS[0]);
   const [interests, setInterests] = useState<string[]>([]);
   const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set());
@@ -365,11 +368,19 @@ export default function Plan() {
       setMessages([...nextMessages, { role: "assistant", content: cleanText || reply, time: nowLabel() }]);
       if (parsed) {
         setPartial(parsed);
+        // Seed whatever the chat already extracted so the step chain below (see confirmDates /
+        // submitFollowup / selectParty / submitFamilyDetails) can skip re-asking it.
+        if (parsed.groupType) setGroupType(parsed.groupType);
+        if (parsed.familyDetails) setFamilyNotes(parsed.familyDetails);
+        if (parsed.budget) setBudget(parsed.budget);
+        if (parsed.originCity) setOriginCity(parsed.originCity);
         track("Plan Details Extracted", {
           city: parsed.legs[0].city,
           leg_count: parsed.legs.length,
           dates: parsed.dates,
           duration: parsed.duration,
+          group_type: parsed.groupType,
+          budget: parsed.budget,
         });
         sitesPromiseRef.current = loadSites(parsed);
         askStep("dates", t("plan.q.dates"));
@@ -397,12 +408,37 @@ export default function Plan() {
     sendMessage(t("plan.suggestion.visitCity", { city: cityName }));
   }
 
+  // Lands on "interests" instead of "tripExtras" when the chat already extracted both budget and
+  // origin city (see sendMessage's seeding from parsed.budget/originCity) -- called from every
+  // point that would otherwise unconditionally ask tripExtras next.
+  function advanceToTripExtras() {
+    if (budget && originCity.trim()) {
+      askStep("interests", t("plan.q.interests"));
+    } else {
+      askStep("tripExtras", t("plan.q.tripExtras"));
+    }
+  }
+
+  // Only a Family party gets asked who's joining, and only if that wasn't already given earlier in
+  // the chat (familyNotes seeded from parsed.familyDetails) -- Solo/Couple/Friends, and a Family
+  // whose details are already known, go straight to advanceToTripExtras.
+  function advanceAfterParty(g: string) {
+    if (g === "Family" && !familyNotes.trim()) {
+      askStep("familyDetails", t("plan.q.familyDetails"));
+    } else {
+      advanceToTripExtras();
+    }
+  }
+
   function submitFollowup(e: FormEvent) {
     e.preventDefault();
     const trimmed = input.trim();
     setFollowupNotes(trimmed);
     setInput("");
-    answerStep(trimmed || t("plan.noSpecificPlace"), "party", t("plan.q.party"));
+    setMessages((prev) => [...prev, { role: "user", content: trimmed || t("plan.noSpecificPlace"), time: nowLabel() }]);
+    // Skips "party" entirely when the chat already extracted groupType -- see sendMessage.
+    if (groupType) advanceAfterParty(groupType);
+    else askStep("party", t("plan.q.party"));
   }
 
   function confirmDates(label: string) {
@@ -415,13 +451,8 @@ export default function Plan() {
 
   function selectParty(g: string) {
     setGroupType(g);
-    // Only a Family party gets asked who's joining -- Solo/Couple/Friends skip straight to
-    // tripExtras, so the flow doesn't ask an irrelevant question just to always ask something.
-    if (g === "Family") {
-      answerStep(t(GROUP_LABEL_KEYS[g]), "familyDetails", t("plan.q.familyDetails"));
-    } else {
-      answerStep(t(GROUP_LABEL_KEYS[g]), "tripExtras", t("plan.q.tripExtras"));
-    }
+    setMessages((prev) => [...prev, { role: "user", content: t(GROUP_LABEL_KEYS[g]), time: nowLabel() }]);
+    advanceAfterParty(g);
   }
 
   function submitFamilyDetails(e: FormEvent) {
@@ -429,7 +460,8 @@ export default function Plan() {
     const trimmed = input.trim();
     setFamilyNotes(trimmed);
     setInput("");
-    answerStep(trimmed || t("plan.noFamilyDetails"), "tripExtras", t("plan.q.tripExtras"));
+    setMessages((prev) => [...prev, { role: "user", content: trimmed || t("plan.noFamilyDetails"), time: nowLabel() }]);
+    advanceToTripExtras();
   }
 
   function continueTripExtras() {
@@ -534,8 +566,12 @@ export default function Plan() {
     setPhase("building");
     setError(null);
     const chosen = sites.filter((s) => selectedPlaces.has(s.name));
+    // Only reachable as null if the "party" step itself was somehow never resolved -- shouldn't
+    // happen given the step chain always lands there unless already known, but a trip still needs
+    // a concrete, storable group_type either way.
+    const resolvedGroupType = groupType || GROUP_TYPES[1];
     track("Trip Details Submitted", {
-      group_type: groupType,
+      group_type: resolvedGroupType,
       interests,
       pace,
       city: partial.legs[0].city,
@@ -580,7 +616,7 @@ export default function Plan() {
         city: partial.legs[0].city,
         dates: partial.dates || null,
         duration,
-        groupType,
+        groupType: resolvedGroupType,
         pace,
         days,
       };
@@ -591,7 +627,7 @@ export default function Plan() {
           city: itinerary.city,
           dates: itinerary.dates,
           duration: itinerary.duration,
-          group_type: groupType,
+          group_type: resolvedGroupType,
           pace,
           budget,
           origin_city: originCity.trim() || null,
@@ -831,7 +867,7 @@ export default function Plan() {
       </h1>
       <p className="text-[13px] text-text-secondary mt-[6px]">
         {t("plan.durationLabel", { count: partial?.duration ?? 0 })} · {partial?.dates || t("plan.flexibleDates")} ·{" "}
-        {t(GROUP_LABEL_KEYS[groupType])} · {t(PACE_LABEL_KEYS[pace])}
+        {t(GROUP_LABEL_KEYS[groupType || GROUP_TYPES[1]])} · {t(PACE_LABEL_KEYS[pace])}
         {budget ? ` · ${t(BUDGET_LABEL_KEYS[budget])}` : ""}
         {interests.length > 0 ? ` · ${interests.map((tag) => t(categoryOrActivityLabelKey(tag))).join(", ")}` : ""}
       </p>
