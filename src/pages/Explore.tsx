@@ -201,7 +201,6 @@ export default function Explore() {
             key={cat}
             label={cat === "All" ? t("explore.allCategories") : t(CATEGORY_LABEL_KEYS[cat])}
             active={activeCategory === cat}
-            accent={CATEGORY_ACCENTS[cat]}
             onClick={() => {
               track("Site Filter Toggled", { tag: cat, active: activeCategory !== cat, view: "nearby" });
               setActiveCategory(cat);
