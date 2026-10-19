@@ -174,37 +174,26 @@ export default function Explore() {
         )}
       </div>
 
-      <div className="bg-surface-lavender rounded-[16px] mt-[24px] px-[24px] py-[14px]">
-        <p className="font-medium text-[11px] text-secondary-purple tracking-[0.44px]">
-          {status === "locating" && t("explore.statusLocatingYou")}
-          {status === "loading-sites" && t("explore.statusDiscoveringSites")}
-          {status === "ready" && (override ? t("explore.statusExploring") : t("explore.statusNearby"))}
-          {status === "error" && (override ? t("explore.loadFailed") : t("explore.statusLocationUnavailable"))}
-          {status === "idle" && t("explore.statusLocatingYou")}
-        </p>
-        <p className="text-[14px] text-text-secondary mt-[4px]">
-          {status === "locating" && t("explore.findingPlace")}
-          {status === "loading-sites" &&
-            (override ? t("explore.gatheringSitesFor", { city: override.name }) : t("explore.gatheringSites"))}
-          {status === "ready" &&
-            (override ? t("explore.sitesInCity", { count: sites.length }) : t("explore.sitesWithinRange", { count: sites.length }))}
-          {status === "error" && (error || t("explore.locationUnavailable"))}
-          {status === "idle" && t("explore.findingPlace")}
-        </p>
-        {status === "error" && (
-          <button
-            onClick={locate}
-            className="mt-[10px] bg-secondary-purple text-white text-[12px] font-medium rounded-[16px] px-[14px] py-[6px]"
-          >
-            {t("explore.tryAgain")}
-          </button>
-        )}
-      </div>
-
-      <p className="font-medium text-[12px] text-text-primary tracking-[0.48px] mt-[20px]">
-        {override ? t("explore.topSitesIn", { city: override.name }) : t("explore.nearbyWithinRange")}
+      <p className="font-medium text-[12px] text-text-primary tracking-[0.48px] mt-[24px]">
+        {status === "locating" && t("explore.findingPlace")}
+        {status === "loading-sites" &&
+          (override ? t("explore.gatheringSitesFor", { city: override.name }) : t("explore.gatheringSites"))}
+        {status === "ready" &&
+          (override
+            ? t("explore.topSitesIn", { city: override.name, count: sites.length })
+            : t("explore.nearbyWithinRange", { count: sites.length }))}
+        {status === "error" && (error || t("explore.locationUnavailable"))}
+        {status === "idle" && t("explore.findingPlace")}
         {city?.locality ? ` · ${city.locality.toUpperCase()}` : ""}
       </p>
+      {status === "error" && (
+        <button
+          onClick={locate}
+          className="mt-[10px] bg-secondary-purple text-white text-[12px] font-medium rounded-[16px] px-[14px] py-[6px]"
+        >
+          {t("explore.tryAgain")}
+        </button>
+      )}
 
       <div className="flex gap-[10px] mt-[16px] flex-wrap">
         {CATEGORIES.map((cat) => (
@@ -212,7 +201,6 @@ export default function Explore() {
             key={cat}
             label={cat === "All" ? t("explore.allCategories") : t(CATEGORY_LABEL_KEYS[cat])}
             active={activeCategory === cat}
-            accent={CATEGORY_ACCENTS[cat]}
             onClick={() => {
               track("Site Filter Toggled", { tag: cat, active: activeCategory !== cat, view: "nearby" });
               setActiveCategory(cat);

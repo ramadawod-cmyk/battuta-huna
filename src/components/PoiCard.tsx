@@ -34,7 +34,7 @@ export default function PoiCard({
   const { t } = useTranslation();
   const [imgFailed, setImgFailed] = useState(false);
   return (
-    <div className={`relative bg-white border border-secondary-purple rounded-[20px] w-[358px] max-w-full p-[19px] ${className}`}>
+    <div className={`relative bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] w-[358px] max-w-full p-[19px] ${className}`}>
       <div className="flex gap-4">
         <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
           {imageUrl && !imgFailed ? (
@@ -50,7 +50,7 @@ export default function PoiCard({
         </div>
         {/* pe-8 reserves room for a future top-right action (like/more) button, not added yet */}
         <button className="text-start min-w-0 flex-1 pe-8" onClick={onClick}>
-          <p className="font-heading font-semibold text-[17px] text-text-primary">{name}</p>
+          <p className="font-heading font-semibold text-[17px] text-text-primary line-clamp-2">{name}</p>
           <p className="font-medium text-[10px] text-text-secondary tracking-[0.4px] mt-[5px]">{distance}</p>
           <p className={`font-medium text-[11px] ${CATEGORY_TEXT_CLASSES[categoryAccent]} tracking-[0.44px] mt-[3px]`}>
             {category}
