@@ -4,7 +4,7 @@ import { useCity } from "../lib/CityContext";
 import { useTranslation } from "../lib/LanguageContext";
 import { ensureTopSitesPreview } from "../lib/sitesPreview";
 import { ensurePopularDestinations, type PopularDestination } from "../lib/popularDestinations";
-import { useWikiThumbnail } from "../lib/useWikiThumbnail";
+import { ensureCityHeroImage } from "../lib/cityHero";
 import { ensureSiteImage } from "../lib/siteImage";
 import { slugify } from "../lib/geo";
 import { track } from "../lib/analytics";
@@ -86,9 +86,11 @@ function SuggestionCard({
 }
 
 /**
- * Uses a plain Wikipedia thumbnail, not ensureCityHeroImage -- Unsplash photos require a visible
- * photographer credit, and there's no room for one on this small a card, so this card simply
- * doesn't draw from Unsplash at all. The full-size hero on Explore/TripDetail/etc. still does.
+ * Resolves + persists its own hero image (see ensureCityHeroImage). The card intentionally shows
+ * no Unsplash credit -- there's no room for one at this size -- relying on the credit shown when
+ * the traveller opens the city on Explore instead. Product decision, not an oversight: Unsplash's
+ * attribution terms technically call for a credit next to every rendering of the photo, which this
+ * knowingly doesn't do.
  */
 function DestinationCard({
   destination,
@@ -101,7 +103,17 @@ function DestinationCard({
   subtitle: string;
   onClick: () => void;
 }) {
-  const imageUrl = useWikiThumbnail(destination.city);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const cityId = slugify(destination.city);
+    const countryId = slugify(destination.country);
+    ensureCityHeroImage(cityId, destination.city, countryId, destination.country).then((result) => {
+      if (!cancelled) setImageUrl(result?.url ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [destination.city, destination.country]);
+
   return <SuggestionCard imageUrl={imageUrl} title={title} subtitle={subtitle} onClick={onClick} />;
 }
 
