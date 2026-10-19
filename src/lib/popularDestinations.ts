@@ -1,6 +1,7 @@
 import { planAgent, db } from "./api";
 import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 import { slugify } from "./geo";
+import { SUGGESTION_TAGS } from "./suggestionTags";
 
 export type PopularDestination = {
   city: string;
@@ -9,6 +10,9 @@ export type PopularDestination = {
   countryAr: string;
   reason: string;
   reasonAr: string;
+  // Absent on rows cached before this field existed -- normalizeSuggestionTags treats that the
+  // same as an empty array, so older cached destinations just render no pills.
+  tags?: string[];
 };
 
 function isValidDestination(d: unknown): d is PopularDestination {
@@ -38,11 +42,12 @@ export async function ensurePopularDestinations(
   const system =
     "You are a travel assistant for Battuta. Given a traveller's home city, suggest the 3 most " +
     "popular, appealing travel destinations for someone leaving from there, considering realistic " +
-    "flight access. For each, give the city name, country name, and a short one-line reason (under " +
-    "15 words), in both English and Arabic. " +
+    "flight access. For each, give the city name, country name, a short one-line reason (under " +
+    "15 words), in both English and Arabic, and 1-2 tags describing the destination. Tags MUST be " +
+    `exactly from this list, verbatim, no variations: ${SUGGESTION_TAGS.map((t) => `"${t}"`).join(", ")}. ` +
     ARABIC_VOICE_GUIDANCE +
     ' Respond with ONLY a JSON array, no prose, no markdown fences: [{"city": string, "cityAr": ' +
-    'string, "country": string, "countryAr": string, "reason": string, "reasonAr": string}].';
+    'string, "country": string, "countryAr": string, "reason": string, "reasonAr": string, "tags": string[1-2]}].';
 
   const text = await planAgent(system, [
     { role: "user", content: `Traveller is based in ${originCityName}, ${originCountryName}.` },

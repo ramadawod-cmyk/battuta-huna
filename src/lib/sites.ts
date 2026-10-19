@@ -1,6 +1,7 @@
 import { db, planAgent } from "./api";
 import { ARABIC_VOICE_GUIDANCE } from "./arabicVoice";
 import { CATEGORIES, normalizeCategory } from "./categories";
+import { SUGGESTION_TAGS } from "./suggestionTags";
 import { slugify, haversineMeters } from "./geo";
 import { track } from "./analytics";
 import type { Site } from "./types";
@@ -44,7 +45,7 @@ const BATCH_COUNT = 12;
 export const NEAR_DUPLICATE_METERS = 150;
 
 export async function generatePoiBatch(cityName: string, countryName: string, focus: string, count: number): Promise<GeneratedPoi[]> {
-  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. ${ARABIC_VOICE_GUIDANCE} Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "nameAr": string (the place's real Arabic name if one exists, otherwise a natural Arabic rendering), "category": string (one of the 8 exact category strings above), "tags": string[1-2], "description": string (10-14 words, warm editorial tone, no markdown), "descriptionAr": string (10-14 words), "lat": number, "lng": number, "mustSee": boolean (true only for iconic, unmissable landmarks a first-time visitor shouldn't skip), "durationMinutes": number (typical time a visitor spends here, in minutes)}.`;
+  const system = `You are a travel research assistant for Battuta, a cultural-discovery app. Generate ${count} real, accurate points of interest for a given city. ${focus} Categories MUST be exactly one of these 8 strings, verbatim, no variations: ${CATEGORIES.map((c) => `"${c}"`).join(", ")}. Tags MUST be 1-2 of exactly these strings, verbatim, no variations: ${SUGGESTION_TAGS.map((t) => `"${t}"`).join(", ")}. Coordinates must be real and accurate. Keep descriptions to 10-14 words. ${ARABIC_VOICE_GUIDANCE} Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "nameAr": string (the place's real Arabic name if one exists, otherwise a natural Arabic rendering), "category": string (one of the 8 exact category strings above), "tags": string[1-2] (from the exact tag list above, whichever genuinely fit -- omit any that don't), "description": string (10-14 words, warm editorial tone, no markdown), "descriptionAr": string (10-14 words), "lat": number, "lng": number, "mustSee": boolean (true only for iconic, unmissable landmarks a first-time visitor shouldn't skip), "durationMinutes": number (typical time a visitor spends here, in minutes)}.`;
 
   const text = await planAgent(system, [
     { role: "user", content: `Generate ${count} points of interest for ${cityName}, ${countryName}.` },

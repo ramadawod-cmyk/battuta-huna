@@ -93,6 +93,14 @@ const en = {
   "plan.budget.midRange": "Mid-range",
   "plan.budget.luxury": "Luxury",
 
+  "tag.familyFriendly": "Family-friendly",
+  "tag.romantic": "Romantic",
+  "tag.adventure": "Adventure",
+  "tag.bestInSpring": "Best in spring",
+  "tag.bestInSummer": "Best in summer",
+  "tag.bestInAutumn": "Best in autumn",
+  "tag.bestInWinter": "Best in winter",
+
   "category.sightseeing": "Sightseeing",
   "category.history": "History",
   "category.artCulture": "Art & Culture",

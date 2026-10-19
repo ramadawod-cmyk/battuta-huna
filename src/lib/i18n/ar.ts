@@ -93,6 +93,14 @@ const ar: typeof en = {
   "plan.budget.midRange": "متوسطة",
   "plan.budget.luxury": "فاخرة",
 
+  "tag.familyFriendly": "مناسب للعائلات",
+  "tag.romantic": "رومانسي",
+  "tag.adventure": "مغامرة",
+  "tag.bestInSpring": "الأفضل في الربيع",
+  "tag.bestInSummer": "الأفضل في الصيف",
+  "tag.bestInAutumn": "الأفضل في الخريف",
+  "tag.bestInWinter": "الأفضل في الشتاء",
+
   "category.sightseeing": "معالم سياحية",
   "category.history": "تاريخ",
   "category.artCulture": "فن وثقافة",

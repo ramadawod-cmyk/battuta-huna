@@ -4,12 +4,13 @@ import { useCity } from "../lib/CityContext";
 import { useTranslation } from "../lib/LanguageContext";
 import { ensureTopSitesPreview } from "../lib/sitesPreview";
 import { ensurePopularDestinations, type PopularDestination } from "../lib/popularDestinations";
-import { useWikiThumbnail } from "../lib/useWikiThumbnail";
+import { ensureCityHeroImage } from "../lib/cityHero";
 import { ensureSiteImage } from "../lib/siteImage";
 import { slugify } from "../lib/geo";
 import { track } from "../lib/analytics";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { CATEGORY_ACCENTS, CATEGORY_LABEL_KEYS, normalizeCategory, type CategoryAccent } from "../lib/categories";
+import { SUGGESTION_TAG_LABEL_KEYS, normalizeSuggestionTags, type SuggestionTag } from "../lib/suggestionTags";
 import type { PlanLeg } from "../lib/planFlow";
 import type { Site } from "../lib/types";
 
@@ -39,6 +40,7 @@ function SuggestionCard({
   subtitle,
   category,
   categoryAccent = "purple",
+  tags = [],
   onClick,
 }: {
   imageUrl: string | null;
@@ -46,11 +48,12 @@ function SuggestionCard({
   subtitle: string;
   category?: string;
   categoryAccent?: CategoryAccent;
+  tags?: SuggestionTag[];
   onClick: () => void;
 }) {
   const { t } = useTranslation();
   return (
-    <div className="relative bg-white border border-secondary-purple rounded-[20px] p-[16px] flex flex-col">
+    <div className="relative bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] p-[16px] flex flex-col">
       <div className="flex gap-3">
         <div className="relative bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
           {imageUrl ? (
@@ -70,6 +73,18 @@ function SuggestionCard({
             )}
           </button>
           <p className="text-[12px] leading-[1.5] text-text-primary mt-[8px] line-clamp-2">{subtitle}</p>
+          {tags.length > 0 && (
+            <div className="flex gap-[8px] mt-[9px] flex-wrap">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="bg-surface-lavender text-secondary-purple text-[10px] font-medium tracking-[0.4px] rounded-[20px] px-[10px] py-[4px]"
+                >
+                  {t(SUGGESTION_TAG_LABEL_KEYS[tag])}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex justify-end mt-[8px]">
@@ -86,9 +101,11 @@ function SuggestionCard({
 }
 
 /**
- * Uses a plain Wikipedia thumbnail, not ensureCityHeroImage -- Unsplash photos require a visible
- * photographer credit, and there's no room for one on this small a card, so this card simply
- * doesn't draw from Unsplash at all. The full-size hero on Explore/TripDetail/etc. still does.
+ * Resolves + persists its own hero image (see ensureCityHeroImage). The card intentionally shows
+ * no Unsplash credit -- there's no room for one at this size -- relying on the credit shown when
+ * the traveller opens the city on Explore instead. Product decision, not an oversight: Unsplash's
+ * attribution terms technically call for a credit next to every rendering of the photo, which this
+ * knowingly doesn't do.
  */
 function DestinationCard({
   destination,
@@ -101,8 +118,26 @@ function DestinationCard({
   subtitle: string;
   onClick: () => void;
 }) {
-  const imageUrl = useWikiThumbnail(destination.city);
-  return <SuggestionCard imageUrl={imageUrl} title={title} subtitle={subtitle} onClick={onClick} />;
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const cityId = slugify(destination.city);
+    const countryId = slugify(destination.country);
+    ensureCityHeroImage(cityId, destination.city, countryId, destination.country).then((result) => {
+      if (!cancelled) setImageUrl(result?.url ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [destination.city, destination.country]);
+
+  return (
+    <SuggestionCard
+      imageUrl={imageUrl}
+      title={title}
+      subtitle={subtitle}
+      tags={normalizeSuggestionTags(destination.tags)}
+      onClick={onClick}
+    />
+  );
 }
 
 /** Resolves + persists its own image (see ensureSiteImage) before rendering a card. */
@@ -136,6 +171,7 @@ function SiteCard({
       subtitle={subtitle}
       category={t(CATEGORY_LABEL_KEYS[category]).toUpperCase()}
       categoryAccent={CATEGORY_ACCENTS[category]}
+      tags={normalizeSuggestionTags(site.tags)}
       onClick={onClick}
     />
   );

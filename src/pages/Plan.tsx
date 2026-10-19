@@ -608,54 +608,62 @@ export default function Plan() {
 
   if (phase === "landing") {
     return (
-      <div className="relative px-4 sm:px-10 md:px-16 lg:px-[80px] py-16 sm:py-24 md:py-32 lg:py-[140px] max-w-[1180px]">
-        <img src={heroIllustration} alt="" className="hidden lg:block absolute end-[80px] top-[140px] w-[203px]" />
+      <div className="flex items-center px-4 sm:px-10 md:px-16 lg:px-[80px] h-[calc(100dvh-60px)] md:h-[100dvh] max-w-[1260px] overflow-y-auto">
+        <div className="flex gap-[32px] items-start w-full py-8">
+          <div className="flex-1 min-w-0 max-w-[680px]">
+            <img src={heroIllustration} alt="" className="w-[90px] sm:w-[110px] mb-[14px] sm:mb-[18px]" />
 
-        <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">{t("plan.heroEyebrow")}</p>
-        <h1 className="font-heading font-semibold text-[32px] sm:text-[40px] md:text-[48px] leading-[1.15] text-text-primary mt-[16px] max-w-[600px]">
-          {t("plan.heroTitle")}
-        </h1>
-        <p className="text-[16px] leading-[1.5] text-text-secondary mt-[16px] max-w-[560px]">
-          {t("plan.heroSubtitle")}
-        </p>
+            <p className="font-medium text-[12px] text-primary-orange tracking-[1.44px]">{t("plan.heroEyebrow")}</p>
+            <h1 className="font-heading font-semibold text-[28px] sm:text-[36px] md:text-[42px] leading-[1.15] text-text-primary mt-[12px] max-w-[600px]">
+              {t("plan.heroTitle")}
+            </h1>
+            <p className="text-[15px] leading-[1.5] text-text-secondary mt-[12px] max-w-[560px]">
+              {t("plan.heroSubtitle")}
+            </p>
 
-        <form
-          className="relative mt-[36px] w-full max-w-[600px]"
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage(input);
-          }}
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={t("plan.inputPlaceholder")}
-            className="w-full h-[64px] sm:h-[76px] rounded-[24px] border-[1.5px] border-secondary-purple shadow-[0px_16px_40px_0px_rgba(48,48,48,0.12)] ps-[20px] sm:ps-[26px] pe-[70px] sm:pe-[80px] text-[15px] sm:text-[16px] text-text-primary placeholder:text-text-secondary outline-none"
-          />
-          <button
-            type="submit"
-            aria-label={t("plan.send")}
-            className="absolute end-[10px] sm:end-[12px] top-1/2 -translate-y-1/2 size-[44px] sm:size-[52px] rounded-full bg-primary-orange flex items-center justify-center"
-          >
-            <img src={sendArrow} alt="" className="size-[12px]" />
-          </button>
-        </form>
-
-        <div className="flex gap-[10px] mt-[24px] flex-wrap">
-          {SUGGESTION_KEYS.map((key) => (
-            <button
-              key={key}
-              onClick={() => {
-                const hint = SUGGESTION_DESTINATION_HINTS[key];
-                if (hint) setDestinationHint(hint);
-                sendMessage(t(key));
+            <form
+              className="relative mt-[24px] w-full max-w-[600px]"
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage(input);
               }}
-              className="bg-white border border-secondary-purple rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium text-text-primary"
             >
-              {t(key)}
-            </button>
-          ))}
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={t("plan.inputPlaceholder")}
+                className="w-full h-[56px] sm:h-[64px] rounded-[24px] border-[1.5px] border-secondary-purple shadow-[0px_16px_40px_0px_rgba(48,48,48,0.12)] ps-[20px] sm:ps-[26px] pe-[62px] sm:pe-[70px] text-[15px] sm:text-[16px] text-text-primary placeholder:text-text-secondary outline-none"
+              />
+              <button
+                type="submit"
+                aria-label={t("plan.send")}
+                className="absolute end-[8px] sm:end-[10px] top-1/2 -translate-y-1/2 size-[40px] sm:size-[46px] rounded-full bg-primary-orange flex items-center justify-center"
+              >
+                <img src={sendArrow} alt="" className="size-[11px]" />
+              </button>
+            </form>
+
+            <div className="flex gap-[10px] mt-[18px] flex-wrap">
+              {SUGGESTION_KEYS.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    const hint = SUGGESTION_DESTINATION_HINTS[key];
+                    if (hint) setDestinationHint(hint);
+                    sendMessage(t(key));
+                  }}
+                  className="bg-white border border-secondary-purple rounded-[20px] px-[16px] py-[10px] text-[13px] font-medium text-text-primary"
+                >
+                  {t(key)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden lg:block w-[320px] shrink-0">
+            <PlanSuggestionsPanel destination={null} />
+          </div>
         </div>
       </div>
     );
