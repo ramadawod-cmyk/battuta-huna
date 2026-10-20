@@ -39,7 +39,7 @@ export default function TripDetail() {
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
   const [swapTarget, setSwapTarget] = useState<{ day: number; slotName: string } | null>(null);
-  const [selectedSite, setSelectedSite] = useState<{ day: number; slotName: string } | null>(null);
+  const [selectedSite, setSelectedSite] = useState<{ day: number; slot: TripSlot } | null>(null);
   const [sharingBusy, setSharingBusy] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState<{ url: string; copied: boolean } | null>(null);
@@ -308,7 +308,7 @@ export default function TripDetail() {
         <div className="mt-[32px]">
           <TripItinerary
             trip={trip}
-            onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
+            onViewDetails={(day, slot) => setSelectedSite({ day, slot })}
             onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
             onViewMapForDay={(day) => {
               setActiveMapDay(day);
@@ -353,10 +353,11 @@ export default function TripDetail() {
 
       {selectedSite && (
         <SiteDetailModal
-          siteName={selectedSite.slotName}
+          siteName={selectedSite.slot.name}
           cityId={selectedSiteCityId}
           cityName={selectedSiteCityName}
           source="trip_detail"
+          fallbackSlot={selectedSite.slot}
           onClose={() => setSelectedSite(null)}
         />
       )}

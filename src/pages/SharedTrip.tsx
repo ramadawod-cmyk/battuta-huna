@@ -14,7 +14,7 @@ import { publicDateLabel } from "../lib/tripSharing";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
 import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
-import type { Trip } from "../lib/types";
+import type { Trip, TripSlot } from "../lib/types";
 
 // A standalone public page (no <Layout> sidebar, same pattern as "/" and "/auth") -- a stranger
 // opening a share link should land on something that reads like a shareable web page, not an app
@@ -31,7 +31,7 @@ export default function SharedTrip() {
   const [tipsByCity, setTipsByCity] = useState<Record<string, CityTips>>({});
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide">("itinerary");
   const [expandedGuideKeys, setExpandedGuideKeys] = useState<Set<string>>(new Set());
-  const [selectedSite, setSelectedSite] = useState<{ day: number; slotName: string } | null>(null);
+  const [selectedSite, setSelectedSite] = useState<{ day: number; slot: TripSlot } | null>(null);
   const primaryDestination = trip ? tripDestinations(trip)[0] : null;
   const hero = useCityHeroImage(
     primaryDestination?.cityId,
@@ -156,7 +156,7 @@ export default function SharedTrip() {
 
             {activeTab === "itinerary" && (
               <div className="mt-[32px]">
-                <TripItinerary trip={trip} onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })} />
+                <TripItinerary trip={trip} onViewDetails={(day, slot) => setSelectedSite({ day, slot })} />
               </div>
             )}
 
@@ -180,10 +180,11 @@ export default function SharedTrip() {
 
             {selectedSite && (
               <SiteDetailModal
-                siteName={selectedSite.slotName}
+                siteName={selectedSite.slot.name}
                 cityId={selectedSiteCityId}
                 cityName={selectedSiteCityName}
                 source="shared_trip"
+                fallbackSlot={selectedSite.slot}
                 onClose={() => setSelectedSite(null)}
               />
             )}

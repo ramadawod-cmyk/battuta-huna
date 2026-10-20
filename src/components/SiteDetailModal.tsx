@@ -6,10 +6,11 @@ import { db, planAgent, type WikiImage, wikiImagesBySearch } from "../lib/api";
 import { activityToCandidate } from "../lib/activities";
 import { ARABIC_VOICE_GUIDANCE } from "../lib/arabicVoice";
 import { categoryOrActivityLabelKey, normalizeCategory } from "../lib/categories";
+import { slugify } from "../lib/geo";
 import { buildViatorSearchUrl } from "../lib/viator";
 import { useTranslation } from "../lib/LanguageContext";
 import { track } from "../lib/analytics";
-import type { Activity, Site } from "../lib/types";
+import type { Activity, Site, TripSlot } from "../lib/types";
 
 // Paused (2026-09-13) pending a UX rethink on how/where the Viator CTA should actually appear --
 // code, tests, and the env var wiring are all intact, just not rendered. Flip back to true to
@@ -21,6 +22,12 @@ type SiteDetailModalProps = {
   cityId: string;
   cityName: string;
   source: string;
+  // The itinerary already has this stop's own data in memory -- used only when neither sites nor
+  // activities has a row matching this exact name (e.g. a trip built while the activities table's
+  // writes were silently failing, see the RLS incident -- its slot names were never persisted
+  // anywhere queryable). Lets the modal still render real content instead of "not found"; only
+  // the AI-generated long description is genuinely missing in that case.
+  fallbackSlot?: TripSlot;
   onClose: () => void;
 };
 
@@ -40,7 +47,7 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
   }
 }
 
-export default function SiteDetailModal({ siteName, cityId, cityName, source, onClose }: SiteDetailModalProps) {
+export default function SiteDetailModal({ siteName, cityId, cityName, source, fallbackSlot, onClose }: SiteDetailModalProps) {
   const { t, language } = useTranslation();
   const [site, setSite] = useState<Site | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +71,28 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
         return db("getActivity", { name: siteName, cityId })
           .then((activity: Activity | null) => (activity ? activityToCandidate(activity) : null))
           .catch(() => null);
+      })
+      .then((result: Site | null) => {
+        if (result) return result;
+        if (!fallbackSlot) return null;
+        // Neither table has a row under this exact name -- fall back to the itinerary's own
+        // already-known data rather than a dead end. Only long_description is genuinely missing
+        // here, so the generation effect below still runs for it as usual.
+        return {
+          id: `slot-${slugify(fallbackSlot.name)}`,
+          city_id: cityId,
+          name: fallbackSlot.name,
+          category: fallbackSlot.category,
+          tags: fallbackSlot.tags,
+          description: fallbackSlot.description,
+          lat: fallbackSlot.lat,
+          lng: fallbackSlot.lng,
+          map_url: fallbackSlot.mapUrl,
+          image_url: fallbackSlot.imageUrl ?? null,
+          kind: fallbackSlot.kind,
+          name_ar: fallbackSlot.nameAr ?? null,
+          description_ar: fallbackSlot.descriptionAr ?? null,
+        } satisfies Site;
       })
       .then((result: Site | null) => {
         setSite(result);
