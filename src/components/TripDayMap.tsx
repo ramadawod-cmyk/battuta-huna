@@ -1,6 +1,15 @@
 import { useEffect } from "react";
-import { APIProvider, Map as GoogleMap, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
+import {
+  APIProvider,
+  Map as GoogleMap,
+  AdvancedMarker,
+  InfoWindow,
+  useMap,
+  useAdvancedMarkerRef,
+} from "@vis.gl/react-google-maps";
+import ImagePlaceholder from "./ImagePlaceholder";
 import { useTranslation } from "../lib/LanguageContext";
+import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import type { TripSlot } from "../lib/types";
 
 /** The numbered pin content for one stop -- plain inline styles, not Tailwind, since the size is
@@ -63,6 +72,56 @@ function MapCamera({ slots, selectedSlot }: { slots: TripSlot[]; selectedSlot: T
 }
 
 /**
+ * One marker plus the mini thumbnail+name popup shown while it's selected. The popup closing
+ * itself (close button, Escape, tapping elsewhere) calls onSelect(null) so the parent's selection
+ * state and the open InfoWindow never drift apart -- there's exactly one source of truth
+ * (selected), not a separate local "is this window open" flag.
+ */
+function TripMapMarker({
+  slot,
+  index,
+  selected,
+  onSelect,
+}: {
+  slot: TripSlot;
+  index: number;
+  selected: boolean;
+  onSelect: (slot: TripSlot | null) => void;
+}) {
+  const { language } = useTranslation();
+  const [markerRef, marker] = useAdvancedMarkerRef();
+  // Same cached-image-first pattern as ItinerarySlotRow -- see the note on TripSlot.imageUrl.
+  const liveImageUrl = useWikiThumbnail(slot.imageUrl ? null : slot.name);
+  const imageUrl = slot.imageUrl || liveImageUrl;
+  const name = language === "ar" && slot.nameAr ? slot.nameAr : slot.name;
+
+  return (
+    <>
+      <AdvancedMarker
+        ref={markerRef}
+        position={{ lat: slot.lat, lng: slot.lng }}
+        zIndex={selected ? 10 : index}
+        onClick={() => onSelect(slot)}
+      >
+        <MapPin index={index} selected={selected} />
+      </AdvancedMarker>
+      {selected && marker && (
+        <InfoWindow anchor={marker} onClose={() => onSelect(null)}>
+          <div className="flex items-center gap-[10px] p-[2px]">
+            <div className="bg-surface-lavender rounded-[10px] size-[48px] shrink-0 overflow-hidden">
+              {imageUrl ? <img src={imageUrl} alt="" className="size-full object-cover" /> : <ImagePlaceholder />}
+            </div>
+            <p className="font-heading font-semibold text-[13px] text-text-primary max-w-[140px] leading-tight">
+              {name}
+            </p>
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  );
+}
+
+/**
  * The Google Maps panel for one day's stops -- shared by TripDetail (itinerary + map side by
  * side) and anywhere else a day's stops need showing on a map. Fills its container (h-full); the
  * host controls actual sizing/stickiness.
@@ -75,7 +134,7 @@ export default function TripDayMap({
 }: {
   slots: TripSlot[];
   selectedSlot: TripSlot | null;
-  onSelectSlot: (slot: TripSlot) => void;
+  onSelectSlot: (slot: TripSlot | null) => void;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -106,14 +165,13 @@ export default function TripDayMap({
       >
         <MapCamera slots={slots} selectedSlot={selectedSlot} />
         {slots.map((slot, i) => (
-          <AdvancedMarker
+          <TripMapMarker
             key={slot.name}
-            position={{ lat: slot.lat, lng: slot.lng }}
-            zIndex={selectedSlot?.name === slot.name ? 10 : i}
-            onClick={() => onSelectSlot(slot)}
-          >
-            <MapPin index={i} selected={selectedSlot?.name === slot.name} />
-          </AdvancedMarker>
+            slot={slot}
+            index={i}
+            selected={selectedSlot?.name === slot.name}
+            onSelect={onSelectSlot}
+          />
         ))}
       </GoogleMap>
     </APIProvider>

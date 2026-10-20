@@ -147,6 +147,7 @@ export default function TripDetail() {
     trip.pace ? (PACE_LABEL_KEYS[trip.pace] ? t(PACE_LABEL_KEYS[trip.pace]) : trip.pace).toUpperCase() : null,
     trip.budget ? (BUDGET_LABEL_KEYS[trip.budget] ? t(BUDGET_LABEL_KEYS[trip.budget]) : trip.budget).toUpperCase() : null,
   ].filter(Boolean);
+  const isMultiCity = tripDestinations(trip).length > 1;
 
   async function copyShareLink(id: string) {
     const url = shareUrl(window.location.origin, id);
@@ -284,6 +285,28 @@ export default function TripDetail() {
             />
           </div>
           <div className="hidden lg:block w-[480px] shrink-0 sticky top-[24px]">
+            {trip.days.length > 1 && (
+              <div className="flex gap-[8px] mb-[12px] flex-wrap">
+                {trip.days.map((day) => (
+                  <button
+                    key={day.day}
+                    type="button"
+                    onClick={() => {
+                      setActiveMapDay(day.day);
+                      setSelectedMapSlot(null);
+                    }}
+                    className={`rounded-[16px] px-[14px] py-[7px] text-[12px] font-medium transition-colors ${
+                      activeMapDay === day.day
+                        ? "bg-secondary-purple text-white"
+                        : "bg-white border border-secondary-purple text-text-primary"
+                    }`}
+                  >
+                    {t("trip.dayLabel", { number: day.day })}
+                    {isMultiCity && day.city ? ` · ${day.city}` : ""}
+                  </button>
+                ))}
+              </div>
+            )}
             {mapSlots.length === 0 ? (
               <div className="rounded-[24px] h-[600px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
                 {t("tripMap.noLocatedStops")}
