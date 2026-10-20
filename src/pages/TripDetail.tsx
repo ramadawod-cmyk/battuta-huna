@@ -187,7 +187,13 @@ export default function TripDetail() {
   const selectedSiteCityId = selectedSiteDay?.cityId || slugify(selectedSiteCityName);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
+    // Persistent split view (see mindtrip.ai/explore for the reference) instead of a map embedded
+    // partway down a normal scrollable page: left pane scrolls independently, right pane is a
+    // full-height, edge-to-edge map that never moves. md:h-[100dvh] on desktop (no mobile header to
+    // clear); h-[calc(100dvh-60px)] on mobile matches MobileHeader's fixed 60px bar, same formula
+    // Plan.tsx's chat phase already uses for the same reason.
+    <div className="flex h-[calc(100dvh-60px)] md:h-[100dvh]">
+    <div className="flex-1 min-w-0 h-full overflow-y-auto px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
       <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary" />
 
       <div className="flex items-start justify-between gap-[16px] mt-[24px] sm:mt-[32px]">
@@ -299,35 +305,17 @@ export default function TripDetail() {
       </div>
 
       {activeTab === "itinerary" && (
-        <div className="flex gap-[24px] lg:gap-[32px] items-start mt-[32px]">
-          <div className="flex-1 min-w-0">
-            <TripItinerary
-              trip={trip}
-              onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
-              onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
-              onViewMapForDay={(day) => {
-                setActiveMapDay(day);
-                setSelectedMapSlot(null);
-              }}
-              activeDayForMap={activeMapDay ?? undefined}
-            />
-          </div>
-          <div className="hidden lg:block w-[480px] shrink-0 sticky top-[24px]">
-            <div className="bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] p-[12px]">
-              {mapSlots.length === 0 ? (
-                <div className="rounded-[14px] h-[340px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
-                  {t("tripMap.noLocatedStops")}
-                </div>
-              ) : (
-                <TripDayMap
-                  slots={mapSlots}
-                  selectedSlot={selectedMapSlot}
-                  onSelectSlot={setSelectedMapSlot}
-                  className="h-[340px]"
-                />
-              )}
-            </div>
-          </div>
+        <div className="mt-[32px]">
+          <TripItinerary
+            trip={trip}
+            onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
+            onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
+            onViewMapForDay={(day) => {
+              setActiveMapDay(day);
+              setSelectedMapSlot(null);
+            }}
+            activeDayForMap={activeMapDay ?? undefined}
+          />
         </div>
       )}
 
@@ -372,6 +360,25 @@ export default function TripDetail() {
           onClose={() => setSelectedSite(null)}
         />
       )}
+    </div>
+
+    {/* Persistent, edge-to-edge map pane -- stays visible across both tabs (not just itinerary),
+        same "map never moves" feel as the mindtrip reference. No card framing/radius here, it's
+        meant to run flush to the viewport edges rather than sit inside a boxed card. */}
+    <div className="hidden lg:block w-[40%] shrink-0 h-full border-s border-text-primary/15">
+      {mapSlots.length === 0 ? (
+        <div className="size-full bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
+          {t("tripMap.noLocatedStops")}
+        </div>
+      ) : (
+        <TripDayMap
+          slots={mapSlots}
+          selectedSlot={selectedMapSlot}
+          onSelectSlot={setSelectedMapSlot}
+          className="h-full"
+        />
+      )}
+    </div>
     </div>
   );
 }
