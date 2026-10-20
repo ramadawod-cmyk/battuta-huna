@@ -362,12 +362,12 @@ export default function TripDetail() {
       )}
     </div>
 
-    {/* Persistent, edge-to-edge map pane -- stays visible across both tabs (not just itinerary),
-        same "map never moves" feel as the mindtrip reference. No card framing/radius here, it's
-        meant to run flush to the viewport edges rather than sit inside a boxed card. */}
-    <div className="hidden lg:block w-[40%] shrink-0 h-full border-s border-text-primary/15">
+    {/* Persistent map pane -- stays visible across both tabs (not just itinerary), same "map
+        never moves" feel as the mindtrip reference, but with a white margin around the map
+        itself (flush-to-edge read as too harsh/heavy) rather than true edge-to-edge. */}
+    <div className="hidden lg:block w-[40%] shrink-0 h-full border-s border-text-primary/15 bg-white p-[16px]">
       {mapSlots.length === 0 ? (
-        <div className="size-full bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
+        <div className="size-full rounded-[20px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
           {t("tripMap.noLocatedStops")}
         </div>
       ) : (
@@ -375,7 +375,7 @@ export default function TripDetail() {
           slots={mapSlots}
           selectedSlot={selectedMapSlot}
           onSelectSlot={setSelectedMapSlot}
-          className="h-full"
+          className="size-full rounded-[20px] overflow-hidden"
         />
       )}
     </div>
