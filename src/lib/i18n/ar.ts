@@ -14,6 +14,8 @@ const ar: typeof en = {
   "sidebar.settings": "الإعدادات",
   "sidebar.openMenu": "فتح القائمة",
   "sidebar.closeMenu": "إغلاق القائمة",
+  "sidebar.collapseMenu": "طي القائمة",
+  "sidebar.expandMenu": "توسيع القائمة",
 
   "common.backToMyTrips": "العودة إلى رحلاتي",
   "common.backToTrip": "العودة إلى الرحلة",

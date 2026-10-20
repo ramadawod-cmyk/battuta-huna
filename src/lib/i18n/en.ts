@@ -14,6 +14,8 @@ const en = {
   "sidebar.settings": "Settings",
   "sidebar.openMenu": "Open menu",
   "sidebar.closeMenu": "Close menu",
+  "sidebar.collapseMenu": "Collapse menu",
+  "sidebar.expandMenu": "Expand menu",
 
   "common.backToMyTrips": "Back to My Trips",
   "common.backToTrip": "Back to Trip",

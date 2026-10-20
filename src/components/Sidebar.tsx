@@ -69,56 +69,106 @@ const NAV_ITEMS = [
 
 const SETTINGS_ITEM = { labelKey: "sidebar.settings" as const, path: "/settings", Icon: ProfileIcon };
 
+const COLLAPSED_STORAGE_KEY = "bh_sidebar_collapsed";
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+
 function DesktopSidebar() {
   const { pathname } = useLocation();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  // Persisted so the choice survives a reload, same pattern as the app's other small per-browser
+  // preferences (e.g. CityContext's cached city) -- read once at mount, not re-read per render.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1");
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(COLLAPSED_STORAGE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
+  // The icon is drawn pointing left. In LTR, "expanded" already points toward the collapse
+  // direction (left/start) with no rotation needed; collapsing flips it to point the other way
+  // (expand direction). RTL mirrors the whole sidebar to the right edge, so both of those flip --
+  // net effect is an XOR between the two independent flips rather than stacking two rotations
+  // (which would cancel out wrong in the collapsed+RTL case).
+  const isRtl = language === "ar";
+  const chevronFlipped = collapsed !== isRtl;
 
   return (
     // border-e (logical, not border-r): the sidebar visually flips to the screen's right edge
     // under dir="rtl" (flexbox's "row" direction is direction-aware, no extra class needed for
     // that part) -- border-e keeps the border on the edge facing the main content in either
     // direction instead of staying pinned to the physical right and ending up on the outside.
-    <aside className="hidden md:flex w-[220px] lg:w-[260px] h-screen shrink-0 bg-white border-e border-text-primary/15 sticky top-0 flex-col">
-      <div className="flex items-center gap-[8px] px-[24px] lg:px-[32px] pt-[32px]">
+    <aside
+      className={`hidden md:flex ${
+        collapsed ? "w-[76px]" : "w-[220px] lg:w-[260px]"
+      } h-screen shrink-0 bg-white border-e border-text-primary/15 sticky top-0 flex-col relative transition-[width] duration-200`}
+    >
+      <button
+        type="button"
+        aria-label={t(collapsed ? "sidebar.expandMenu" : "sidebar.collapseMenu")}
+        onClick={toggleCollapsed}
+        className="absolute top-[28px] end-0 translate-x-1/2 rtl:-translate-x-1/2 size-[26px] rounded-full bg-white border border-text-primary/15 shadow-[0px_2px_6px_0px_rgba(48,48,48,0.12)] flex items-center justify-center text-text-secondary hover:text-secondary-purple transition-colors z-10"
+      >
+        <ChevronIcon className={chevronFlipped ? "rotate-180" : ""} />
+      </button>
+
+      <div className={`flex items-center gap-[8px] pt-[32px] ${collapsed ? "justify-center px-[16px]" : "px-[24px] lg:px-[32px]"}`}>
         <BrandMark className="text-text-primary shrink-0" />
-        <p className="font-heading font-semibold text-[20px] text-text-primary">Battuta</p>
+        {!collapsed && <p className="font-heading font-semibold text-[20px] text-text-primary">Battuta</p>}
       </div>
 
-      <nav className="px-[16px] lg:px-[20px] mt-[48px] lg:mt-[68px] flex flex-col gap-[8px]">
+      <nav className={`${collapsed ? "px-[14px]" : "px-[16px] lg:px-[20px]"} mt-[48px] lg:mt-[68px] flex flex-col gap-[8px]`}>
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`h-[44px] rounded-[12px] flex items-center gap-[12px] px-[16px] ${
-                active ? "bg-secondary-purple/10" : ""
-              }`}
+              title={collapsed ? t(item.labelKey) : undefined}
+              className={`h-[44px] rounded-[12px] flex items-center gap-[12px] ${
+                collapsed ? "justify-center px-0" : "px-[16px]"
+              } ${active ? "bg-secondary-purple/10" : ""}`}
             >
-              <item.Icon className={active ? "text-secondary-purple" : "text-text-secondary"} />
-              <span className={`text-[14px] ${active ? "font-medium text-text-primary" : "text-text-secondary"}`}>
-                {t(item.labelKey)}
-              </span>
+              <item.Icon className={`shrink-0 ${active ? "text-secondary-purple" : "text-text-secondary"}`} />
+              {!collapsed && (
+                <span className={`text-[14px] ${active ? "font-medium text-text-primary" : "text-text-secondary"}`}>
+                  {t(item.labelKey)}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-auto px-[16px] lg:px-[20px] pb-[40px]">
+      <div className={`mt-auto ${collapsed ? "px-[14px]" : "px-[16px] lg:px-[20px]"} pb-[40px]`}>
         <Link
           to={SETTINGS_ITEM.path}
-          className={`h-[44px] rounded-[12px] flex items-center gap-[12px] px-[16px] ${
-            pathname === SETTINGS_ITEM.path ? "bg-secondary-purple/10" : ""
-          }`}
+          title={collapsed ? t(SETTINGS_ITEM.labelKey) : undefined}
+          className={`h-[44px] rounded-[12px] flex items-center gap-[12px] ${
+            collapsed ? "justify-center px-0" : "px-[16px]"
+          } ${pathname === SETTINGS_ITEM.path ? "bg-secondary-purple/10" : ""}`}
         >
-          <SETTINGS_ITEM.Icon className={pathname === SETTINGS_ITEM.path ? "text-secondary-purple" : "text-text-secondary"} />
-          <span
-            className={`text-[14px] ${
-              pathname === SETTINGS_ITEM.path ? "font-medium text-text-primary" : "text-text-secondary"
-            }`}
-          >
-            {t(SETTINGS_ITEM.labelKey)}
-          </span>
+          <SETTINGS_ITEM.Icon
+            className={`shrink-0 ${pathname === SETTINGS_ITEM.path ? "text-secondary-purple" : "text-text-secondary"}`}
+          />
+          {!collapsed && (
+            <span
+              className={`text-[14px] ${
+                pathname === SETTINGS_ITEM.path ? "font-medium text-text-primary" : "text-text-secondary"
+              }`}
+            >
+              {t(SETTINGS_ITEM.labelKey)}
+            </span>
+          )}
         </Link>
       </div>
     </aside>
