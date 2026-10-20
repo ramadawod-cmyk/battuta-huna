@@ -112,7 +112,7 @@ export function TripItinerary({
   activeDayForMap,
 }: {
   trip: Trip;
-  onViewDetails: (day: number, slotName: string) => void;
+  onViewDetails: (day: number, slot: TripSlot) => void;
   onSwap?: (day: number, slotName: string) => void;
   onViewMapForDay?: (day: number) => void;
   // Highlights whichever day's "Map view" pill matches what the embedded map is currently
@@ -166,7 +166,7 @@ export function TripItinerary({
                     <ItinerarySlotRow
                       key={`${day.day}-${slot.name}`}
                       slot={slot}
-                      onViewDetails={() => onViewDetails(day.day, slot.name)}
+                      onViewDetails={() => onViewDetails(day.day, slot)}
                       onSwap={onSwap ? () => onSwap(day.day, slot.name) : undefined}
                     />
                   ))}
