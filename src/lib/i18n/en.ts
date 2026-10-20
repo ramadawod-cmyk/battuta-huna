@@ -192,6 +192,7 @@ const en = {
 
   "tripMap.loading": "Loading map…",
   "tripMap.noLocatedStops": "No located stops for this day.",
+  "tripMap.mapUnavailable": "Map isn't available right now.",
 
   "sharedTrip.unavailableTitle": "This trip isn't available.",
   "sharedTrip.unavailableBody": "It may have been unshared, or the link is incorrect.",

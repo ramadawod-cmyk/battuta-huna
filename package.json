@@ -12,7 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "leaflet": "^1.9.4",
+    "@vis.gl/react-google-maps": "^1.10.1",
     "lucide-react": "^1.45.0",
     "mixpanel-browser": "^2.82.0",
     "react": "^19.2.8",
@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/leaflet": "^1.9.22",
     "@types/mixpanel-browser": "^2.60.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
