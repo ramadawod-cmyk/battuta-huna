@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import BackLink from "../components/BackLink";
+import ImagePlaceholder from "../components/ImagePlaceholder";
 import { db } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useTranslation } from "../lib/LanguageContext";
@@ -10,6 +11,7 @@ import { categoryOrActivityLabelKey } from "../lib/categories";
 import { GROUP_LABEL_KEYS, PACE_LABEL_KEYS } from "../lib/planFlow";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
+import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import type { Trip, TripSlot } from "../lib/types";
 
 function markerIcon(index: number, selected: boolean) {
@@ -23,11 +25,82 @@ function markerIcon(index: number, selected: boolean) {
   });
 }
 
+/**
+ * Styled to match PoiCard/ItinerarySlotRow (borderless shadow card, fixed thumbnail) so the map
+ * page's stop list feels like the same app. The numbered badge stays separate from the image
+ * rather than overlaid on it, since it has to keep matching the map pin numbers unambiguously.
+ */
+function MapStopCard({
+  slot,
+  index,
+  selected,
+  onClick,
+}: {
+  slot: TripSlot;
+  index: number;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const { t, language } = useTranslation();
+  // Prefers whatever image was already resolved+cached elsewhere -- see the note on
+  // TripSlot.imageUrl in types.ts, same pattern as ItinerarySlotRow.
+  const liveImageUrl = useWikiThumbnail(slot.imageUrl ? null : slot.name);
+  const imageUrl = slot.imageUrl || liveImageUrl;
+  const name = language === "ar" && slot.nameAr ? slot.nameAr : slot.name;
+  const description = language === "ar" && slot.descriptionAr ? slot.descriptionAr : slot.description;
+  return (
+    <button
+      onClick={onClick}
+      className={`text-start w-full flex gap-[14px] bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] p-[16px] mb-[16px] transition-colors ${
+        selected ? "border-2 border-secondary-purple" : ""
+      }`}
+    >
+      <div className="bg-primary-orange rounded-full size-[28px] shrink-0 flex items-center justify-center text-white font-bold text-[13px] mt-[2px]">
+        {index + 1}
+      </div>
+      <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
+        {imageUrl ? <img src={imageUrl} alt="" className="size-full object-cover" /> : <ImagePlaceholder />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] text-text-secondary">{slot.time}</p>
+        <p className="font-heading font-semibold text-[16px] text-text-primary mt-[2px] line-clamp-1">{name}</p>
+        <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px] mt-[3px]">
+          {t(categoryOrActivityLabelKey(slot.category))}
+        </p>
+        <p className="text-[12px] leading-[1.4] text-text-secondary mt-[4px] line-clamp-2">{description}</p>
+      </div>
+    </button>
+  );
+}
+
+/** The card below the map for whichever pin/stop is currently selected -- same card style as MapStopCard. */
+function SelectedSlotCard({ slot }: { slot: TripSlot }) {
+  const { t, language } = useTranslation();
+  const liveImageUrl = useWikiThumbnail(slot.imageUrl ? null : slot.name);
+  const imageUrl = slot.imageUrl || liveImageUrl;
+  const name = language === "ar" && slot.nameAr ? slot.nameAr : slot.name;
+  const description = language === "ar" && slot.descriptionAr ? slot.descriptionAr : slot.description;
+  return (
+    <div className="flex gap-[16px] bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] p-[16px] mt-[16px]">
+      <div className="bg-surface-lavender rounded-[12px] size-[60px] shrink-0 overflow-hidden">
+        {imageUrl ? <img src={imageUrl} alt="" className="size-full object-cover" /> : <ImagePlaceholder />}
+      </div>
+      <div className="min-w-0">
+        <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px]">
+          {t(categoryOrActivityLabelKey(slot.category))}
+        </p>
+        <p className="font-heading font-semibold text-[16px] text-text-primary mt-[4px]">{name}</p>
+        <p className="text-[12px] leading-[1.4] text-text-secondary mt-[6px]">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function TripMapBuilder() {
   const { tripId } = useParams<{ tripId: string }>();
   const [searchParams] = useSearchParams();
   const { session, loading: authLoading } = useAuth();
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,49 +237,20 @@ export default function TripMapBuilder() {
           {slots.length === 0 && (
             <p className="text-text-secondary text-[14px]">{t("tripMap.noLocatedStops")}</p>
           )}
-          {slots.map((slot, i) => {
-            const isSelected = selectedSlot?.name === slot.name;
-            const name = language === "ar" && slot.nameAr ? slot.nameAr : slot.name;
-            const description = language === "ar" && slot.descriptionAr ? slot.descriptionAr : slot.description;
-            return (
-              <button
-                key={slot.name}
-                onClick={() => setSelectedSlot(slot)}
-                className={`text-start w-full flex gap-[20px] bg-white border rounded-[20px] p-[23px] mb-[16px] transition-colors ${
-                  isSelected ? "border-[2px] border-secondary-purple" : "border border-secondary-purple"
-                }`}
-              >
-                <div className="bg-primary-orange rounded-full size-[32px] shrink-0 flex items-center justify-center text-white font-bold text-[14px]">
-                  {i + 1}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[12px] text-text-secondary">{slot.time}</p>
-                  <p className="font-heading font-semibold text-[16px] text-text-primary mt-[2px]">{name}</p>
-                  <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px] mt-[3px]">
-                    {t(categoryOrActivityLabelKey(slot.category))}
-                  </p>
-                  <p className="text-[12px] leading-[1.4] text-text-secondary mt-[4px]">{description}</p>
-                </div>
-              </button>
-            );
-          })}
+          {slots.map((slot, i) => (
+            <MapStopCard
+              key={slot.name}
+              slot={slot}
+              index={i}
+              selected={selectedSlot?.name === slot.name}
+              onClick={() => setSelectedSlot(slot)}
+            />
+          ))}
         </div>
 
         <div className="w-[524px] max-w-full shrink-0">
           <div ref={mapContainerRef} className="rounded-[24px] overflow-hidden h-[320px] sm:h-[500px] border border-secondary-purple" />
-          {selectedSlot && (
-            <div className="bg-white border border-secondary-purple rounded-[20px] p-[19px] mt-[16px]">
-              <p className="font-medium text-[10px] text-secondary-purple tracking-[0.4px]">
-                {t(categoryOrActivityLabelKey(selectedSlot.category))}
-              </p>
-              <p className="font-heading font-semibold text-[16px] text-text-primary mt-[4px]">
-                {language === "ar" && selectedSlot.nameAr ? selectedSlot.nameAr : selectedSlot.name}
-              </p>
-              <p className="text-[12px] leading-[1.4] text-text-secondary mt-[6px]">
-                {language === "ar" && selectedSlot.descriptionAr ? selectedSlot.descriptionAr : selectedSlot.description}
-              </p>
-            </div>
-          )}
+          {selectedSlot && <SelectedSlotCard slot={selectedSlot} />}
         </div>
       </div>
     </div>
