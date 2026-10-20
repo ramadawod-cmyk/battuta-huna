@@ -15,13 +15,16 @@ import { useWikiThumbnail } from "../lib/useWikiThumbnail";
 import type { Trip, TripSlot } from "../lib/types";
 
 function markerIcon(index: number, selected: boolean) {
+  const size = selected ? 40 : 34;
   return L.divIcon({
     className: "",
-    html: `<div style="width:36px;height:36px;border-radius:9999px;background:${
+    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${
       selected ? "#6155cc" : "#fe9c5e"
-    };border:3px solid white;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;box-shadow:0 2px 6px rgba(48,48,48,0.25);">${index + 1}</div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
+    };border:3px solid white;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;box-shadow:0 4px 10px rgba(48,48,48,${
+      selected ? "0.35" : "0.2"
+    });transition:width 0.15s ease,height 0.15s ease;">${index + 1}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
 }
 
@@ -110,7 +113,7 @@ export default function TripMapBuilder() {
   const [mapEl, setMapEl] = useState<HTMLDivElement | null>(null);
   const mapContainerRef = useCallback((node: HTMLDivElement | null) => setMapEl(node), []);
   const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const markersRef = useRef<Map<string, L.Marker>>(new Map());
 
   useTrackScreen("trip_map");
 
@@ -145,29 +148,41 @@ export default function TripMapBuilder() {
 
   useEffect(() => {
     if (!mapEl || mapRef.current) return;
-    mapRef.current = L.map(mapEl, { zoomControl: true }).setView([20, 0], 2);
+    // zoomSnap/zoomDelta below 1 and a larger wheelPxPerZoomLevel make zoom steps feel smoother
+    // and less twitchy than Leaflet's jumpy integer-zoom default.
+    mapRef.current = L.map(mapEl, { zoomControl: true, zoomSnap: 0.5, zoomDelta: 0.5, wheelPxPerZoomLevel: 90 }).setView(
+      [20, 0],
+      2,
+    );
     const geoapifyKey = import.meta.env.VITE_GEOAPIFY_KEY;
     // Geoapify when configured -- OpenStreetMap's own public tile servers explicitly disallow
     // sustained production traffic and will throttle/block it; falls back to OSM directly for
-    // local dev when no key is set, same pattern as buildViatorSearchUrl.
+    // local dev when no key is set, same pattern as buildViatorSearchUrl. "positron" is a light,
+    // minimal style (vs. osm-bright's busy default OSM look) so the custom pins read clearly and
+    // the map feels current rather than like stock OpenStreetMap -- {r} + detectRetina request
+    // Geoapify's @2x tiles on high-DPI screens so they don't look soft/blurry on phones.
     const tileUrl = geoapifyKey
-      ? `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${geoapifyKey}`
+      ? `https://maps.geoapify.com/v1/tile/positron/{z}/{x}/{y}{r}.png?apiKey=${geoapifyKey}`
       : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
     const attribution = geoapifyKey
       ? 'Powered by <a href="https://www.geoapify.com/" target="_blank">Geoapify</a> | &copy; OpenStreetMap <a href="https://www.openstreetmap.org/copyright" target="_blank">contributors</a>'
       : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-    L.tileLayer(tileUrl, { attribution, maxZoom: 20 }).addTo(mapRef.current);
+    L.tileLayer(tileUrl, { attribution, maxZoom: 20, detectRetina: true }).addTo(mapRef.current);
     return () => {
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, [mapEl]);
 
+  // Rebuilds markers and re-fits the view only when the stop list itself changes (new day, trip
+  // loaded) -- NOT on every selection. Re-running this on selectedSlot too (as it used to) tore
+  // down and recreated every marker plus re-fit the whole map on every single pin/card tap, which
+  // is exactly what made selecting a stop feel like a jarring jump instead of a quiet highlight.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    markersRef.current = new Map();
     if (slots.length === 0) return;
 
     slots.forEach((slot, i) => {
@@ -175,12 +190,27 @@ export default function TripMapBuilder() {
         icon: markerIcon(i, selectedSlot?.name === slot.name),
       }).addTo(map);
       marker.on("click", () => setSelectedSlot(slot));
-      markersRef.current.push(marker);
+      markersRef.current.set(slot.name, marker);
     });
 
     const bounds = L.latLngBounds(slots.map((s) => [s.lat, s.lng] as [number, number]));
     map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
-  }, [mapEl, slots, selectedSlot]);
+    // selectedSlot deliberately excluded -- only read for each marker's initial icon above, same
+    // read-once rationale as the searchParams effect further up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapEl, slots]);
+
+  // Just restyles whichever marker is selected/deselected and gently pans to it -- no marker
+  // churn, no re-fit, so picking a stop from the list or tapping a different pin feels like a
+  // quiet highlight + smooth pan instead of the whole map resetting.
+  useEffect(() => {
+    slots.forEach((slot, i) => {
+      markersRef.current.get(slot.name)?.setIcon(markerIcon(i, selectedSlot?.name === slot.name));
+    });
+    if (selectedSlot) {
+      mapRef.current?.panTo([selectedSlot.lat, selectedSlot.lng], { animate: true });
+    }
+  }, [selectedSlot, slots]);
 
   if (loading) {
     return <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[40px] text-text-secondary">{t("tripMap.loading")}</div>;
@@ -249,7 +279,10 @@ export default function TripMapBuilder() {
         </div>
 
         <div className="w-[524px] max-w-full shrink-0">
-          <div ref={mapContainerRef} className="rounded-[24px] overflow-hidden h-[320px] sm:h-[500px] border border-secondary-purple" />
+          <div
+            ref={mapContainerRef}
+            className="rounded-[24px] overflow-hidden h-[320px] sm:h-[500px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.08)]"
+          />
           {selectedSlot && <SelectedSlotCard slot={selectedSlot} />}
         </div>
       </div>
