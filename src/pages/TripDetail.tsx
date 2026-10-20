@@ -187,7 +187,13 @@ export default function TripDetail() {
   const selectedSiteCityId = selectedSiteDay?.cityId || slugify(selectedSiteCityName);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
+    // Persistent split view (see mindtrip.ai/explore for the reference) instead of a map embedded
+    // partway down a normal scrollable page: left pane scrolls independently, right pane is a
+    // full-height, edge-to-edge map that never moves. md:h-[100dvh] on desktop (no mobile header to
+    // clear); h-[calc(100dvh-60px)] on mobile matches MobileHeader's fixed 60px bar, same formula
+    // Plan.tsx's chat phase already uses for the same reason.
+    <div className="flex h-[calc(100dvh-60px)] md:h-[100dvh]">
+    <div className="flex-1 min-w-0 h-full overflow-y-auto px-4 sm:px-6 md:px-10 lg:px-[48px] py-6 md:py-[32px]">
       <BackLink to="/my-trips" labelKey="common.backToMyTrips" className="text-[13px] font-medium text-text-secondary" />
 
       <div className="flex items-start justify-between gap-[16px] mt-[24px] sm:mt-[32px]">
@@ -251,75 +257,65 @@ export default function TripDetail() {
         </p>
       )}
 
-      <div className="flex gap-[12px] mt-[32px]">
-        <button
-          onClick={() => setActiveTab("itinerary")}
-          className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
-            activeTab === "itinerary" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          {t("trip.itineraryTab")}
-        </button>
-        <button
-          onClick={() => setActiveTab("guide")}
-          className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
-            activeTab === "guide" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          {t("trip.guideTab")}
-        </button>
+      <div className="flex items-center justify-between gap-[16px] mt-[32px] flex-wrap">
+        <div className="flex gap-[12px]">
+          <button
+            onClick={() => setActiveTab("itinerary")}
+            className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
+              activeTab === "itinerary" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {t("trip.itineraryTab")}
+          </button>
+          <button
+            onClick={() => setActiveTab("guide")}
+            className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
+              activeTab === "guide" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {t("trip.guideTab")}
+          </button>
+        </div>
+
+        {/* Day filter for the embedded map, raised to the same row as Itinerary/Travel Guide
+            (rather than sitting inside the map column below) so it reads as one tab bar. Hidden
+            below lg since the map panel itself is lg+ only. */}
+        {activeTab === "itinerary" && trip.days.length > 1 && (
+          <div className="hidden lg:flex gap-[8px] flex-wrap">
+            {trip.days.map((day) => (
+              <button
+                key={day.day}
+                type="button"
+                onClick={() => {
+                  setActiveMapDay(day.day);
+                  setSelectedMapSlot(null);
+                }}
+                className={`rounded-[16px] px-[14px] py-[7px] text-[12px] font-medium transition-colors ${
+                  activeMapDay === day.day
+                    ? "bg-secondary-purple text-white"
+                    : "bg-white border border-secondary-purple text-text-primary"
+                }`}
+              >
+                {t("trip.dayLabel", { number: day.day })}
+                {isMultiCity && day.city ? ` · ${day.city}` : ""}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {activeTab === "itinerary" && (
-        <div className="flex gap-[24px] lg:gap-[32px] items-start mt-[32px]">
-          <div className="flex-1 min-w-0">
-            <TripItinerary
-              trip={trip}
-              onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
-              onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
-              onViewMapForDay={(day) => {
-                setActiveMapDay(day);
-                setSelectedMapSlot(null);
-              }}
-              activeDayForMap={activeMapDay ?? undefined}
-            />
-          </div>
-          <div className="hidden lg:block w-[480px] shrink-0 sticky top-[24px]">
-            {trip.days.length > 1 && (
-              <div className="flex gap-[8px] mb-[12px] flex-wrap">
-                {trip.days.map((day) => (
-                  <button
-                    key={day.day}
-                    type="button"
-                    onClick={() => {
-                      setActiveMapDay(day.day);
-                      setSelectedMapSlot(null);
-                    }}
-                    className={`rounded-[16px] px-[14px] py-[7px] text-[12px] font-medium transition-colors ${
-                      activeMapDay === day.day
-                        ? "bg-secondary-purple text-white"
-                        : "bg-white border border-secondary-purple text-text-primary"
-                    }`}
-                  >
-                    {t("trip.dayLabel", { number: day.day })}
-                    {isMultiCity && day.city ? ` · ${day.city}` : ""}
-                  </button>
-                ))}
-              </div>
-            )}
-            {mapSlots.length === 0 ? (
-              <div className="rounded-[24px] h-[600px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
-                {t("tripMap.noLocatedStops")}
-              </div>
-            ) : (
-              <TripDayMap
-                slots={mapSlots}
-                selectedSlot={selectedMapSlot}
-                onSelectSlot={setSelectedMapSlot}
-                className="h-[600px]"
-              />
-            )}
-          </div>
+        <div className="mt-[32px]">
+          <TripItinerary
+            trip={trip}
+            onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
+            onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
+            onViewMapForDay={(day) => {
+              setActiveMapDay(day);
+              setSelectedMapSlot(null);
+            }}
+            activeDayForMap={activeMapDay ?? undefined}
+          />
         </div>
       )}
 
@@ -364,6 +360,25 @@ export default function TripDetail() {
           onClose={() => setSelectedSite(null)}
         />
       )}
+    </div>
+
+    {/* Persistent map pane -- stays visible across both tabs (not just itinerary), same "map
+        never moves" feel as the mindtrip reference, but with a white margin around the map
+        itself (flush-to-edge read as too harsh/heavy) rather than true edge-to-edge. */}
+    <div className="hidden lg:block w-[40%] shrink-0 h-full border-s border-text-primary/15 bg-white p-[16px]">
+      {mapSlots.length === 0 ? (
+        <div className="size-full rounded-[20px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
+          {t("tripMap.noLocatedStops")}
+        </div>
+      ) : (
+        <TripDayMap
+          slots={mapSlots}
+          selectedSlot={selectedMapSlot}
+          onSelectSlot={setSelectedMapSlot}
+          className="size-full rounded-[20px] overflow-hidden"
+        />
+      )}
+    </div>
     </div>
   );
 }

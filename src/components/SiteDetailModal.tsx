@@ -3,12 +3,13 @@ import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import Button from "./Button";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { db, planAgent, type WikiImage, wikiImagesBySearch } from "../lib/api";
+import { activityToCandidate } from "../lib/activities";
 import { ARABIC_VOICE_GUIDANCE } from "../lib/arabicVoice";
-import { CATEGORY_LABEL_KEYS, normalizeCategory } from "../lib/categories";
+import { categoryOrActivityLabelKey, normalizeCategory } from "../lib/categories";
 import { buildViatorSearchUrl } from "../lib/viator";
 import { useTranslation } from "../lib/LanguageContext";
 import { track } from "../lib/analytics";
-import type { Site } from "../lib/types";
+import type { Activity, Site } from "../lib/types";
 
 // Paused (2026-09-13) pending a UX rethink on how/where the Viator CTA should actually appear --
 // code, tests, and the env var wiring are all intact, just not rendered. Flip back to true to
@@ -54,8 +55,18 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
     track("Site Viewed", { name: siteName, source });
     setLoading(true);
     db("getSite", { name: siteName, cityId })
+      .then((siteResult: Site | null) => {
+        if (siteResult) return { ...siteResult, category: normalizeCategory(siteResult.category) };
+        // An itinerary slot can come from the activities table too (a bar crawl, a market, etc.)
+        // -- getSite only ever checks sites, so a stop built from an activity would otherwise
+        // always show "not found". activityToCandidate keeps its category as the raw activity
+        // type (never normalizeCategory, which is the site-only taxonomy).
+        return db("getActivity", { name: siteName, cityId })
+          .then((activity: Activity | null) => (activity ? activityToCandidate(activity) : null))
+          .catch(() => null);
+      })
       .then((result: Site | null) => {
-        setSite(result ? { ...result, category: normalizeCategory(result.category) } : null);
+        setSite(result);
         setLongDescription(result?.long_description || null);
         setLongDescriptionAr(result?.long_description_ar || null);
         if (result?.long_description) {
@@ -91,7 +102,7 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
           setLongDescription(cleaned);
           setLongDescriptionAr(cleanedAr);
           track("Site Description Generated", { name: site.name, source: "ai", success: true });
-          await db("saveLongDescription", { name: site.name, cityId, longDescription: cleaned, longDescriptionAr: cleanedAr });
+          await db("saveLongDescription", { name: site.name, cityId, longDescription: cleaned, longDescriptionAr: cleanedAr, kind: site.kind });
         })
         .catch((err) => {
           track("Site Description Generated", {
@@ -112,7 +123,7 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
           const cleanedAr = typeof parsed?.descriptionAr === "string" ? parsed.descriptionAr.trim() : null;
           if (!cleanedAr) return;
           setLongDescriptionAr(cleanedAr);
-          await db("saveLongDescription", { name: site.name, cityId, longDescription: site!.long_description, longDescriptionAr: cleanedAr });
+          await db("saveLongDescription", { name: site.name, cityId, longDescription: site!.long_description, longDescriptionAr: cleanedAr, kind: site.kind });
         })
         .catch(() => {})
         .finally(() => setGeneratingDescription(false));
@@ -197,7 +208,7 @@ export default function SiteDetailModal({ siteName, cityId, cityName, source, on
 
             <div className="w-[360px] max-w-full">
               <p className="font-medium text-[11px] text-secondary-purple tracking-[0.44px]">
-                {t(CATEGORY_LABEL_KEYS[site.category]).toUpperCase()}
+                {t(categoryOrActivityLabelKey(site.category)).toUpperCase()}
               </p>
               <h1 className="font-heading font-semibold text-[28px] text-text-primary mt-[16px] pe-[32px]">
                 {displayName}

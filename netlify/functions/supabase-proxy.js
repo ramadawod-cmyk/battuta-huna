@@ -65,16 +65,28 @@ exports.handler = async function(event) {
       return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
     }
 
+    // ── GET ACTIVITY ──────────────────────────────────
+    // getSite only ever looks at the sites table -- an itinerary slot built from an activity
+    // (a bar crawl, a market, etc.) has no row there at all, so SiteDetailModal falls back to
+    // this when getSite comes back empty, same name+cityId lookup against activities instead.
+    if (action === 'getActivity') {
+      const { name, cityId } = data;
+      const res = await request('GET', `/rest/v1/activities?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}&select=*`);
+      const rows = res.body;
+      return { statusCode: 200, headers, body: JSON.stringify(rows?.[0] || null) };
+    }
+
     // ── SAVE LONG DESCRIPTION ────────────────────────
     if (action === 'saveLongDescription') {
-      const { siteId, name, cityId, longDescription, longDescriptionAr } = data;
+      const { siteId, name, cityId, longDescription, longDescriptionAr, kind } = data;
+      const table = kind === 'activity' ? 'activities' : 'sites';
       const patch = { long_description: longDescription, review_status: 'ai_complete' };
       if (longDescriptionAr) patch.long_description_ar = longDescriptionAr;
       let res;
       if (name && cityId) {
-        res = await request('PATCH', `/rest/v1/sites?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, patch);
+        res = await request('PATCH', `/rest/v1/${table}?name=eq.${encodeURIComponent(name)}&city_id=eq.${cityId}`, patch);
       } else {
-        res = await request('PATCH', `/rest/v1/sites?id=eq.${siteId}`, patch);
+        res = await request('PATCH', `/rest/v1/${table}?id=eq.${siteId}`, patch);
       }
       return { statusCode: 200, headers, body: JSON.stringify({ saved: true }) };
     }
