@@ -14,6 +14,8 @@ const ar: typeof en = {
   "sidebar.settings": "الإعدادات",
   "sidebar.openMenu": "فتح القائمة",
   "sidebar.closeMenu": "إغلاق القائمة",
+  "sidebar.collapseMenu": "طي القائمة",
+  "sidebar.expandMenu": "توسيع القائمة",
 
   "common.backToMyTrips": "العودة إلى رحلاتي",
   "common.backToTrip": "العودة إلى الرحلة",
@@ -192,6 +194,7 @@ const ar: typeof en = {
 
   "tripMap.loading": "جارٍ تحميل الخريطة…",
   "tripMap.noLocatedStops": "لا توجد محطات محددة الموقع لهذا اليوم.",
+  "tripMap.mapUnavailable": "الخريطة غير متاحة حاليًا.",
 
   "sharedTrip.unavailableTitle": "هذه الرحلة غير متاحة.",
   "sharedTrip.unavailableBody": "ربما تم إلغاء مشاركتها، أو أن الرابط غير صحيح.",

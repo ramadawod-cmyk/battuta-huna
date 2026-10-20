@@ -131,6 +131,7 @@ export default function SwapPanel({ trip, tripId, day, slotName, onClose, onSwap
         kind: site.kind,
         nameAr: site.name_ar,
         descriptionAr: site.description_ar,
+        imageUrl: site.image_url ?? null,
       };
       const updatedDays = trip.days.map((d) =>
         d.day !== day ? d : { ...d, slots: d.slots.map((s) => (s.name === slotName ? newSlot : s)) },

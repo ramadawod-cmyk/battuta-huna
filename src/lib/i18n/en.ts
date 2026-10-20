@@ -14,6 +14,8 @@ const en = {
   "sidebar.settings": "Settings",
   "sidebar.openMenu": "Open menu",
   "sidebar.closeMenu": "Close menu",
+  "sidebar.collapseMenu": "Collapse menu",
+  "sidebar.expandMenu": "Expand menu",
 
   "common.backToMyTrips": "Back to My Trips",
   "common.backToTrip": "Back to Trip",
@@ -192,6 +194,7 @@ const en = {
 
   "tripMap.loading": "Loading map…",
   "tripMap.noLocatedStops": "No located stops for this day.",
+  "tripMap.mapUnavailable": "Map isn't available right now.",
 
   "sharedTrip.unavailableTitle": "This trip isn't available.",
   "sharedTrip.unavailableBody": "It may have been unshared, or the link is incorrect.",

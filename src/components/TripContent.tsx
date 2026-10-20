@@ -22,7 +22,11 @@ function ItinerarySlotRow({
   onSwap?: () => void;
 }) {
   const { t, language } = useTranslation();
-  const imageUrl = useWikiThumbnail(slot.name);
+  // Prefers whatever image was already resolved+cached elsewhere (see the note on TripSlot.imageUrl
+  // in types.ts) -- only falls back to a fresh live lookup (passing null skips the fetch entirely,
+  // see useWikiThumbnail) when the slot predates that or nothing was ever found for it.
+  const liveImageUrl = useWikiThumbnail(slot.imageUrl ? null : slot.name);
+  const imageUrl = slot.imageUrl || liveImageUrl;
   const name = language === "ar" && slot.nameAr ? slot.nameAr : slot.name;
   const description = language === "ar" && slot.descriptionAr ? slot.descriptionAr : slot.description;
   return (
