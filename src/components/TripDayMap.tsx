@@ -123,8 +123,9 @@ function TripMapMarker({
 
 /**
  * The Google Maps panel for one day's stops -- shared by TripDetail (itinerary + map side by
- * side) and anywhere else a day's stops need showing on a map. Fills its container (h-full); the
- * host controls actual sizing/stickiness.
+ * side) and anywhere else a day's stops need showing on a map. Fills its container; the host
+ * controls sizing/stickiness and is expected to wrap this in its own white/shadowed card (see
+ * TripDetail) -- this component itself stays unstyled beyond its own corner radius.
  */
 export default function TripDayMap({
   slots,
@@ -146,7 +147,7 @@ export default function TripDayMap({
 
   if (!googleMapsKey) {
     return (
-      <div className={`rounded-[24px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px] ${className}`}>
+      <div className={`rounded-[14px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px] ${className}`}>
         {t("tripMap.mapUnavailable")}
       </div>
     );
@@ -161,7 +162,7 @@ export default function TripDayMap({
         gestureHandling="greedy"
         disableDefaultUI
         zoomControl
-        className={`rounded-[24px] overflow-hidden shadow-[0px_8px_24px_0px_rgba(48,48,48,0.08)] ${className}`}
+        className={`rounded-[14px] overflow-hidden ${className}`}
       >
         <MapCamera slots={slots} selectedSlot={selectedSlot} />
         {slots.map((slot, i) => (

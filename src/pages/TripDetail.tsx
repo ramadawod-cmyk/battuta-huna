@@ -251,23 +251,51 @@ export default function TripDetail() {
         </p>
       )}
 
-      <div className="flex gap-[12px] mt-[32px]">
-        <button
-          onClick={() => setActiveTab("itinerary")}
-          className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
-            activeTab === "itinerary" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          {t("trip.itineraryTab")}
-        </button>
-        <button
-          onClick={() => setActiveTab("guide")}
-          className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
-            activeTab === "guide" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          {t("trip.guideTab")}
-        </button>
+      <div className="flex items-center justify-between gap-[16px] mt-[32px] flex-wrap">
+        <div className="flex gap-[12px]">
+          <button
+            onClick={() => setActiveTab("itinerary")}
+            className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
+              activeTab === "itinerary" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {t("trip.itineraryTab")}
+          </button>
+          <button
+            onClick={() => setActiveTab("guide")}
+            className={`rounded-[20px] px-[16px] py-[8px] text-[14px] font-semibold transition-colors ${
+              activeTab === "guide" ? "bg-surface-lavender text-text-primary" : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {t("trip.guideTab")}
+          </button>
+        </div>
+
+        {/* Day filter for the embedded map, raised to the same row as Itinerary/Travel Guide
+            (rather than sitting inside the map column below) so it reads as one tab bar. Hidden
+            below lg since the map panel itself is lg+ only. */}
+        {activeTab === "itinerary" && trip.days.length > 1 && (
+          <div className="hidden lg:flex gap-[8px] flex-wrap">
+            {trip.days.map((day) => (
+              <button
+                key={day.day}
+                type="button"
+                onClick={() => {
+                  setActiveMapDay(day.day);
+                  setSelectedMapSlot(null);
+                }}
+                className={`rounded-[16px] px-[14px] py-[7px] text-[12px] font-medium transition-colors ${
+                  activeMapDay === day.day
+                    ? "bg-secondary-purple text-white"
+                    : "bg-white border border-secondary-purple text-text-primary"
+                }`}
+              >
+                {t("trip.dayLabel", { number: day.day })}
+                {isMultiCity && day.city ? ` · ${day.city}` : ""}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {activeTab === "itinerary" && (
@@ -285,40 +313,20 @@ export default function TripDetail() {
             />
           </div>
           <div className="hidden lg:block w-[480px] shrink-0 sticky top-[24px]">
-            {trip.days.length > 1 && (
-              <div className="flex gap-[8px] mb-[12px] flex-wrap">
-                {trip.days.map((day) => (
-                  <button
-                    key={day.day}
-                    type="button"
-                    onClick={() => {
-                      setActiveMapDay(day.day);
-                      setSelectedMapSlot(null);
-                    }}
-                    className={`rounded-[16px] px-[14px] py-[7px] text-[12px] font-medium transition-colors ${
-                      activeMapDay === day.day
-                        ? "bg-secondary-purple text-white"
-                        : "bg-white border border-secondary-purple text-text-primary"
-                    }`}
-                  >
-                    {t("trip.dayLabel", { number: day.day })}
-                    {isMultiCity && day.city ? ` · ${day.city}` : ""}
-                  </button>
-                ))}
-              </div>
-            )}
-            {mapSlots.length === 0 ? (
-              <div className="rounded-[24px] h-[600px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
-                {t("tripMap.noLocatedStops")}
-              </div>
-            ) : (
-              <TripDayMap
-                slots={mapSlots}
-                selectedSlot={selectedMapSlot}
-                onSelectSlot={setSelectedMapSlot}
-                className="h-[600px]"
-              />
-            )}
+            <div className="bg-white rounded-[20px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.06)] p-[12px]">
+              {mapSlots.length === 0 ? (
+                <div className="rounded-[14px] h-[340px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
+                  {t("tripMap.noLocatedStops")}
+                </div>
+              ) : (
+                <TripDayMap
+                  slots={mapSlots}
+                  selectedSlot={selectedMapSlot}
+                  onSelectSlot={setSelectedMapSlot}
+                  className="h-[340px]"
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
