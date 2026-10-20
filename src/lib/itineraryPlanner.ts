@@ -85,6 +85,7 @@ function siteToSlot(site: Site, time: string): TripSlot {
     // Snapshotted here, not looked up live -- see the note on TripSlot.nameAr in types.ts.
     nameAr: site.name_ar,
     descriptionAr: site.description_ar,
+    imageUrl: site.image_url ?? null,
   };
 }
 

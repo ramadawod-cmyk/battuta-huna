@@ -84,6 +84,12 @@ export type TripSlot = {
   // language the viewer has selected, independent of which language the trip was built in.
   nameAr?: string | null;
   descriptionAr?: string | null;
+  // Snapshotted from Site.image_url/Activity.image_url at build time (see itineraryPlanner.ts's
+  // siteToSlot) so the itinerary reuses whatever image was already resolved+cached elsewhere (e.g.
+  // via ensureSiteImage on the suggestions panel) instead of discarding it and redoing a live
+  // lookup -- which often finds nothing for an AI-invented activity name even when a real image is
+  // already cached for it. Null/absent falls back to a fresh lookup, same as before this existed.
+  imageUrl?: string | null;
 };
 
 export type TripDay = {
