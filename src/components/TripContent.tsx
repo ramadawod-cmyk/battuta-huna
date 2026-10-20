@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { Map } from "lucide-react";
 import swapIcon from "../assets/trip-detail/swap-icon.svg";
 import { formatDuration } from "../lib/categories";
@@ -100,21 +99,25 @@ function GuideCard({
 }
 
 /**
- * The itinerary tab's rendering, shared between the owner's TripDetail and the public /shared
- * page. `onSwap`/`mapHrefForDay` are optional and omitted entirely (not passed-but-disabled) on
- * the public page, since neither works there: swapping mutates a trip the viewer doesn't own, and
- * the map route is owner-scoped (getTrips, not getPublicTrip) so it would just 404 for a stranger.
+ * The itinerary tab's rendering, shared between the owner's TripDetail (where it sits beside an
+ * embedded day map) and the public /shared page. `onSwap`/`onViewMapForDay` are optional and
+ * omitted entirely (not passed-but-disabled) on the public page, since neither works there:
+ * swapping mutates a trip the viewer doesn't own, and the map is driven by TripDetail's own state.
  */
 export function TripItinerary({
   trip,
   onViewDetails,
   onSwap,
-  mapHrefForDay,
+  onViewMapForDay,
+  activeDayForMap,
 }: {
   trip: Trip;
   onViewDetails: (day: number, slotName: string) => void;
   onSwap?: (day: number, slotName: string) => void;
-  mapHrefForDay?: (day: number) => string;
+  onViewMapForDay?: (day: number) => void;
+  // Highlights whichever day's "Map view" pill matches what the embedded map is currently
+  // showing, so the link between a day card and the map panel reads clearly.
+  activeDayForMap?: number;
 }) {
   const { t, language } = useTranslation();
   const destinations = tripDestinations(trip);
@@ -138,15 +141,22 @@ export function TripItinerary({
                 <p className="font-bold text-[15px] text-secondary-purple tracking-[0.6px]">
                   {(language === "ar" && day.labelAr) || day.label || t("trip.dayFallback", { number: day.day })}
                 </p>
-                {mapHrefForDay && (
-                  <Link
-                    to={mapHrefForDay(day.day)}
-                    onClick={() => track("Map Link Clicked", { name: trip.city, source: "trip_detail", day: day.day })}
-                    className="flex items-center gap-[4px] text-[12px] font-medium text-secondary-purple underline hover:opacity-70 transition-opacity"
+                {onViewMapForDay && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      track("Map Link Clicked", { name: trip.city, source: "trip_detail", day: day.day });
+                      onViewMapForDay(day.day);
+                    }}
+                    className={`flex items-center gap-[4px] rounded-full px-[10px] py-[3px] text-[12px] font-medium transition-colors ${
+                      activeDayForMap === day.day
+                        ? "bg-secondary-purple text-white"
+                        : "text-secondary-purple underline hover:opacity-70"
+                    }`}
                   >
                     <Map size={13} strokeWidth={2} />
                     {t("tripContent.mapView")}
-                  </Link>
+                  </button>
                 )}
               </div>
               <div className="flex flex-col mt-[12px] divide-y divide-border/60">

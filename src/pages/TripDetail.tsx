@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import BackLink from "../components/BackLink";
 import SiteDetailModal from "../components/SiteDetailModal";
 import SwapPanel from "../components/SwapPanel";
+import TripDayMap from "../components/TripDayMap";
 import { TripGuide, TripItinerary } from "../components/TripContent";
 import { db, planAgent } from "../lib/api";
 import { ARABIC_VOICE_GUIDANCE } from "../lib/arabicVoice";
@@ -17,7 +18,7 @@ import { track } from "../lib/analytics";
 import { useTrackScreen } from "../lib/useTrackScreen";
 import { shareUrl } from "../lib/tripSharing";
 import { destinationsLabel, tripDestinations } from "../lib/trips";
-import type { Trip, TripDay } from "../lib/types";
+import type { Trip, TripDay, TripSlot } from "../lib/types";
 
 export default function TripDetail() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -42,6 +43,15 @@ export default function TripDetail() {
   const [sharingBusy, setSharingBusy] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState<{ url: string; copied: boolean } | null>(null);
+  // Which day's stops the embedded map (right column) is currently showing -- defaults to the
+  // trip's first day once it loads (see the load effect below). null only before that.
+  const [activeMapDay, setActiveMapDay] = useState<number | null>(null);
+  const [selectedMapSlot, setSelectedMapSlot] = useState<TripSlot | null>(null);
+  const activeMapDayData = trip?.days.find((d) => d.day === activeMapDay) || trip?.days[0];
+  const mapSlots = useMemo(
+    () => (activeMapDayData?.slots || []).filter((s) => !s._removed && s.lat && s.lng),
+    [activeMapDayData],
+  );
 
   useTrackScreen("trip_detail");
 
@@ -57,6 +67,8 @@ export default function TripDetail() {
           setError(t("trip.notFound"));
           return;
         }
+        setActiveMapDay(found.days[0]?.day ?? null);
+        setSelectedMapSlot(null);
         const destinations = tripDestinations(found);
         track("Trip Detail Viewed", {
           trip_id: found.id,
@@ -135,6 +147,7 @@ export default function TripDetail() {
     trip.pace ? (PACE_LABEL_KEYS[trip.pace] ? t(PACE_LABEL_KEYS[trip.pace]) : trip.pace).toUpperCase() : null,
     trip.budget ? (BUDGET_LABEL_KEYS[trip.budget] ? t(BUDGET_LABEL_KEYS[trip.budget]) : trip.budget).toUpperCase() : null,
   ].filter(Boolean);
+  const isMultiCity = tripDestinations(trip).length > 1;
 
   async function copyShareLink(id: string) {
     const url = shareUrl(window.location.origin, id);
@@ -258,13 +271,55 @@ export default function TripDetail() {
       </div>
 
       {activeTab === "itinerary" && (
-        <div className="mt-[32px]">
-          <TripItinerary
-            trip={trip}
-            onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
-            onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
-            mapHrefForDay={(day) => `/trip/${tripId}/map?day=${day}`}
-          />
+        <div className="flex gap-[24px] lg:gap-[32px] items-start mt-[32px]">
+          <div className="flex-1 min-w-0">
+            <TripItinerary
+              trip={trip}
+              onViewDetails={(day, slotName) => setSelectedSite({ day, slotName })}
+              onSwap={(day, slotName) => setSwapTarget({ day, slotName })}
+              onViewMapForDay={(day) => {
+                setActiveMapDay(day);
+                setSelectedMapSlot(null);
+              }}
+              activeDayForMap={activeMapDay ?? undefined}
+            />
+          </div>
+          <div className="hidden lg:block w-[480px] shrink-0 sticky top-[24px]">
+            {trip.days.length > 1 && (
+              <div className="flex gap-[8px] mb-[12px] flex-wrap">
+                {trip.days.map((day) => (
+                  <button
+                    key={day.day}
+                    type="button"
+                    onClick={() => {
+                      setActiveMapDay(day.day);
+                      setSelectedMapSlot(null);
+                    }}
+                    className={`rounded-[16px] px-[14px] py-[7px] text-[12px] font-medium transition-colors ${
+                      activeMapDay === day.day
+                        ? "bg-secondary-purple text-white"
+                        : "bg-white border border-secondary-purple text-text-primary"
+                    }`}
+                  >
+                    {t("trip.dayLabel", { number: day.day })}
+                    {isMultiCity && day.city ? ` · ${day.city}` : ""}
+                  </button>
+                ))}
+              </div>
+            )}
+            {mapSlots.length === 0 ? (
+              <div className="rounded-[24px] h-[600px] bg-surface-lavender/40 flex items-center justify-center text-text-secondary text-[13px] text-center p-[24px]">
+                {t("tripMap.noLocatedStops")}
+              </div>
+            ) : (
+              <TripDayMap
+                slots={mapSlots}
+                selectedSlot={selectedMapSlot}
+                onSelectSlot={setSelectedMapSlot}
+                className="h-[600px]"
+              />
+            )}
+          </div>
         </div>
       )}
 

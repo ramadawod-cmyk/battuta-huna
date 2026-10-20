@@ -1,11 +1,10 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import Layout from "./components/Layout";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Plan from "./pages/Plan";
 import Explore from "./pages/Explore";
-import TripMapBuilder from "./pages/TripMapBuilder";
 import AllSites from "./pages/AllSites";
 import MyTrips from "./pages/MyTrips";
 import Settings from "./pages/Settings";
@@ -14,6 +13,13 @@ import TripDetail from "./pages/TripDetail";
 import CustomiseTrip from "./pages/CustomiseTrip";
 import SharedTrip from "./pages/SharedTrip";
 import { useProximityNotifications } from "./lib/useProximityNotifications";
+
+// The standalone map page merged into TripDetail itself (itinerary + map side by side) -- this
+// just catches any old bookmarked/shared links to the retired route.
+function RedirectToTripDetail() {
+  const { tripId } = useParams<{ tripId: string }>();
+  return <Navigate to={`/trip/${tripId}`} replace />;
+}
 
 export default function App() {
   useProximityNotifications();
@@ -33,7 +39,7 @@ export default function App() {
       <Route path="/my-trips" element={<Layout><MyTrips /></Layout>} />
       <Route path="/settings" element={<Layout><Settings /></Layout>} />
       <Route path="/trip/:tripId" element={<Layout><TripDetail /></Layout>} />
-      <Route path="/trip/:tripId/map" element={<Layout><TripMapBuilder /></Layout>} />
+      <Route path="/trip/:tripId/map" element={<RedirectToTripDetail />} />
       <Route path="/trip/:tripId/customise" element={<Layout><CustomiseTrip /></Layout>} />
     </Routes>
   );

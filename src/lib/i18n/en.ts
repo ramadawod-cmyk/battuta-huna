@@ -192,7 +192,6 @@ const en = {
   "tripDetail.stopSharing": "stop sharing",
   "tripDetail.shareUpdateFailed": "Couldn't update sharing.",
 
-  "tripMap.loading": "Loading map…",
   "tripMap.noLocatedStops": "No located stops for this day.",
   "tripMap.mapUnavailable": "Map isn't available right now.",
 
