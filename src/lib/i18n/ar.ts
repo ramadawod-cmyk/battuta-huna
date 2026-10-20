@@ -192,7 +192,6 @@ const ar: typeof en = {
   "tripDetail.stopSharing": "إيقاف المشاركة",
   "tripDetail.shareUpdateFailed": "تعذّر تحديث المشاركة.",
 
-  "tripMap.loading": "جارٍ تحميل الخريطة…",
   "tripMap.noLocatedStops": "لا توجد محطات محددة الموقع لهذا اليوم.",
   "tripMap.mapUnavailable": "الخريطة غير متاحة حاليًا.",
 

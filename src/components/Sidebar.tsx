@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import BrandMark from "./BrandMark";
 import { useTranslation } from "../lib/LanguageContext";
@@ -93,6 +93,16 @@ function DesktopSidebar() {
       return next;
     });
   }
+
+  // The itinerary page's two-column itinerary+map layout wants the extra width, so landing there
+  // collapses the sidebar by default. This is a page-scoped nudge, not a permanent preference
+  // change -- it doesn't touch localStorage, so a manual toggle (which does persist) still wins,
+  // and visiting any other page leaves the user's own saved preference alone. Re-fires each time
+  // the route changes back to this exact pattern, not just once, since Sidebar stays mounted
+  // across client-side navigations.
+  useEffect(() => {
+    if (/^\/trip\/[^/]+$/.test(pathname)) setCollapsed(true);
+  }, [pathname]);
 
   // The icon is drawn pointing left. In LTR, "expanded" already points toward the collapse
   // direction (left/start) with no rotation needed; collapsing flips it to point the other way
