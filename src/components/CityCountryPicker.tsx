@@ -7,11 +7,16 @@ import type { City } from "../lib/types";
 
 const MAX_SUGGESTIONS = 8;
 
+type ResolvedCountry = { id: string; name: string };
+
 /**
- * Lets a traveller manually choose a country + city to explore, independent of geolocation --
- * visible whether Explore's own location detection succeeded, failed, or was never granted.
- * Submitting hands the pick back to Explore.tsx, which drives it through the same override
- * mechanism already used by links from the Plan page's suggestions panel.
+ * Lets a traveller manually search for a city to explore, independent of geolocation -- visible
+ * whether Explore's own location detection succeeded, failed, or was never granted. There's no
+ * separate country field: the country is resolved behind the scenes (see resolveCountry) from
+ * whichever city gets submitted, same way geo.ts's reverseGeocodeCity already falls back to
+ * "Unknown" when a country genuinely can't be determined. Submitting hands the pick back to
+ * Explore.tsx, which drives it through the same override mechanism already used by links from the
+ * Plan page's suggestions panel.
  */
 export default function CityCountryPicker({
   currentCity,
@@ -20,7 +25,7 @@ export default function CityCountryPicker({
   onReset,
 }: {
   // Whatever city Explore is currently showing (auto-detected or already overridden) -- prefills
-  // the fields so the picker reads as "here's what you're looking at, change it if you want"
+  // the field so the picker reads as "here's what you're looking at, change it if you want"
   // instead of a blank form next to an already-populated page.
   currentCity: { name: string; countryId: string } | null;
   onPick: (countryId: string, countryName: string, cityName: string) => void;
@@ -28,8 +33,11 @@ export default function CityCountryPicker({
   onReset: () => void;
 }) {
   const { t, language } = useTranslation();
-  const [countryId, setCountryId] = useState("");
   const [cityName, setCityName] = useState("");
+  // Not shown in the UI -- tracks the best-known country for whatever's in the city field, updated
+  // whenever that's unambiguous (prefill, picking a suggestion) and re-checked against an exact
+  // name match at submit time.
+  const [resolvedCountry, setResolvedCountry] = useState<ResolvedCountry | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   // The real, ever-growing catalog (every city a traveller has already explored) -- merged with
@@ -48,17 +56,9 @@ export default function CityCountryPicker({
   useEffect(() => {
     if (!currentCity) return;
     const match = COUNTRIES.find((c) => c.id === currentCity.countryId);
-    setCountryId(match?.id ?? "");
+    setResolvedCountry(match ? { id: match.id, name: match.name } : null);
     setCityName(currentCity.name);
   }, [currentCity?.countryId, currentCity?.name]);
-
-  // English alphabetical order would read oddly for someone selecting in Arabic -- sort by
-  // whichever label is actually shown.
-  const sortedCountries = [...COUNTRIES].sort((a, b) => {
-    const labelA = language === "ar" ? a.nameAr : a.name;
-    const labelB = language === "ar" ? b.nameAr : b.name;
-    return labelA.localeCompare(labelB, language);
-  });
 
   // Static entries carry an Arabic name and win on an id collision (e.g. a catalog row for a city
   // also in the bootstrap list); catalog-only entries fill in everything this static list misses.
@@ -76,8 +76,8 @@ export default function CityCountryPicker({
     if (!query) return [];
     const matches = allCities.filter((c) => c.name.toLowerCase().includes(query));
     matches.sort((a, b) => {
-      const aInCountry = a.countryId === countryId ? 0 : 1;
-      const bInCountry = b.countryId === countryId ? 0 : 1;
+      const aInCountry = a.countryId === resolvedCountry?.id ? 0 : 1;
+      const bInCountry = b.countryId === resolvedCountry?.id ? 0 : 1;
       if (aInCountry !== bInCountry) return aInCountry - bInCountry;
       const aStarts = a.name.toLowerCase().startsWith(query) ? 0 : 1;
       const bStarts = b.name.toLowerCase().startsWith(query) ? 0 : 1;
@@ -85,11 +85,12 @@ export default function CityCountryPicker({
       return a.name.localeCompare(b.name);
     });
     return matches.slice(0, MAX_SUGGESTIONS);
-  }, [allCities, cityName, countryId]);
+  }, [allCities, cityName, resolvedCountry]);
 
   function selectSuggestion(city: CityOption) {
     setCityName(city.name);
-    if (city.countryId !== countryId) setCountryId(city.countryId);
+    const country = COUNTRIES.find((c) => c.id === city.countryId);
+    if (country) setResolvedCountry({ id: country.id, name: country.name });
     setShowSuggestions(false);
     setHighlightedIndex(-1);
   }
@@ -110,11 +111,24 @@ export default function CityCountryPicker({
     }
   }
 
+  // Prefers an exact match on whatever's currently typed (covers both an explicit pick and a city
+  // typed out in full without using the dropdown) over the last resolved country, since the typed
+  // text is the more current signal; only falls back to "Unknown" when neither gives an answer --
+  // the same last resort geo.ts's reverseGeocodeCity already uses.
+  function resolveCountry(): ResolvedCountry {
+    const typed = cityName.trim().toLowerCase();
+    const exactCity = allCities.find((c) => c.name.toLowerCase() === typed);
+    const exactCountry = exactCity && COUNTRIES.find((c) => c.id === exactCity.countryId);
+    if (exactCountry) return { id: exactCountry.id, name: exactCountry.name };
+    if (resolvedCountry) return resolvedCountry;
+    return { id: "unknown", name: "Unknown" };
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const country = COUNTRIES.find((c) => c.id === countryId);
     const trimmedCity = cityName.trim();
-    if (!country || !trimmedCity) return;
+    if (!trimmedCity) return;
+    const country = resolveCountry();
     // countryName is always the canonical English form (same convention as the AI-generated
     // destinations in popularDestinations.ts) so the same country picked under either language
     // resolves to the same cached country_id/row.
@@ -124,24 +138,6 @@ export default function CityCountryPicker({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-[10px] mt-[16px]">
-      <div className="flex flex-col gap-[4px]">
-        <label htmlFor="explore-country" className="text-[11px] font-medium text-text-secondary">
-          {t("explore.pickCountry")}
-        </label>
-        <select
-          id="explore-country"
-          value={countryId}
-          onChange={(e) => setCountryId(e.target.value)}
-          className="bg-surface-lavender/40 border border-border rounded-[12px] text-[13px] text-text-primary px-[12px] py-[9px] min-w-[170px]"
-        >
-          <option value="">{t("explore.selectCountry")}</option>
-          {sortedCountries.map((c) => (
-            <option key={c.id} value={c.id}>
-              {language === "ar" ? c.nameAr : c.name}
-            </option>
-          ))}
-        </select>
-      </div>
       <div className="relative flex flex-col gap-[4px]">
         <label htmlFor="explore-city" className="text-[11px] font-medium text-text-secondary">
           {t("explore.pickCity")}
@@ -160,10 +156,10 @@ export default function CityCountryPicker({
           onBlur={() => setShowSuggestions(false)}
           onKeyDown={handleCityKeyDown}
           placeholder={t("explore.cityPlaceholder")}
-          className="bg-surface-lavender/40 border border-border rounded-[12px] text-[13px] text-text-primary px-[12px] py-[9px] min-w-[160px]"
+          className="bg-surface-lavender/40 border border-border rounded-[12px] text-[13px] text-text-primary px-[12px] py-[9px] min-w-[220px]"
         />
         {showSuggestions && suggestions.length > 0 && (
-          <ul className="absolute top-full mt-[4px] w-full min-w-[220px] bg-white border border-border rounded-[12px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.12)] py-[6px] z-10 max-h-[240px] overflow-y-auto">
+          <ul className="absolute top-full mt-[4px] w-full min-w-[260px] bg-white border border-border rounded-[12px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.12)] py-[6px] z-10 max-h-[240px] overflow-y-auto">
             {suggestions.map((city, i) => {
               const country = COUNTRIES.find((c) => c.id === city.countryId);
               return (
@@ -195,7 +191,7 @@ export default function CityCountryPicker({
       </div>
       <button
         type="submit"
-        disabled={!countryId || !cityName.trim()}
+        disabled={!cityName.trim()}
         className="bg-secondary-purple text-white text-[13px] font-semibold rounded-[12px] px-[18px] py-[10px] disabled:opacity-40"
       >
         {t("explore.goExplore")}

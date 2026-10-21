@@ -165,14 +165,6 @@ export default function Explore() {
       </p>
       <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{t("explore.culturalDiscovery")}</p>
 
-      {/* Always rendered -- works whether geolocation succeeded, failed, or was never granted. */}
-      <CityCountryPicker
-        currentCity={city}
-        onPick={handlePick}
-        overrideActive={!!override}
-        onReset={handleResetToMyLocation}
-      />
-
       <div className="relative bg-secondary-purple rounded-[24px] w-full h-[320px] overflow-hidden mt-[16px]">
         {displayedHeroUrl ? (
           <img
@@ -217,6 +209,14 @@ export default function Explore() {
           {t("explore.tryAgain")}
         </button>
       )}
+
+      {/* Always rendered -- works whether geolocation succeeded, failed, or was never granted. */}
+      <CityCountryPicker
+        currentCity={city}
+        onPick={handlePick}
+        overrideActive={!!override}
+        onReset={handleResetToMyLocation}
+      />
 
       <div className="flex gap-[10px] mt-[16px] flex-wrap">
         {CATEGORIES.map((cat) => (
