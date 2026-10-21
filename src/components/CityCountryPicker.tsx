@@ -1,6 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "../lib/LanguageContext";
 import { COUNTRIES } from "../lib/countries";
+import { CITIES, type CityOption } from "../lib/cities";
+import { db } from "../lib/api";
+import type { City } from "../lib/types";
+
+const MAX_SUGGESTIONS = 8;
 
 /**
  * Lets a traveller manually choose a country + city to explore, independent of geolocation --
@@ -25,6 +30,18 @@ export default function CityCountryPicker({
   const { t, language } = useTranslation();
   const [countryId, setCountryId] = useState("");
   const [cityName, setCityName] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  // The real, ever-growing catalog (every city a traveller has already explored) -- merged with
+  // the static CITIES bootstrap list below so search coverage improves over time without that
+  // static list needing to be exhaustive. Fetched once; this list only grows, no need to refetch.
+  const [catalogCities, setCatalogCities] = useState<City[]>([]);
+
+  useEffect(() => {
+    db("getCities")
+      .then((rows: City[]) => setCatalogCities(Array.isArray(rows) ? rows : []))
+      .catch(() => {});
+  }, []);
 
   // countryId here and in countries.ts are both slugify(name), so comparing by id is equivalent
   // to a case/accent-insensitive name match without a second normalization step.
@@ -43,6 +60,56 @@ export default function CityCountryPicker({
     return labelA.localeCompare(labelB, language);
   });
 
+  // Static entries carry an Arabic name and win on an id collision (e.g. a catalog row for a city
+  // also in the bootstrap list); catalog-only entries fill in everything this static list misses.
+  const allCities = useMemo<CityOption[]>(() => {
+    const byId = new Map<string, CityOption>();
+    for (const c of catalogCities) {
+      byId.set(c.id, { id: c.id, name: c.name, nameAr: "", countryId: c.country_id });
+    }
+    for (const c of CITIES) byId.set(c.id, c);
+    return [...byId.values()];
+  }, [catalogCities]);
+
+  const suggestions = useMemo(() => {
+    const query = cityName.trim().toLowerCase();
+    if (!query) return [];
+    const matches = allCities.filter((c) => c.name.toLowerCase().includes(query));
+    matches.sort((a, b) => {
+      const aInCountry = a.countryId === countryId ? 0 : 1;
+      const bInCountry = b.countryId === countryId ? 0 : 1;
+      if (aInCountry !== bInCountry) return aInCountry - bInCountry;
+      const aStarts = a.name.toLowerCase().startsWith(query) ? 0 : 1;
+      const bStarts = b.name.toLowerCase().startsWith(query) ? 0 : 1;
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return a.name.localeCompare(b.name);
+    });
+    return matches.slice(0, MAX_SUGGESTIONS);
+  }, [allCities, cityName, countryId]);
+
+  function selectSuggestion(city: CityOption) {
+    setCityName(city.name);
+    if (city.countryId !== countryId) setCountryId(city.countryId);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+  }
+
+  function handleCityKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+    } else if (e.key === "Enter" && highlightedIndex >= 0) {
+      e.preventDefault();
+      selectSuggestion(suggestions[highlightedIndex]);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+    }
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const country = COUNTRIES.find((c) => c.id === countryId);
@@ -52,6 +119,7 @@ export default function CityCountryPicker({
     // destinations in popularDestinations.ts) so the same country picked under either language
     // resolves to the same cached country_id/row.
     onPick(country.id, country.name, trimmedCity);
+    setShowSuggestions(false);
   }
 
   return (
@@ -74,18 +142,56 @@ export default function CityCountryPicker({
           ))}
         </select>
       </div>
-      <div className="flex flex-col gap-[4px]">
+      <div className="relative flex flex-col gap-[4px]">
         <label htmlFor="explore-city" className="text-[11px] font-medium text-text-secondary">
           {t("explore.pickCity")}
         </label>
         <input
           id="explore-city"
           type="text"
+          autoComplete="off"
           value={cityName}
-          onChange={(e) => setCityName(e.target.value)}
+          onChange={(e) => {
+            setCityName(e.target.value);
+            setShowSuggestions(true);
+            setHighlightedIndex(-1);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => setShowSuggestions(false)}
+          onKeyDown={handleCityKeyDown}
           placeholder={t("explore.cityPlaceholder")}
           className="bg-surface-lavender/40 border border-border rounded-[12px] text-[13px] text-text-primary px-[12px] py-[9px] min-w-[160px]"
         />
+        {showSuggestions && suggestions.length > 0 && (
+          <ul className="absolute top-full mt-[4px] w-full min-w-[220px] bg-white border border-border rounded-[12px] shadow-[0px_8px_24px_0px_rgba(48,48,48,0.12)] py-[6px] z-10 max-h-[240px] overflow-y-auto">
+            {suggestions.map((city, i) => {
+              const country = COUNTRIES.find((c) => c.id === city.countryId);
+              return (
+                <li key={`${city.countryId}-${city.id}`}>
+                  <button
+                    type="button"
+                    // Fires before the input's onBlur, so the dropdown can't close itself out from
+                    // under the click.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectSuggestion(city)}
+                    className={`w-full text-start px-[14px] py-[8px] text-[13px] ${
+                      i === highlightedIndex ? "bg-surface-lavender/60" : "hover:bg-surface-lavender/40"
+                    }`}
+                  >
+                    <span className="text-text-primary font-medium">
+                      {language === "ar" && city.nameAr ? city.nameAr : city.name}
+                    </span>
+                    {country && (
+                      <span className="text-text-secondary text-[11px] ms-[6px]">
+                        {language === "ar" ? country.nameAr : country.name}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
       <button
         type="submit"
