@@ -134,6 +134,12 @@ const en = {
   "explore.topSitesIn": "{count} top sites in {city}",
   "explore.gatheringSitesFor": "Battuta is gathering cultural sites for {city} for the first time — this can take a moment.",
   "explore.loadFailed": "Couldn't load this destination right now.",
+  "explore.pickCountry": "Country",
+  "explore.pickCity": "City",
+  "explore.selectCountry": "Select a country",
+  "explore.cityPlaceholder": "e.g. Paris",
+  "explore.goExplore": "Explore",
+  "explore.backToMyLocation": "Back to my location",
 
   "plan.panel.popularFrom": "Popular destinations from {city}",
   "plan.panel.popularGeneric": "Popular destinations",

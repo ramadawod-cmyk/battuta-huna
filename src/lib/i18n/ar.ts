@@ -134,6 +134,12 @@ const ar: typeof en = {
   "explore.topSitesIn": "أفضل {count} مواقع في {city}",
   "explore.gatheringSitesFor": "يجمع بطوطة المواقع الثقافية في {city} لأول مرة، قد يستغرق هذا لحظة.",
   "explore.loadFailed": "تعذّر تحميل هذه الوجهة الآن.",
+  "explore.pickCountry": "الدولة",
+  "explore.pickCity": "المدينة",
+  "explore.selectCountry": "اختر دولة",
+  "explore.cityPlaceholder": "مثال: باريس",
+  "explore.goExplore": "استكشف",
+  "explore.backToMyLocation": "العودة إلى موقعي",
 
   "plan.panel.popularFrom": "وجهات شائعة من {city}",
   "plan.panel.popularGeneric": "وجهات شائعة",

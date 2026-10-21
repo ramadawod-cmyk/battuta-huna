@@ -4,10 +4,11 @@ import TagPill from "../components/TagPill";
 import PoiCard from "../components/PoiCard";
 import SiteDetailModal from "../components/SiteDetailModal";
 import UnsplashCredit from "../components/UnsplashCredit";
+import CityCountryPicker from "../components/CityCountryPicker";
 import { useCity } from "../lib/CityContext";
 import { useTranslation } from "../lib/LanguageContext";
 import { useWikiThumbnail } from "../lib/useWikiThumbnail";
-import { haversineMeters, getCurrentPosition } from "../lib/geo";
+import { haversineMeters, getCurrentPosition, slugify } from "../lib/geo";
 import { ensureCitySites } from "../lib/sites";
 import { CATEGORIES as SITE_CATEGORIES, CATEGORY_ACCENTS, CATEGORY_LABEL_KEYS, normalizeCategory } from "../lib/categories";
 import { track } from "../lib/analytics";
@@ -54,26 +55,26 @@ function PoiCardWithImage({
 export default function Explore() {
   const homeCity = useCity();
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState("All");
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
   const [heroFallbackFailed, setHeroFallbackFailed] = useState(false);
   const [selectedSiteName, setSelectedSiteName] = useState<string | null>(() => searchParams.get("site"));
 
-  // Query params let a link (e.g. the Plan page's suggestions panel) show someone ELSE's city --
-  // read once on mount, same convention TripMapBuilder.tsx uses for its `day` param, deliberately
-  // not reactive. When present, this page shows that city via a local fetch instead of the
-  // viewer's own detected location, and never touches useCity()/locate() or the user's stored
-  // home city at all.
-  const [override] = useState(() => {
+  // Query params let a link (e.g. the Plan page's suggestions panel) or the on-page country/city
+  // picker below show someone ELSE's city. Reactive to searchParams (not read once on mount, since
+  // the picker updates them without a navigation/remount) -- when present, this page shows that
+  // city via a local fetch instead of the viewer's own detected location, and never touches
+  // useCity()/locate() or the user's stored home city at all.
+  const override = useMemo(() => {
     const cityId = searchParams.get("cityId");
     const cityName = searchParams.get("cityName");
     const countryId = searchParams.get("countryId");
     const countryName = searchParams.get("countryName");
     if (!cityId || !cityName || !countryId || !countryName) return null;
     return { id: cityId, name: cityName, countryId, countryName, locality: null as string | null };
-  });
+  }, [searchParams]);
   const [overrideSites, setOverrideSites] = useState<Site[] | null>(null);
   const [overrideError, setOverrideError] = useState<string | null>(null);
   const [overrideReloadKey, setOverrideReloadKey] = useState(0);
@@ -129,6 +130,20 @@ export default function Explore() {
     }
   }, [override, status, userPos]);
 
+  function handlePick(countryId: string, countryName: string, cityNameInput: string) {
+    track("Explore City Picked", { country_id: countryId, city_name: cityNameInput, source: "explore_picker" });
+    setSearchParams({
+      cityId: slugify(cityNameInput),
+      cityName: cityNameInput,
+      countryId,
+      countryName,
+    });
+  }
+
+  function handleResetToMyLocation() {
+    setSearchParams({});
+  }
+
   const visibleSites =
     activeCategory === "All" ? sites : sites.filter((s) => s.category === activeCategory);
 
@@ -149,6 +164,9 @@ export default function Explore() {
         {city?.name || t("explore.locating")}
       </p>
       <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{t("explore.culturalDiscovery")}</p>
+
+      {/* Always rendered -- works whether geolocation succeeded, failed, or was never granted. */}
+      <CityCountryPicker onPick={handlePick} overrideActive={!!override} onReset={handleResetToMyLocation} />
 
       <div className="relative bg-secondary-purple rounded-[24px] w-full h-[320px] overflow-hidden mt-[16px]">
         {displayedHeroUrl ? (
