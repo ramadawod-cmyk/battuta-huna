@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "../lib/LanguageContext";
 import { COUNTRIES } from "../lib/countries";
 
@@ -9,10 +9,15 @@ import { COUNTRIES } from "../lib/countries";
  * mechanism already used by links from the Plan page's suggestions panel.
  */
 export default function CityCountryPicker({
+  currentCity,
   onPick,
   overrideActive,
   onReset,
 }: {
+  // Whatever city Explore is currently showing (auto-detected or already overridden) -- prefills
+  // the fields so the picker reads as "here's what you're looking at, change it if you want"
+  // instead of a blank form next to an already-populated page.
+  currentCity: { name: string; countryId: string } | null;
   onPick: (countryId: string, countryName: string, cityName: string) => void;
   overrideActive: boolean;
   onReset: () => void;
@@ -20,6 +25,15 @@ export default function CityCountryPicker({
   const { t, language } = useTranslation();
   const [countryId, setCountryId] = useState("");
   const [cityName, setCityName] = useState("");
+
+  // countryId here and in countries.ts are both slugify(name), so comparing by id is equivalent
+  // to a case/accent-insensitive name match without a second normalization step.
+  useEffect(() => {
+    if (!currentCity) return;
+    const match = COUNTRIES.find((c) => c.id === currentCity.countryId);
+    setCountryId(match?.id ?? "");
+    setCityName(currentCity.name);
+  }, [currentCity?.countryId, currentCity?.name]);
 
   // English alphabetical order would read oddly for someone selecting in Arabic -- sort by
   // whichever label is actually shown.

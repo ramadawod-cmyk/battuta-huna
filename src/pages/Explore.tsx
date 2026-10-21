@@ -166,7 +166,12 @@ export default function Explore() {
       <p className="font-medium text-[11px] text-text-secondary tracking-[1px] mt-[4px]">{t("explore.culturalDiscovery")}</p>
 
       {/* Always rendered -- works whether geolocation succeeded, failed, or was never granted. */}
-      <CityCountryPicker onPick={handlePick} overrideActive={!!override} onReset={handleResetToMyLocation} />
+      <CityCountryPicker
+        currentCity={city}
+        onPick={handlePick}
+        overrideActive={!!override}
+        onReset={handleResetToMyLocation}
+      />
 
       <div className="relative bg-secondary-purple rounded-[24px] w-full h-[320px] overflow-hidden mt-[16px]">
         {displayedHeroUrl ? (
